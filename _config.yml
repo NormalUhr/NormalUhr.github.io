@@ -48,8 +48,8 @@ kramdown:
 
 
 # Disqus settings
-duoshuo_share: false
-disqus_username: hux
+disqus_share: false
+disqus_username: Felix Zhang
 
 # Netease setttings
 netease_comment: false
