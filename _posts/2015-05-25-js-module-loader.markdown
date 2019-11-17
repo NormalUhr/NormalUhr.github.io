@@ -2,14 +2,12 @@
 layout:     post
 title:      "第一篇博文纪念我三个月来的动荡"
 subtitle:   "至少我开始了"
-date:       2015-05-25
-author:     "Hux"
-header-img: "img/post-bg-js-module.jpg"
+date:       2019-11-16
+author:     "Felix"
+header-img: "img/post-bg-hello-world.jpg"
 catalog: true
 tags:
-    - 笔记
-    - Web
-    - JavaScript
+    - 随笔
 ---
 
 
