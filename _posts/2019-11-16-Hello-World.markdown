@@ -5,8 +5,6 @@ subtitle	"至少我开始了"
 date		2019-11-17 3:06
 author		"Felix"
 header-img	"img/post-bg-hello-world.jpg"
-tags:
-	- 随笔
 ---
 
 >我正在处于一个人生重大的转折点，如果说人生必定要经历一定数量的失败，那不妨让这个博客作为一个半途而废的例子，让我操心的事情尽量圆满。
