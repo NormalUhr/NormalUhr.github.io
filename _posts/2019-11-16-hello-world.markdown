@@ -5,7 +5,7 @@ subtitle: 	"至少我开始了"
 date: 		2019-11-17
 author: 	"Felix"
 header-img: "img/post-bg-hello-world.jpg"
-catalog 	:true
+catalog: true
 tags:
 	- 随笔
 ---
