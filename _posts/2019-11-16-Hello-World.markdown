@@ -1,10 +1,10 @@
 ---
-layout:		post
-title:		"第一篇博文纪念我三个月来的动荡"
-subtitle:	"至少我开始了"
-date:		2019-11-11 12:00:00
-author:		"Felix"
-header-img:	"img/post-bg-hello-world.jpg"
+layout: post
+title: "第一篇博文纪念我三个月来的动荡"
+subtitle: "至少我开始了"
+date: 2019-11-11 12:00:00
+author: "Felix"
+header-img: "img/post-bg-hello-world.jpg"
 tags:
 	- 随笔
 ---
@@ -18,4 +18,3 @@ tags:
 第一篇博文的另一个意义在于测试markdown中的一些功能，如tags等，看是否配置正确能否正常显示。
 
 第一个坑：github.oi在push过后没收到确认邮件（反馈网站刷新成功或失败），需要清空浏览器缓存，再push一次就好了。
-
