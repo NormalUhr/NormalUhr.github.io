@@ -1,10 +1,10 @@
 ---
 layout:     post
 title:      "Hello World by Markdown"
-subtitle:   "A new start."
+subtitle:   "A start."
 date:       2019-11-25
 author:     "Felix"
-header-img: "img/post-bg-C++.jpg"
+header-img: "img/in-post/2019-11-16-hello-world/Markdown_cover.png"
 catalog: true
 tags:
     - Markdown
@@ -42,9 +42,9 @@ tags:
 
 * 自动链接，将简短的网址实用尖括号括起来可实现短连接的自动生成。例如感谢<https://www.jianshu.com/p/d7867cb330ec>的技术支持。
 
-* 表格制作。实用|和-来绘制表格。:可控制左对齐右对齐和剧中。例如
+* 表格制作。使用\|和\-来绘制表格。:可控制左对齐右对齐和剧中。例如
 
-  ```
+  ```markdown
   | Title | Description|
   |:-----|:---------------:|
   |Version|0.0.1|
@@ -53,10 +53,7 @@ tags:
 
   其效果如下：
 
-  ```ruby
-  | Title | Description |
-  | :------ | :--------------------------------: |
-  | Version | 0.0.1 |
-  | Editor | [Melo618](mailto:Editor@Email.com) |
-  ```
-
+  | Title   |              Description              |
+  | :------ | :-----------------------------------: |
+  | Version |                 0.0.1                 |
+  | Editor  | [Felix](StarkSchroedinger.github.com) |
