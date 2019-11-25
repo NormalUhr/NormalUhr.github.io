@@ -4,7 +4,7 @@ title:      "Hello World by Markdown"
 subtitle:   "A start."
 date:       2019-11-25
 author:     "Felix"
-header-img: "img/in-post/2019-11-16-hello-world/Markdown_cover.png"
+header-img: "img/post-bg-C++"
 catalog: true
 tags:
     - Markdown
@@ -30,7 +30,7 @@ tags:
 
 * 图片的插入：和链接非常相似，只是多了一个感叹号!。
 
-  ![标志](D:\Github\StarkSchroedinger\huxpro.github.io\img\in-post\2019-11-16-hello-world\Markdown_cover.png)
+  <img src="D:\Github\StarkSchroedinger\huxpro.github.io\img\post-bg-C++.jpg" style="zoom:50%;" />
 
 * 分割线：可以使用三个以上的*或者-连建立分割线。例如连续三个 * 可产生如下效果
 
