@@ -4,7 +4,7 @@ title:      "Hello World by Markdown"
 subtitle:   "A start."
 date:       2019-11-25
 author:     "Felix"
-header-img: "img/post-bg-C++"
+header-img: "img/post-bg-C++.jpg"
 catalog: true
 tags:
     - Markdown
