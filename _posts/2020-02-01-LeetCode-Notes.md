@@ -4,15 +4,13 @@ title:      "LeetCode 刷题总结 二"
 subtitle:   "滑动窗口"
 date:       2020-02-01
 author:     "Felix"
-header-img: "img\in-post\2020-02-01-LeetCode-Notes.jpg"
+header-img: "img/in-post/2020-02-01-LeetCode-Notes/bg.jpg"
 catalog: true
 tags:
-    - Markdown
+   - LeetCode
 ---
 
 # 滑动窗口 #
-
-
 
 滑动窗口的实现方式有很多种，可以用double pointer, Hash Map 和队列。其本质是用队列实现头和尾可移动的窗口，这一类问题总是选择出满足条件的某个最值区间，符合条件的区间始终在窗口区域内。
 
