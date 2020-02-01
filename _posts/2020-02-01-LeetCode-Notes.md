@@ -68,3 +68,83 @@ public:
 };
 ~~~
 
+因为j只从1遍历到n，所以复杂度降为O(n)。
+
+## 159. Longest Substring With At Most Two Distinct Characters.(Medium) ##
+
+选择一个子串，使得这个子串最多包含两个不同的字母，滑动窗口的判断标准为判断字串内不同字母的个数。使用变量counter记录重复的字母数，index记录每个字母出现在滑动窗口内的次数。
+
+~~~C++
+class Solution{
+public:
+    int lengthOfLongestSubstringTwoDistinct(string s)
+    {
+        if(s.empty()) return 0;
+        int n = s.size();
+        int[] index = new int[128];
+        //记录不同字母的个数
+        int counter = 0;
+        int res = 0;
+        
+        for(int left = 0, j = 0; j < n; j++)
+        {
+           	if(index[s[j]] == 0)
+            {
+                counter++;
+            }
+            index[s[j]]++;
+            while(counter > 2)
+            {
+                index[s[left]]--;
+                if(index[s[left]] == 0)
+                    counter--;
+                left++;
+            }
+            res = max(res, j + 1 - left);
+        }
+        return res;
+    }
+};
+~~~
+
+
+
+
+
+## 340. Longest Substring With At Most k Distinct Characters.(Hard)
+
+在159的基础上，将判断重复的上限提升到k。
+
+~~~C++
+class Solution{
+public:
+    int lengthOfLongestSubstringTwoDistinct(string s)
+    {
+        if(s.empty()) return 0;
+        int n = s.size();
+        int[] index = new int[128];
+        //记录不同字母的个数
+        int counter = 0;
+        int res = 0;
+        
+        for(int left = 0, j = 0; j < n; j++)
+        {
+           	if(index[s[j]] == 0)
+            {
+                counter++;
+            }
+            index[s[j]]++;
+            while(counter > k)
+            {
+                index[s[left]]--;
+                if(index[s[left]] == 0)
+                    counter--;
+                left++;
+            }
+            res = max(res, j + 1 - left);
+        }
+        return res;
+    }
+};
+~~~
+
