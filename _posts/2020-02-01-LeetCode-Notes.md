@@ -12,6 +12,8 @@ tags:
 
 # 滑动窗口 #
 
+滑动窗口一般用来处理寻找某一满足条件的最长/最短子串这样的问题。
+
 滑动窗口的实现方式有很多种，可以用double pointer, Hash Map 和队列。其本质是用队列实现头和尾可移动的窗口，这一类问题总是选择出满足条件的某个最值区间，符合条件的区间始终在窗口区域内。
 
 ## 3. Longest Substring Without Repeating Characters ##
