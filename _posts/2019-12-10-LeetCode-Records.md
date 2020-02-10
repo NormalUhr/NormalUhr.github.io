@@ -468,21 +468,7 @@ public:
 class Solution {
 public:
     vector<vector<string>> dict = {{},{},{"a", "b", "c"}, {"d", "e", "f"}, {"g", "h", "i"}, {"j", "k", "l"}, {"m", "n", "o"}, {"p", "q", "r", "s"}, {"t", "u", "v"}, {"w", "x", "y", "z"}};
-    vector<string> letterCombinations(string digits) 
-	{
-        
-        if(digits.empty()) return {};
-        vector<string> res = {""};
-        int digit = digits.size();
-        for(int i = 0; i < digit; i++)
-        {
-            int cur = digits[i] - '0';
-            if(cur < 2) return {};
-            forward(res, cur);
-        }
-        if(res.size() < 3) return {};
-        return res;
-    }
+    
     
 };
 ~~~
