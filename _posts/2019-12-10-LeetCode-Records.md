@@ -452,6 +452,7 @@ public:
 ~~~
 
 
+
 *****
 
 ## 17M. 电话号码的字母组合
@@ -463,48 +464,6 @@ public:
 **优化**：待定。
 
 **代码**：
-
-~~~C++
-class Solution {
-public:
-    vector<vector<string>> dict = {{},{},{"a", "b", "c"}, {"d", "e", "f"}, {"g", "h", "i"}, {"j", "k", "l"}, {"m", "n", "o"}, {"p", "q", "r", "s"}, {"t", "u", "v"}, {"w", "x", "y", "z"}};
-    vector<string> letterCombinations(string digits) {
-        
-        if(digits.empty()) return {};
-        vector<string> res = {""};
-        int digit = digits.size();
-        for(int i = 0; i < digit; i++)
-        {
-            int cur = digits[i] - '0';
-            if(cur < 2) return {};
-            forward(res, cur);
-        }
-        if(res.size() < 3) return {};
-        return res;
-    }
-    
-    void forward(vector<string>& res, int n)
-    {
-        int size = res.size();
-        for(int i = 1; i < dict[n].size(); i++)
-        {
-            for(int j = 0; j < size; j++)
-            {
-                res.push_back(res[j] + dict[n][i]);
-            }
-        }
-        for(int j = 0; j < size; j++)
-        {
-            res[j] += dict[n][0];
-        }
-        return;
-    }
-};
-~~~
-
-
-*****
-
 
 
 ## 19M. 移除倒数第n个链表结点。
