@@ -494,6 +494,58 @@ public:
 ~~~
 
 
+*****
+
+## 20E. 有效的括号对
+
+问题描述：判断一个给定字符串是否是有效的括号对。有效的括号对只任何两个配对的括号对中间都必须是完整的配对括号对。如：` "{[]}"`、`"[[{}{()}]]"`等。
+
+我的思路：一个自然的思路自然是stack，如果当前的是左括号就压入stack，如果是右括号就把stack顶部元素弹出，符合要求的一定会与当前括号匹配。否则返回无效。
+
+坑：注意判断stack的时候需要注意没有右括号的case，如`"(("`，在判断的时候由于没有弹出stack判断的操作自然会没有因此判断为无效，因此在末尾要判断stack内是否还有元素。
+
+优化：如果本身括号的个数是奇数，那么一定不会是有效的。
+
+代码：
+
+~~~C++
+#define XIAO    0
+#define ZHONG   1
+#define DA      2
+
+class Solution {
+public:
+    bool isValid(string s) {
+        if(s.size() % 2) return false;
+        stack<int> myStk;
+        
+        for(int i = 0; i < s.size(); i++)
+        {
+            if(s[i] == '(') myStk.push(XIAO);
+            else if(s[i] == '[') myStk.push(ZHONG);
+            else if(s[i] == '{') myStk.push(DA);
+            else if(s[i] == ')')
+            {
+                if(myStk.empty() || myStk.top() != XIAO) return false;
+                myStk.pop();
+            }
+            else if(s[i] == ']')
+            {
+                if(myStk.empty() || myStk.top() != ZHONG) return false;
+                myStk.pop();
+            }
+            else if(s[i] == '}')
+            {
+                if(myStk.empty() || myStk.top() != DA) return false;
+                myStk.pop();
+            }
+        }
+        if(myStk.empty()) return true;
+        else return false;
+    }
+};
+~~~
+
 
 
 *****
