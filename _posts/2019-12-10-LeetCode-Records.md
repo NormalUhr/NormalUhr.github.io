@@ -158,6 +158,10 @@ public:
 
 
 
+
+*****
+
+
 ## 8M. 字符串中提取整数
 
 **问题描述**：从一个给定的字符串中提取数字，要求从第一个非空字符开始，如果第一个非空字符不是正负符号或数字则返回0；如果超出int类型的范围（大于INT_MAX或小于INT_MIN）则返回INT_MAX或INT_MIN。
@@ -216,35 +220,6 @@ public:
             }
         }
         return res;
-    }
-};
-~~~
-
-******
-
-## 11M. 能盛最多水的容器
-
-问题描述·；有若干相距为1的立起来的板子，他们的高度依次被存在给定的数组中。现在需要找到个板子，使得这两个板子之间能盛的水最多。
-
-我的思路：这道题如果暴力求解需要找出两两配对的情况，复杂度在O(n^2)。现在比较巧妙的方法是，首先取首尾两个板子，然后逐渐向中间移动，直到碰头，规则是：左右两边较低一侧的指针往中间移动。这样能保证最大的情况一定能被遍历到，且只用O(n)的时间。（证明略，用反证法比较容易想清楚。）
-
-代码：
-
-~~~C++
-class Solution {
-public:
-    int maxArea(vector<int>& height) {
-        if(height.size() == 2) return height[0] < height[1] ? height[0] : height[1];
-        int areaMax = 0;
-        int left = 0, right = height.size() - 1;
-        while(left < right)
-        {
-            areaMax = max(areaMax, (right - left) * min(height[left], height[right]));
-            if(height[left] < height[right])    left++;
-            else right--;
-        }
-        
-        return areaMax;
     }
 };
 ~~~
