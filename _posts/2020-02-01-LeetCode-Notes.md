@@ -16,7 +16,7 @@ tags:
 
 滑动窗口的实现方式有很多种，可以用double pointer, Hash Map 和队列。其本质是用队列实现头和尾可移动的窗口，这一类问题总是选择出满足条件的某个最值区间，符合条件的区间始终在窗口区域内。
 
-## 3. Longest Substring Without Repeating Characters ##
+## 3M. Longest Substring Without Repeating Characters ##
 
 寻找一个字符串中不含重复字母的最长子串，由于要检测重复，所以选择hash map来实现滑动窗口。
 
@@ -72,7 +72,7 @@ public:
 
 因为j只从1遍历到n，所以复杂度降为O(n)。
 
-## 159. Longest Substring With At Most Two Distinct Characters.(Medium) ##
+## 159M. Longest Substring With At Most Two Distinct Characters. ##
 
 选择一个子串，使得这个子串最多包含两个不同的字母，滑动窗口的判断标准为判断字串内不同字母的个数。使用变量counter记录重复的字母数，index记录每个字母出现在滑动窗口内的次数。
 
@@ -113,7 +113,7 @@ public:
 
 
 
-## 340. Longest Substring With At Most k Distinct Characters.(Hard)
+## 340H. Longest Substring With At Most k Distinct Characters.
 
 在159的基础上，将判断重复的上限提升到k。
 
