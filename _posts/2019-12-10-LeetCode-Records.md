@@ -452,6 +452,102 @@ public:
 ~~~
 
 
+*****
+
+## 17M. 电话号码的字母组合
+
+**问题描述**：给定一个字母串，每一个字母代表九宫格输入法上若干个字母，问可能组成的字母组合有哪些，并输出所有的字母组合。
+
+**我的思路**：这个问题逻辑上非常简单，就是最基本的排列组合问题。但是在实施的过程中有一点难度。我的思路是采用迭代，每考虑后一个数字都在前一个数字对应字母组合的基础上再增加相应的几倍。如“23”，其中2对应的是“a, b, c”，在这之后增加3对应的“d，e，f”后变为"a, b, c, bd, be, bf, cd, ce, cf"，再把初始的字母组合后边添加变为"ad, ae, af, bd, be, bf, cd, ce, cf"。
+
+**优化**：待定。
+
+**代码**：
+
+~~~C++
+class Solution {
+public:
+    vector<vector<string>> dict = {{},{},{"a", "b", "c"}, {"d", "e", "f"}, {"g", "h", "i"}, {"j", "k", "l"}, {"m", "n", "o"}, {"p", "q", "r", "s"}, {"t", "u", "v"}, {"w", "x", "y", "z"}};
+    vector<string> letterCombinations(string digits) {
+        
+        if(digits.empty()) return {};
+        vector<string> res = {""};
+        int digit = digits.size();
+        for(int i = 0; i < digit; i++)
+        {
+            int cur = digits[i] - '0';
+            if(cur < 2) return {};
+            forward(res, cur);
+        }
+        if(res.size() < 3) return {};
+        return res;
+    }
+    
+    void forward(vector<string>& res, int n)
+    {
+        int size = res.size();
+        for(int i = 1; i < dict[n].size(); i++)
+        {
+            for(int j = 0; j < size; j++)
+            {
+                res.push_back(res[j] + dict[n][i]);
+            }
+        }
+        for(int j = 0; j < size; j++)
+        {
+            res[j] += dict[n][0];
+        }
+        return;
+    }
+};
+~~~
+
+
+*****
+
+## 19M. 移除倒数第n个链表结点。
+
+**问题描述**：给定链表头，移除倒数第n个链表结点。
+
+**我的思路**：采用快慢指针，第一个指针快第二个指针n个节点遍历，当第一个指针访问到链表尾部(null)时，第二个指针刚好指向倒数第n个。
+
+**坑：**通常删去链表结点的方法是让被删结点前一个节点指向被删结点后一个节点，但是此方法对head不起作用，需额外判断。
+
+代码：
+
+~~~C++
+/**
+ * Definition for singly-linked list.
+ * struct ListNode {
+ *     int val;
+ *     ListNode *next;
+ *     ListNode(int x) : val(x), next(NULL) {}
+ * };
+ */
+class Solution {
+public:
+    ListNode* removeNthFromEnd(ListNode* head, int n) {
+        if(!head) return head;
+        ListNode *front = head, *back = new ListNode(0);
+        back->next = head;
+        while(n--)
+        {
+            front = front->next;
+        }
+        while(front)
+        {
+            front = front->next;
+            back = back->next;
+        }
+        if(back->next == head) return head->next;
+        back->next = back->next->next;
+        return head;
+    }
+};
+~~~
+
+
+
 
 *****
 
