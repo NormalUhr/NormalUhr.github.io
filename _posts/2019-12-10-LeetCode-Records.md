@@ -452,59 +452,6 @@ public:
 ~~~
 
 
-*****
-
-## 17M. 电话号码的字母组合
-
-**问题描述**：给定一个字母串，每一个字母代表九宫格输入法上若干个字母，问可能组成的字母组合有哪些，并输出所有的字母组合。
-
-**我的思路**：这个问题逻辑上非常简单，就是最基本的排列组合问题。但是在实施的过程中有一点难度。我的思路是采用迭代，每考虑后一个数字都在前一个数字对应字母组合的基础上再增加相应的几倍。如“23”，其中2对应的是“a, b, c”，在这之后增加3对应的“d，e，f”后变为"a, b, c, bd, be, bf, cd, ce, cf"，再把初始的字母组合后边添加变为"ad, ae, af, bd, be, bf, cd, ce, cf"。
-
-**优化**：待定。
-
-**代码**：
-
-~~~C++
-class Solution {
-public:
-    vector<vector<string>> dict = {{},{},{"a", "b", "c"}, {"d", "e", "f"}, {"g", "h", "i"}, {"j", "k", "l"}, {"m", "n", "o"}, {"p", "q", "r", "s"}, {"t", "u", "v"}, {"w", "x", "y", "z"}};
-    vector<string> letterCombinations(string digits) {
-        
-        if(digits.empty()) return {};
-        vector<string> res = {""};
-        int digit = digits.size();
-        for(int i = 0; i < digit; i++)
-        {
-            int cur = digits[i] - '0';
-            if(cur < 2) return {};
-            forward(res, cur);
-        }
-        if(res.size() < 3) return {};
-        return res;
-    }
-    
-    void forward(vector<string>& res, int n)
-    {
-        int size = res.size();
-        for(int i = 1; i < dict[n].size(); i++)
-        {
-            for(int j = 0; j < size; j++)
-            {
-                res.push_back(res[j] + dict[n][i]);
-            }
-        }
-        for(int j = 0; j < size; j++)
-        {
-            res[j] += dict[n][0];
-        }
-        return;
-    }
-};
-~~~
-
-
-*****
-
 ## 19M. 移除倒数第n个链表结点。
 
 **问题描述**：给定链表头，移除倒数第n个链表结点。
