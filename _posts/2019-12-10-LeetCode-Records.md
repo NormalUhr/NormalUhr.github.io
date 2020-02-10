@@ -253,6 +253,114 @@ public:
 };
 ~~~
 
+*****
+
+## 12M. 阿拉伯数字到罗马数字转换
+
+**问题描述**：将1～3999范围内的整数转换为罗马数字。
+
+**我的思路**：无脑转换，写的复杂一点，算起来很快。
+
+**代码**：
+
+~~~C++
+class Solution {
+public:
+    string intToRoman(int num) {
+        if(num > 3999) return "";
+        
+        int ge = num % 10;
+        num /= 10;
+        int shi = num % 10;
+        num /= 10;
+        int bai = num % 10;
+        num /= 10;
+        int qian = num;
+        
+        string res = "";
+        while(qian--)
+        {
+            res += "M";
+        }
+        
+        if(bai < 4)
+        {
+            while(bai--)
+            {
+                res += "C";
+            }
+        }
+        else if(bai < 9)
+        {
+            if(bai == 4)
+                res += "CD";
+            else
+            {
+                res += "D";
+                while(bai - 5)
+                {
+                    res += "C";
+                    bai--;
+                }
+            }
+        }
+        else res += "CM";
+        
+        if(shi < 4)
+        {
+            while(shi--)
+            {
+                res += "X";
+            }
+        }
+        else if(shi < 9)
+        {
+            if(shi == 4)
+                res += "XL";
+            else
+            {
+                res += "L";
+                while(shi - 5)
+                {
+                    res += "X";
+                    shi--;
+                }
+            }        
+        }
+        else res += "XC";
+        
+        if(ge < 4)
+        {
+            while(ge--)
+            {
+                res += "I";
+            }
+        }
+        else if(ge < 9)
+        {
+            if(ge == 4)
+                res += "IV";
+            else
+            {
+                res += "V";
+                while(ge - 5)
+                {
+                    res += "I";
+                    ge--;
+                }
+            }
+        }
+        else res += "IX";
+        
+        return res;
+    }
+};
+~~~
+
+
+
+
+*****
 
 
 
