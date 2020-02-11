@@ -17,7 +17,6 @@ tags:
 
 本帖子记录刷题过程中的思路，经验以及遇到的坑。
 
-*****
 ## 2M. 两数相加
 
 **问题描述**：给定两已知链表由低到高保存两数的各位，将两数相加后返回一链表。
@@ -91,19 +90,13 @@ public:
 };
 ~~~
 
-
-
-*****
-
 ## 3M. 不含重复字母的最长子串
 
-## 159M. 最多含有2个重复字母的最长字串
+## *159M. 最多含有2个重复字母的最长字串
 
-## 340H. 最多含有k个重复字母的最长字串
+## *340H. 最多含有k个重复字母的最长字串
 
 参见滑动窗口的应用<https://starkschroedinger.github.io/2020/02/01/LeetCode-Notes/。
-
-*****
 
 ## 6M. ZigZag转换
 
@@ -157,9 +150,6 @@ public:
 ~~~
 
 
-
-
-*****
 
 
 ## 8M. 字符串中提取整数
@@ -224,8 +214,6 @@ public:
 };
 ~~~
 
-******
-
 ## 11M. 能盛最多水的容器
 
 问题描述·；有若干相距为1的立起来的板子，他们的高度依次被存在给定的数组中。现在需要找到个板子，使得这两个板子之间能盛的水最多。
@@ -252,8 +240,6 @@ public:
     }
 };
 ~~~
-
-*****
 
 ## 12M. 阿拉伯数字到罗马数字转换
 
@@ -357,10 +343,6 @@ public:
 };
 ~~~
 
-
-
-
-*****
 ## 15M. 3Sum
 
 **问题描述**：给定n个整数，返回所有满足条件的三元组(a, b, c)，使得a + b + c = 0，并且这三元组不能重复。
@@ -451,10 +433,6 @@ public:
 */
 ~~~
 
-
-
-*****
-
 ## 17M. 电话号码的字母组合
 
 **问题描述**：给定一个字母串，每一个字母代表九宫格输入法上若干个字母，问可能组成的字母组合有哪些，并输出所有的字母组合。
@@ -514,7 +492,6 @@ public:
 };
 ~~~
 
-
 ## 19M. 移除倒数第n个链表结点。
 
 **问题描述**：给定链表头，移除倒数第n个链表结点。
@@ -556,9 +533,6 @@ public:
 };
 ~~~
 
-
-*****
-
 ## 20E. 有效的括号对
 
 问题描述：判断一个给定字符串是否是有效的括号对。有效的括号对只任何两个配对的括号对中间都必须是完整的配对括号对。如：` "{[]}"`、`"[[{}{()}]]"`等。
@@ -589,6 +563,7 @@ public:
             else if(s[i] == '{') myStk.push(DA);
             else if(s[i] == ')')
             {
+              	//判断是否越界一定要在数组值引用之前
                 if(myStk.empty() || myStk.top() != XIAO) return false;
                 myStk.pop();
             }
@@ -609,25 +584,337 @@ public:
 };
 ~~~
 
+## 21E. 合并两有序链表
+
+问题描述：将两个有序链表合并成一个有序链表。
+
+我的思路：思路其实很简单，从小到大两链表都有对应的指针，一个一个遍历比较大小即可，但是实现的时候把代码写的简洁却不是一件容易的事。下边放出官方给出的效率最高的代码之一。
+
+代码：
+
+~~~C++
+* Definition for singly-linked list.
+ * struct ListNode {
+ *     int val;
+ *     ListNode *next;
+ *     ListNode(int x) : val(x), next(NULL) {}
+ * };
+ */
+class Solution {
+public:
+    ListNode* mergeTwoLists(ListNode* l1, ListNode* l2) {
+        ListNode* head = NULL;
+        ListNode* prev = NULL;
+        ListNode* cur;
+      	//将l1和l2判断为空整合到下边
+        while(l1 || l2) {
+            if(l1==NULL || (l2 && l2->val<l1->val)) {
+                cur = l2;
+                l2 = l2->next;
+            } else {
+                cur = l1;
+                l1 = l1->next;
+            }
+            if(head==NULL) head = cur;
+            if(prev) prev->next = cur;
+            prev = cur;
+        }
+        return head;
+    }
+};
+~~~
+
+## 22M. 产生括号对
+
+**问题描述**：给出应产生的括号对数n，生成所有符合条件的括号对。其中任何一对括号对中不能包含未闭合的单个括号，如`(()`是错误的，而`((()()))`等是正确的。
+
+**思路**：这个问题属于最基本的卡特兰数问题，但是弄清一共有多少个还不够，把每一种情况确定下来需要用到递归。我们知道左括号和右括号的初始数量都是n，每使用一个左括号或右括号都把变量left或right减去1，递归终止条件是左括号和右括号的数量都为0。
+
+**代码**：
+
+~~~C++
+class Solution{
+public:
+    vector<string> generateParenthesis(int n)
+    {
+        if(n == 0) return {""};
+        vector<string> res = {};
+        helper(n, n, "", res);
+        
+        return res;  
+    }
+    void helper(int left, int right, string s, vector<string>& res)
+    {
+        if(left == 0 && right == 0)
+        {
+            res.push_back(s);
+            return;
+        }
+        if(left > 0)
+            helper(left - 1, right, s + "(", res);
+        if(left < right)
+            helper(left, right - 1, s + ")", res);
+        return;
+    }
+};
+~~~
+
+## 24M. 成对地交换链表结点
+
+问题描述：给出一个链表，成对交换节点的第1、2，3、4...个节点。要求不能改变节点的值，只能改变节点的指向。
+
+我的思路：很平常的思路，一道练习链表节点操作的题。
+
+代码：
+
+~~~C++
+/**
+ * Definition for singly-linked list.
+ * struct ListNode {
+ *     int val;
+ *     ListNode *next;
+ *     ListNode(int x) : val(x), next(NULL) {}
+ * };
+ */
+class Solution {
+public:
+    ListNode* swapPairs(ListNode* head) {
+        if(!head || !head->next) return head;
+        ListNode *record = head->next, *pre = nullptr;
+        while(head && head->next)
+        {
+            ListNode *temp = head->next;
+            //保存2号
+            temp = head->next;
+            //1号指向3号
+            head->next = head->next->next;
+            //2号指向1号
+            temp->next = head;
+            //0号指向2号，如果0号为空，设置0号为1号。
+            if(!pre) pre = head;
+            else pre->next = temp;
+            //0号更新到1号
+            pre = head;
+            //当前1号更新到3号
+            head = head->next;
+        }
+        return record;
+    }
+};
+~~~
 
 
-*****
 
-## 136E 孤独的数
+## 33M. 在旋转过的有序序列寻找目标
 
-## 231E 2的平方
+**问题描述**：已知一个[旋转过的有序序列]()长度为n，在log(n)时间复杂度内寻找target，存在则返回数组索引，不存在则返回-1。被旋转的序列：[0,1,2,4,5,6,7]旋转后变为[5,6,7,0,1,2,4]。
 
-## 342E 4的平方
+**我的思路**：首先使用二分法查找pivot，即围绕哪一点旋转的。然后再从被pivot分割成的两段中的某一段中使用二分法寻找目标。
+
+**坑**：当数组只有一个元素时，需要特别注意。
+
+**代码**：
+
+~~~C++
+class Solution {
+public:
+    int search(vector<int>& nums, int target) {
+        if(nums.empty()) return -1;
+        int l = 0, r = nums.size() - 1, m = (l + r) / 2;
+        //pivot
+        int key = -1;
+        //result
+        int res = -1;
+        //二分法查找pivot
+        if(nums[0] <= nums.back()) key = nums.size() - 1;
+        else
+        {
+            while(1)
+            {
+                if(nums[l] <= nums[r])
+                {
+                    if(nums[m] > nums[m + 1])
+                    {
+                        key = m;
+                    }
+                    else if(nums[m] < nums[m - 1])
+                    {
+                        key = m - 1;
+                    }
+                    break;
+                }
+                m = (l + r) / 2;
+                if(nums[l] > nums[m])
+                {
+                    r = m - 1;
+                }
+                else
+                {
+                    l = m + 1;
+                }
+            }
+        }
+        //测试用
+        //return key;
+        //划分目标区间
+        if(target >= nums[0])
+        {
+            l = 0; r = key;
+        }
+        else
+        {
+            r = nums.size() - 1;
+          	//防止被划分的区间只有一个元素，换言之key和r相等
+            l = (key + 1) > r ? r : (key + 1);
+        }
+        //二分法查找目标
+        do
+        {
+            m = (l + r) / 2;
+            if(nums[m] == target)
+            {
+                res = m;
+                break;
+            }
+            else if(nums[m] > target)
+            {
+                r = m - 1;
+            }
+            else
+            {
+                l = m + 1;
+            }
+        }while(l <= r);
+        return res;
+    }
+};
+~~~
+
+## *977E. 有序数组的平方
+
+**问题描述**：一个有序数组包含所有正负数和0，将每个数的平方输出并按大小排列成为新的有序数组，
+
+**我的思路**：和上边一题很相似，一开始的做法是找到第一个正数，然后就和上题很相似，从左右分别检测绝对值大小并延伸下去，后来发现其实可以直接从最大的开始找，因为最大的在最左边或最右边，效率会提升很多。
+
+**代码**：
+
+~~~C++
+//可优化，我的方法是先循环找到第一个大于0的数，然后从中间往两边双指针遍历，再比较大小。、
+//比较高效的做法是首先将res的size固定好。vector<int> res(A.size(), 0)然后再从两边往中间遍历，
+//直接把平方结果从res的最后往前边放。之前做法还有一个坏处是，由于最后不知道正数部分还是负数部分剩的
+//多，所以之后的遍历方向不能确定。因此不可避免的会造成代码重复（两个while循环）。    
+class Solution {
+public:
+    vector<int> sortedSquares(vector<int>& A) {
+        if(A.empty()) return {};
+        vector<int> res = {};
+        int m = 0;
+        while(m < A.size() && A[m] <= 0)
+            m++;
+        int k = m - 1;
+        while(m < A.size() && k >= 0)
+        {
+            if(A[m] > (-A[k]))
+            {
+                res.push_back(A[k] * A[k]);
+                k--;
+            }
+            else
+            {
+                res.push_back(A[m] * A[m]);
+                m++;
+            }
+        }
+        while(k >= 0)
+        {
+            res.push_back(A[k] * A[k]);
+            k--;
+        }
+        while(m < A.size())
+        {
+            res.push_back(A[m] * A[m]);
+            m++;
+        }
+        return res;
+    }
+};
+~~~
+
+## 48M. 旋转图像
+
+**问题描述**：给出一个方阵，方针每个数字代表图片的每个像素，将这个图片顺时针旋转90度。
+
+**我的思路**：在旋转的过程中，一定是四个像素对应，互相轮换。如果一个像素的行列坐标为(col, row)，那么与之对应的顺时针旋转的位置应该是(col, row)—(col, size - row)—(size - row, size - col)—(size - col, row)。将其封装为函数` rotateInGroup4`。现在只需找到哪些坐标时第一次旋转的坐标且不会重复。从第0行开始一直到第n/2行中，第i行从第i个像素一直到第size-i个像素是不重复的第一旋转像素。
+
+**代码**：
+
+~~~C++
+class Solution {
+public:
+    void rotate(vector<vector<int>>& matrix) {
+        if(matrix.size() < 2) return;
+        size = matrix.size() - 1;
+        
+        for(int layer = 0; layer <= size / 2; layer++)
+        {
+            for(int start = layer; start < size - layer; start++)
+            {
+                rotateInGroup4(matrix, start, layer);
+            }
+        }
+        
+        return;
+    }
+    void rotateInGroup4(vector<vector<int>>& matrix, int row, int col)
+    {
+        int temp1 = matrix[row][size - col];
+        matrix[row][size - col] = matrix[col][row];
+        int temp2 = matrix[size - col][size - row];
+        matrix[size - col][size - row] = temp1;
+        temp1 = matrix[size - row][col];
+        matrix[size - row][col] = temp2;
+        matrix[col][row] = temp1;
+    }
+private:
+    int size;
+};
+~~~
+
+## 136E. 孤独的数
+
+## *231E. 2的平方
+
+## *342E. 4的平方
 
 参见异或的用法<<https://starkschroedinger.github.io/2020/01/31/LeetCode-Notes/>>
-
-*****
 
 ## 141E. 检测链表是否有环
 
 参见快慢指针<https://starkschroedinger.github.io/2020/02/02/LeetCode-Notes/>。
 
-*****
+## 189E. 翻转数组
+
+**问题描述**：将数组的后k位顺序不变的移动到数组的前部。
+
+**我的思路**：在数组后边重复一个数组，同时选取符合要求的部分，重新组成数组。
+
+**最优解法**：将前k位翻转，将剩下的再翻转一次，之后整个数组再翻转一次。
+
+**代码**：
+
+~~~C++
+class Solution {
+public:
+    void rotate(vector<int>& nums, int k) {
+        if(nums.size() == 0 || k == 0) return;
+        k = k % nums.size();
+        reverse(nums.begin(), nums.end());
+        reverse(nums.begin(), nums.begin() + k);
+        reverse(nums.begin() + k, nums.end());
+        return;
+    }
+};
+~~~
 
 
 
