@@ -1,7 +1,7 @@
 ---
 layout:     post
-title:      "LeetCode刷题总结 二"
-subtitle:   "滑动窗口"
+title:      "滑动窗口"
+subtitle:   "LeetCode刷题总结 二"
 date:       2020-02-01
 author:     "Felix"
 header-img: "img/in-post/2020-02-01-LeetCode-Notes/bg.jpg"

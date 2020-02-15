@@ -1,7 +1,7 @@
 ---
 layout:     post
-title:      "C++学习笔记 二"
-subtitle:   "Effective C++ 学习笔记"
+title:      "Effective C++ 学习笔记"
+subtitle:   "C++学习笔记 二"
 date:       2020-01-22
 author:     "Felix"
 header-img: "img/in-post/2020-01-22-Effective-C++/bg.jpg"

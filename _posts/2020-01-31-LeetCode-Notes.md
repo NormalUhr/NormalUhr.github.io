@@ -1,7 +1,7 @@
 ---
 layout:     post
-title:      "LeetCode 刷题总结 一"
-subtitle:   "异或的用法"
+title:      "异或的用法"
+subtitle:   "LeetCode 刷题总结一"
 date:       2020-01-31
 author:     "Felix"
 header-img: "img/in-post/2020-01-31-LeetCode-Notes/bg.jpg"
