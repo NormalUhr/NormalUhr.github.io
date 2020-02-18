@@ -160,7 +160,7 @@ public:
 
 **我的思路**：
 
-回忆2Sum问题，用了O(n)的时间和空间，使用哈希表，将每一个已经遍历了的数对应的“余数”存入哈希表，看接下来的数是否满足条件，思想是用空间换时间。另一种方法是首先将给定数组排序（最快的快排也需要O(nlogn)的时间，因此对于2Sum并不是很划算），然后用双指针分别指向收尾，求和，根据求和的结果和target进行比较来相应地移动首或尾指针，直到求和结果等于target。
+回忆2Sum问题，用了O(n)的时间和空间，使用哈希表，将每一个已经遍历了的数对应的“余数”存入哈希表，看接下来的数是否满足条件，思想是用空间换时间。另一种方法是首先将给定数组排序（最快的快排也需要O(nlogn)的时间，因此对于2Sum并不是很划算），然后用双指针分别指向首尾，求和，根据求和的结果和target进行比较来相应地移动首或尾指针，直到求和结果等于target。
 
 将3Sum的第一个数固定，然后问题就变成了2Sum的问题，此时target就是-a，我们可以在2Sum算法的基础上额外增加一次遍历，使得算法的复杂度处于O(n^2)的水平。剩下还需要解决一些细枝末节的问题。
 
@@ -196,6 +196,7 @@ public:
                 int sum = nums[i] + nums[j] + nums[k];
                 if(sum < 0) j++;
                 else if(sum > 0) k--;
+              	//防止第二个和第三个数重复，下边的原则是，第二个数碰到一连串一样的时候，跳到最右边的那个压入res，而第三个数碰到一连串一样的时候，跳到最左边的那个。但是防止j和k是紧邻的，也就是说nums[j]和nums[k]一样，这时还是要压入res的。
                 else if(nums[j] == nums[j + 1] && j != k - 1) j++;
                 else if(nums[k] == nums[k - 1] && j != k - 1) k--;
                 else
@@ -1180,6 +1181,33 @@ public:
 
 因为j只从1遍历到n，所以复杂度降为O(n)。
 
+### 11M. 能盛最多水的容器
+
+**问题描述**·；有若干相距为1的立起来的板子，他们的高度依次被存在给定的数组中。现在需要找到个板子，使得这两个板子之间能盛的水最多。
+
+**我的思路**：这道题如果暴力求解需要找出两两配对的情况，复杂度在O(n^2)。现在比较巧妙的方法是，首先取首尾两个板子，然后逐渐向中间移动，直到碰头，规则是：左右两边较低一侧的指针往中间移动。这样能保证最大的情况一定能被遍历到，且只用O(n)的时间。（证明略，用反证法比较容易想清楚。）
+
+**代码**：
+
+~~~C++
+class Solution {
+public:
+    int maxArea(vector<int>& height) {
+        if(height.size() == 2) return height[0] < height[1] ? height[0] : height[1];
+        int areaMax = 0;
+        int left = 0, right = height.size() - 1;
+        while(left < right)
+        {
+            areaMax = max(areaMax, (right - left) * min(height[left], height[right]));
+            if(height[left] < height[right])    left++;
+            else right--;
+        }
+        
+        return areaMax;
+    }
+};
+~~~
+
 ### 159M. 最多包含两个不同字母的子串 ###
 
 **问题描述**；选择一个子串，使得这个子串最多包含两个不同的字母。
@@ -1219,40 +1247,11 @@ public:
 };
 ~~~
 
-### 11M. 能盛最多水的容器
 
-**问题描述**·；有若干相距为1的立起来的板子，他们的高度依次被存在给定的数组中。现在需要找到个板子，使得这两个板子之间能盛的水最多。
-
-**我的思路**：这道题如果暴力求解需要找出两两配对的情况，复杂度在O(n^2)。现在比较巧妙的方法是，首先取首尾两个板子，然后逐渐向中间移动，直到碰头，规则是：左右两边较低一侧的指针往中间移动。这样能保证最大的情况一定能被遍历到，且只用O(n)的时间。（证明略，用反证法比较容易想清楚。）
-
-**代码**：
-
-~~~C++
-class Solution {
-public:
-    int maxArea(vector<int>& height) {
-        if(height.size() == 2) return height[0] < height[1] ? height[0] : height[1];
-        int areaMax = 0;
-        int left = 0, right = height.size() - 1;
-        while(left < right)
-        {
-            areaMax = max(areaMax, (right - left) * min(height[left], height[right]));
-            if(height[left] < height[right])    left++;
-            else right--;
-        }
-        
-        return areaMax;
-    }
-};
-~~~
 
 ## 12. 动态规划
 
-
-
 ## 13. 图
-
-
 
 ## 14. 细节实现题
 
@@ -1307,7 +1306,7 @@ public:
 };
 ~~~
 
-### 29M. 两数相除
+### 29M. 两数相除 *
 
 **问题描述**：不用乘除法和取模运算，完成两int相除。
 
