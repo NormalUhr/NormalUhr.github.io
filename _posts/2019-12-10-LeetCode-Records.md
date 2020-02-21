@@ -17,80 +17,7 @@ tags:
 
 本帖子分类记录刷题过程中的思路，经验以及遇到的坑。
 
-## 1. 线性表(数组+链表)
-
-### 2M. 两数相加。
-
-问题描述：给定两已知链表由低到高保存两数的各位，将两数相加后返回一链表。
-
-~~~
-Input: (2 -> 4 -> 3) + (5 -> 6 -> 4)
-Output: 7 -> 0 -> 8
-Explanation: 342 + 465 = 807.
-~~~
-
-**我的思路**：由于不知道哪个链表长，所以两个链表都被在将相加后的结果所替换。为了处理最后一位是否要进位的问题，添加哨兵辅助链表的遍历。（在所有需要对链表后续进行操作的问题都建议添加哨兵并从哨兵开始用do...while{}语句）
-
-**坑**：不用哨兵的话代码会冗杂一些。
-
-**代码**：
-
-~~~C++
-/**
- * Definition for singly-linked list.
- * struct ListNode {
- *     int val;
- *     ListNode *next;
- *     ListNode(int x) : val(x), next(NULL) {}
- * };
- */
-class Solution {
-public:
-    ListNode* addTwoNumbers(ListNode* l1, ListNode* l2) {
-        if(!l1) return l2;
-        if(!l2) return l1;
-        ListNode *pt1 = l1, *pt2 = l2;
-        bool flag = false;
-        while(pt1 && pt2)
-        {
-            pt2->val += pt1->val;
-            pt1->val = pt2->val;
-            pt2 = pt2->next;
-            pt1 = pt1->next;
-        }
-        ListNode *pt = new ListNode(0), *l = nullptr; //pt是哨兵
-        if(pt1) 
-        {
-            pt->next = l1;
-            l = l1;
-        }
-        else 
-        {
-            pt->next = l2;
-            l = l2;
-        }
-        do
-        {
-            pt = pt->next;
-            if(flag) 
-            {
-                pt->val++;
-                flag = false;
-            }
-            if(pt->val >= 10)
-            {
-                pt->val -= 10;
-                flag = true;
-            }
-        }while(pt->next);
-        if(flag)
-        {
-            pt->next = new ListNode(1);
-        }
-        return l;
-    }
-};
-~~~
+## I. 线性表(数组+链表)
 
 ### 8M. 字符串中提取整数
 
@@ -152,97 +79,6 @@ public:
         return res;
     }
 };
-~~~
-
-### 15M. 三数之和
-
-**问题描述**：给定n个整数，返回所有满足条件的三元组(a, b, c)，使得a + b + c = 0，并且这三元组不能重复。
-
-**我的思路**：
-
-回忆2Sum问题，用了O(n)的时间和空间，使用哈希表，将每一个已经遍历了的数对应的“余数”存入哈希表，看接下来的数是否满足条件，思想是用空间换时间。另一种方法是首先将给定数组排序（最快的快排也需要O(nlogn)的时间，因此对于2Sum并不是很划算），然后用双指针分别指向首尾，求和，根据求和的结果和target进行比较来相应地移动首或尾指针，直到求和结果等于target。
-
-将3Sum的第一个数固定，然后问题就变成了2Sum的问题，此时target就是-a，我们可以在2Sum算法的基础上额外增加一次遍历，使得算法的复杂度处于O(n^2)的水平。剩下还需要解决一些细枝末节的问题。
-
-**坑**
-
-* 为了排除因为第一个数字重复而导致的三元组重复，需要在第一个数字遍历时，遇到重复的直接跳过本次循环。
-
-  `if(i > 0 && nums[i] == nums[i - 1]) continue;`
-
-* 2Sum使用哈希表的思路在3Sum问题中当输入数组特别大的时候会导致Time Limit Exceeded。Test case: <https://leetcode.com/submissions/detail/300659782/testcase/>。
-
-**加速**
-
-* 排序过后，当第一个数是正数时，后边两个数也都是正数，那么绝不可能相加为0，大循环可终止。
-
-  `for(int i = 0; i < nums.size() - 2 && nums[i] <= 0; i++)`
-
-**代码**
-
-~~~C++
-class Solution {
-public:
-    vector<vector<int>> threeSum(vector<int>& nums) {
-        if(nums.size() < 3) return {};
-        vector<vector<int>> res;
-        sort(nums.begin(), nums.end());    //为了排除重复三元组
-        for(int i = 0; i < nums.size() - 2 && nums[i] <= 0; i++)
-        {
-            if(i > 0 && nums[i] == nums[i - 1]) continue;
-            int j = i + 1, k = nums.size() - 1;
-            while(j < k)
-            {
-                int sum = nums[i] + nums[j] + nums[k];
-                if(sum < 0) j++;
-                else if(sum > 0) k--;
-              	//防止第二个和第三个数重复，下边的原则是，第二个数碰到一连串一样的时候，跳到最右边的那个压入res，而第三个数碰到一连串一样的时候，跳到最左边的那个。但是防止j和k是紧邻的，也就是说nums[j]和nums[k]一样，这时还是要压入res的。
-                else if(nums[j] == nums[j + 1] && j != k - 1) j++;
-                else if(nums[k] == nums[k - 1] && j != k - 1) k--;
-                else
-                {
-                    res.push_back({nums[i], nums[j], nums[k]});
-                    j++;
-                    k--;
-                }
-            }
-        }
-        return res;
-    }  
-};
-
-//使用hash表，以下算法会在某些test case运算超时。
-/*
-class Solution {
-public:
-    vector<vector<int>> threeSum(vector<int>& nums) {
-        if(nums.size() < 3) return {};
-        vector<vector<int>> res;
-        sort(nums.begin(), nums.end());    //为了排除重复三元组
-        for(int i = 0; i < nums.size() - 2 && nums[i] < 0; i++)
-        {
-            if(i > 0 && nums[i] == nums[i - 1]) continue;
-            unordered_map<int, int> hash;
-            for(int j = i + 1; j < nums.size(); j++)
-            {
-                if(nums[j] > 0)
-                {
-                    auto it = hash.find(nums[j]);
-                    if(it != hash.end())
-                    {
-                        if(!res.empty() && nums[i] == res.back()[0] && nums[j] == res.back()[2])
-                        continue;
-                        else res.push_back({nums[i], nums[it->second], nums[j]});
-                    }
-                }
-                hash.insert((pair<int, int>(0 - nums[i] - nums[j], j)));
-            }
-        }
-        return res;
-    }  
-};
-
-*/
 ~~~
 
 ### 19M. 移除倒数第n个链表结点。
@@ -581,6 +417,190 @@ public:
 };
 ~~~
 
+### 56M. 融合区间
+
+**问题描述**：给出若干个小区间，如果其中任意两个有重叠则二者可以融合，返回所有融合操作过的区间。
+
+**我的思路**：按照区间头从小到大排序，比较好分析一些。对每对相邻区间排序，如果后者的头小于前者的尾，则可以混合，所有相邻的混合过的区间可用start和end统一表示成一个区间。这道题可分为允许和不允许对原输入进行操作的，如果允许改变输入，那么混合过后可以直接删除多余的那个，改变另一个的尾部，而剩去start和end进行计数，当然从提交结果来看，vector的erase操作是相当费时的。
+
+**代码**：
+
+不改动输入：
+
+~~~C++
+class Solution {
+public:
+    static bool compFirst(const vector<int>& a, const vector<int>& b)
+    {
+        return a[0] < b[0] ? true : false;
+    }
+    vector<vector<int>> merge(vector<vector<int>>& intervals) {
+        if(intervals.size() < 2) return intervals;
+        sort(intervals.begin(), intervals.end(), compFirst);
+        vector<vector<int>> res = {};
+        //注意处理最后一个更新了的问题。
+        int start = 0;
+        int end = start;
+        for(int i = 0; i < intervals.size();i++)
+        {
+            //更新end
+            if(start == i) end = intervals[start][1];
+            //如果涉及到要合并，注意每次合并的是i的下一个，即i+1。
+            if(i != intervals.size() - 1 && end >= intervals[i + 1][0])
+            {
+                end = max(end, intervals[i + 1][1]);
+            }
+            else 
+            {
+                res.push_back({intervals[start][0], end});
+                //start重新开始
+                start = i + 1;                
+            }
+        }
+        return res;
+    }
+};
+~~~
+
+改动输入：
+
+~~~C++
+class Solution {
+public:
+    static bool compFirst(const vector<int>& a, const vector<int>& b)
+    {
+        return a[0] < b[0] ? true : false;
+    }
+    vector<vector<int>> merge(vector<vector<int>>& intervals) {
+        if(intervals.size() < 2) return intervals;
+        sort(intervals.begin(), intervals.end(), compFirst);
+        //由于有删除操作，所以intervals的大小可能会更改，需要注意。
+        for(int i = 0; i < intervals.size();)
+        {
+            if(i != intervals.size() - 1 && intervals[i][1] >= intervals[i + 1][0])
+            {
+                intervals[i][1] = max(intervals[i][1], intervals[i + 1][1]);
+                auto it = intervals.begin() + i + 1;
+                intervals.erase(it);
+            }
+            else i++;
+        }
+        return intervals;
+    }
+};
+~~~
+
+### 61M. 轮换链表
+
+问题描述：给出一个链表和一个非负整数k，旋转链表，将链表每个节点向右移动k个位置，链表尾移动后变为链表头。
+
+我的思路：思路可分为寻找支点(pivot)和寻找移动过后的链表头。支点即位倒数第k个数的前一个数。
+
+代码：
+
+1. 寻找支点：
+
+   ~~~C++
+   /**
+    * Definition for singly-linked list.
+    * struct ListNode {
+    *     int val;
+    *     ListNode *next;
+    *     ListNode(int x) : val(x), next(NULL) {}
+    * };
+    */
+   class Solution {
+   public:
+       ListNode* rotateRight(ListNode* head, int k) {
+           if(k < 0) return {};
+           else if(!head || k == 0) return head;
+           //链表的个数
+           int size = 1;
+           ListNode *last = head;
+           while(last->next)
+           {
+               size++;
+               last = last->next;
+           }
+           k = k % size;
+           if(k == 0) return head;
+           //找到倒数第k个数,这时k大于0小于n
+           ListNode *pivot = head;
+           while(--size != k)
+           {
+               pivot = pivot->next;
+           }
+           //现在pivot指向的就是倒数第k个，本身是最后一个，指向NULL
+           last->next = head;
+           head = pivot->next;
+           pivot->next =nullptr;
+           return head;
+       }
+   };
+   ~~~
+
+2. 寻找链表头 略
+
+### 86M. 分割链表
+
+**问题描述**：给定一个数组和一个分割数，输出数组满足比分割数小的数在前，其余的数在后，且与输入的相对顺序不能乱。
+
+**我的思路**：采用双指针方法，一个指针负责遍历，另一个指针负责指向已处理好的小于分割数的节点的最前端。为了方便处理head的问题，添加了哨兵便于操作（反而使占用内存变大了）。
+
+**代码**：
+
+~~~C++
+/**
+ * Definition for singly-linked list.
+ * struct ListNode {
+ *     int val;
+ *     ListNode *next;
+ *     ListNode(int x) : val(x), next(NULL) {}
+ * };
+ */
+class Solution {
+public:
+    ListNode* partition(ListNode* head, int x) {
+        //覆盖了head是空集和x不在链表中的情况
+        ListNode* here = head;
+        if(!here) return head;
+        //Pivot
+        ListNode *less = new ListNode(0), *last = less;
+        less->next = head;
+        //特殊情况 如果头是小于x和大于等于x成立不成立呢？
+        //需要注意的是，如果head之前需要加上一个数，那么head需要前一一位，否则会造成节点丢失
+        while(here)
+        {
+            if(here->val < x)
+            {
+                if(here == less->next)
+                {
+                    less = less->next;
+                    here = here->next;
+                    last = last->next;
+                }
+                else
+                {
+                    last->next = here->next;
+                    here->next = less->next;
+                    less->next = here;
+                    less = less->next;
+                    here = last->next;
+                    if(head->val >= x) 
+                        head = less;
+                }
+            }
+            else
+            {
+                here = here->next;
+                last = last->next;
+            }
+        }
+        return head;
+    }
+};
+~~~
+
 ### 141E. 检测链表是否有环
 
 参见快慢指针<https://starkschroedinger.github.io/2020/02/02/LeetCode-Notes/>。
@@ -659,7 +679,7 @@ public:
 };
 ~~~
 
-## 2. 字符串
+## II. 字符串
 
 ### 12M. 阿拉伯数字到罗马数字转换
 
@@ -763,7 +783,7 @@ public:
 };
 ~~~
 
-## 3. 栈和队列
+## III. 栈和队列
 
 ### 20E. 有效的括号对
 
@@ -816,15 +836,456 @@ public:
 };
 ~~~
 
-### 
+### 84H. 直方图中最大的长方形
 
-## 4. 树
+**问题描述**：给出一个直方图（宽为1，直方图由数组的形式给出），找出这个直方图中最大的长方形。如下图最大长方形面积即为10。
 
-## 5. 排序
+![avatar](https://assets.leetcode.com/uploads/2018/10/12/histogram_area.png)
 
-## 6. 查找
+**我的思路**：
 
-## 7. 策略性枚举
+**代码**：
+
+~~~C++
+class Solution {
+public:
+    int largestRectangleArea(vector<int> &height) 
+    {
+        stack<int> s;
+        height.push_back(0);
+        int result = 0;
+        for(int i = 0; i < height.size();) 
+        {
+            if (s.empty() || height[i] > height[s.top()])
+                s.push(i++);
+            else 
+            {
+                int tmp = s.top();
+                s.pop();
+                result = max(result, height[tmp] * (s.empty() ? i : i - s.top() - 1));
+            }
+        }
+        return result;
+    }
+};
+~~~
+
+## IV. 树
+
+## V. 排序
+
+### 75M. 颜色排序
+
+**问题描述**：一个数组只含有0，1和2，分别代表三种颜色，给这个数组排序。要求仅一次遍历完成排序。
+
+**我的思路**：从头开始遍历，使用三指针，一个指针用于遍历，两个指针分别位于首尾，中间指针每指向一个，就将其归位。每归位一个，相应的前或后指针就像相应的前方移动一位。
+
+**代码**：
+
+~~~C++
+class Solution {
+public:
+    void swap(vector<int>& nums, int first, int second)
+    {
+        int temp = nums[first];
+        nums[first] = nums[second];
+        nums[second] = temp;
+    }
+    void sortColors(vector<int>& nums) {
+        if(nums.empty()) return;
+        int zero = 0, one = 0, two = nums.size() - 1;
+        //因为这里的two和zero每次交换后都会向后顺延，所以two和zero指向的都是待处理的数据，而非处理过后的。所以one == two的情况是一定要考虑的，否则可能会少处理最后一个数据。
+        while(one <= two)
+        {
+            if(nums[one] == 0)
+            {
+                //交换结果：one处可能为1和0,zero处一定是0
+                swap(nums, one, zero);
+                one++;
+                zero++;
+            }
+            else if(nums[one] == 1)
+            {
+                one++;
+            }
+            else
+            {
+                //交换结果，one处可能为0，1和2，所以不再one++，但two处一定是2
+                swap(nums, one, two);
+                two--;
+            }
+        }
+        
+        return;
+    }
+};
+~~~
+
+## VI. 查找
+
+### 2M. 两数相加。
+
+问题描述：给定两已知链表由低到高保存两数的各位，将两数相加后返回一链表。
+
+~~~
+Input: (2 -> 4 -> 3) + (5 -> 6 -> 4)
+Output: 7 -> 0 -> 8
+Explanation: 342 + 465 = 807.
+~~~
+
+**我的思路**：由于不知道哪个链表长，所以两个链表都被在将相加后的结果所替换。为了处理最后一位是否要进位的问题，添加哨兵辅助链表的遍历。（在所有需要对链表后续进行操作的问题都建议添加哨兵并从哨兵开始用do...while{}语句）
+
+**坑**：不用哨兵的话代码会冗杂一些。
+
+**代码**：
+
+~~~C++
+/**
+ * Definition for singly-linked list.
+ * struct ListNode {
+ *     int val;
+ *     ListNode *next;
+ *     ListNode(int x) : val(x), next(NULL) {}
+ * };
+ */
+class Solution {
+public:
+    ListNode* addTwoNumbers(ListNode* l1, ListNode* l2) {
+        if(!l1) return l2;
+        if(!l2) return l1;
+        ListNode *pt1 = l1, *pt2 = l2;
+        bool flag = false;
+        while(pt1 && pt2)
+        {
+            pt2->val += pt1->val;
+            pt1->val = pt2->val;
+            pt2 = pt2->next;
+            pt1 = pt1->next;
+        }
+        ListNode *pt = new ListNode(0), *l = nullptr; //pt是哨兵
+        if(pt1) 
+        {
+            pt->next = l1;
+            l = l1;
+        }
+        else 
+        {
+            pt->next = l2;
+            l = l2;
+        }
+        do
+        {
+            pt = pt->next;
+            if(flag) 
+            {
+                pt->val++;
+                flag = false;
+            }
+            if(pt->val >= 10)
+            {
+                pt->val -= 10;
+                flag = true;
+            }
+        }while(pt->next);
+        if(flag)
+        {
+            pt->next = new ListNode(1);
+        }
+        return l;
+    }
+};
+~~~
+
+### 15M. 三数之和
+
+**问题描述**：给定n个整数，返回所有满足条件的三元组(a, b, c)，使得a + b + c = 0，并且这三元组不能重复。
+
+**我的思路**：
+
+回忆2Sum问题，用了O(n)的时间和空间，使用哈希表，将每一个已经遍历了的数对应的“余数”存入哈希表，看接下来的数是否满足条件，思想是用空间换时间。另一种方法是首先将给定数组排序（最快的快排也需要O(nlogn)的时间，因此对于2Sum并不是很划算），然后用双指针分别指向首尾，求和，根据求和的结果和target进行比较来相应地移动首或尾指针，直到求和结果等于target。
+
+将3Sum的第一个数固定，然后问题就变成了2Sum的问题，此时target就是-a，我们可以在2Sum算法的基础上额外增加一次遍历，使得算法的复杂度处于O(n^2)的水平。剩下还需要解决一些细枝末节的问题。
+
+**坑**:
+
+* 为了排除因为第一个数字重复而导致的三元组重复，需要在第一个数字遍历时，遇到重复的直接跳过本次循环。
+
+  `if(i > 0 && nums[i] == nums[i - 1]) continue;`
+
+* 2Sum使用哈希表的思路在3Sum问题中当输入数组特别大的时候会导致Time Limit Exceeded。Test case: <https://leetcode.com/submissions/detail/300659782/testcase/>。
+
+**加速**:
+
+* 排序过后，当第一个数是正数时，后边两个数也都是正数，那么绝不可能相加为0，大循环可终止。
+
+  `for(int i = 0; i < nums.size() - 2 && nums[i] <= 0; i++)`
+
+**代码**
+
+~~~C++
+class Solution {
+public:
+    vector<vector<int>> threeSum(vector<int>& nums) {
+        if(nums.size() < 3) return {};
+        vector<vector<int>> res;
+        sort(nums.begin(), nums.end());    //为了排除重复三元组
+        for(int i = 0; i < nums.size() - 2 && nums[i] <= 0; i++)
+        {
+            if(i > 0 && nums[i] == nums[i - 1]) continue;
+            int j = i + 1, k = nums.size() - 1;
+            while(j < k)
+            {
+                int sum = nums[i] + nums[j] + nums[k];
+                if(sum < 0) j++;
+                else if(sum > 0) k--;
+              	//防止第二个和第三个数重复，下边的原则是，第二个数碰到一连串一样的时候，跳到最右边的那个压入res，而第三个数碰到一连串一样的时候，跳到最左边的那个。但是防止j和k是紧邻的，也就是说nums[j]和nums[k]一样，这时还是要压入res的。
+                else if(nums[j] == nums[j + 1] && j != k - 1) j++;
+                else if(nums[k] == nums[k - 1] && j != k - 1) k--;
+                else
+                {
+                    res.push_back({nums[i], nums[j], nums[k]});
+                    j++;
+                    k--;
+                }
+            }
+        }
+        return res;
+    }  
+};
+
+//使用hash表，以下算法会在某些test case运算超时。
+/*
+class Solution {
+public:
+    vector<vector<int>> threeSum(vector<int>& nums) {
+        if(nums.size() < 3) return {};
+        vector<vector<int>> res;
+        sort(nums.begin(), nums.end());    //为了排除重复三元组
+        for(int i = 0; i < nums.size() - 2 && nums[i] < 0; i++)
+        {
+            if(i > 0 && nums[i] == nums[i - 1]) continue;
+            unordered_map<int, int> hash;
+            for(int j = i + 1; j < nums.size(); j++)
+            {
+                if(nums[j] > 0)
+                {
+                    auto it = hash.find(nums[j]);
+                    if(it != hash.end())
+                    {
+                        if(!res.empty() && nums[i] == res.back()[0] && nums[j] == res.back()[2])
+                        continue;
+                        else res.push_back({nums[i], nums[it->second], nums[j]});
+                    }
+                }
+                hash.insert((pair<int, int>(0 - nums[i] - nums[j], j)));
+            }
+        }
+        return res;
+    }  
+};
+
+*/
+~~~
+
+### 16M. 最接近的三数之和
+
+**问题描述**：给出一个数列和一个目标target，找出其中的三数，这三数之和最接近target，返回这三数之和。
+
+**我的思路**：这道题看似和15M的三数之和很相似，但有本质的区别，实际上要更简单一些，因为遇到相等的就直接返回了。大循环第一个数，从开始到允许访问的结束，之后两个从两端到中间收缩，根据当前和与target的大小关系移动第二个数和第三个数，每次计算最新的和与target之差和最小的差比较，并更新，遇到和target一样的直接返回target，如果没有最后再返回最新的和。
+
+**代码**：
+
+~~~C++
+//代码是leetcode给出的0ms的答案，思路和我的是一样的。
+class Solution {
+public:
+    int threeSumClosest(vector<int>& nums, int target) {
+        if (nums.size() < 3) return {};
+        sort(nums.begin(), nums.end());      
+        int n=nums.size();
+        int j, k, sum;
+        int t=nums[0]+nums[1]+nums[2];
+        int u=nums[n-1]+nums[n-2]+nums[n-3];
+        int clsum=(abs(target-t)>abs(target-u))?t:u;
+        for (int i = 0; i < nums.size()-1; i++){
+            j = i+1;
+            k = nums.size()-1;
+            sum = -1;
+            while (j < k){
+                sum = nums[i] + nums[j] + nums[k];
+                if(abs(sum-target)<abs(clsum-target))clsum=sum;
+                if(sum-target>0)k--;
+                else if(sum-target<0)j++;
+                else
+                    return clsum;
+            }
+       }
+        return clsum; 
+    }
+};
+~~~
+
+
+
+### 18M. 四数之和
+
+**问题描述**：给出一个数列和一个目标target，找出其中所有的四元数组，其四数之和等于target。
+
+**我的思路**：这道题可以在三数之和的基础上，增加一轮循环，重点在于如何加速循环。首先对数组进行排序，在最外层循环，循环不用持续到最后，当第一个数大于target的四分之一时，就停止循环，因为剩下的四数之和只能大于target；同理对第二个数，当第一个数和第二个数之和大于target的一半时，停止循环；第三个数和第四个数从两边向中间靠拢。对于第三个数，当第三个数大于target减去第一个数和第二个数剩下的一半时，停止循环，第四个数从最大开始，小于target的四分之一时，停止循环。
+
+**坑**：为了防止重复，计策和三数之和相同。对于第一个数和第二个数都采取如果前一个数和当前的数相同，那么跳过本次大循环。对于第三个和第四个数而言，如果找到了符合的四元数组，当第三个数发现下一个数和当前数一样时，直接跳到相同数的最后一个，第四个数与之相应的，遇到重复的直接跳到相同数的最前端，当然不要忘记第三个数和第四个数的情况，不符合上述的跳跃规则。
+
+**代码**：
+
+~~~C++
+class Solution {
+public:
+    vector<vector<int>> fourSum(vector<int>& nums, int target) {
+        vector<vector<int>> res = {};
+        if(nums.size() < 4) return res;
+        sort(nums.begin(), nums.end());
+        for(int i = 0; i <= nums.size() - 4 && nums[i] <= target / 4; i++)
+        {
+            if(i > 0 && nums[i] == nums[i - 1]) continue;
+            int stop_j = target / 2 - nums[i];
+            for(int j = i + 1; j <= nums.size() - 3 && nums[j] <= stop_j; j++)
+            {
+                if(j > i + 1 && nums[j] == nums[j - 1]) continue;
+                int m = j + 1, n = nums.size() - 1;
+                int stop_m = (target - nums[i] - nums[j]) / 2;
+                int stop_n = target / 4;
+                while(m < n && nums[m] <= stop_m && nums[n] >= stop_n)
+                {
+                    int sum = nums[m] + nums[n] + nums[i] + nums[j];
+                    if(sum < target) m++;
+                    else if(sum > target) n--;
+                    else if(nums[m] == nums[m + 1] && m != n - 1) m++;
+                    else if(nums[n] == nums[n - 1] && m != n - 1) n--;
+                    else
+                    {
+                        vector<int> resTemp = {nums[i], nums[j], nums[m], nums[n]};
+                        res.push_back(resTemp);
+                        m++;
+                        n--;
+                    }
+                }
+            }
+        }
+        return res;
+    }
+};
+~~~
+
+
+
+### 49M. 同构异形字符串
+
+**问题描述**：给出一组字符串，找出其中的同构异形字符串并输出，同构异形字符串指那些字符串字母组成和数量都相等的单排列不同的字符串。
+
+**我的思路**：很平凡的思路是：首先对每个字符串按字母顺序先排序，然后将排序后的存入一个hash表，最后同构异形的都被存入一个hash表中。
+
+**优化**：由于unordered_map内置的对string类型的key 计算hash值速度较慢，我们可以采用质数相乘的方法手动取hash值。方法是：从2开始，给26个字母每个字母分配一个质数，然后一个字符串的的hash值就是他们字母对应的质数的乘积。由于质数没有其他质因子，且乘法有交换律，因此同构异形字符串对应的hash值都相同。
+
+**代码**：
+
+1. 采用unordered_map的内置hash
+
+   ~~~C++
+   class Solution {
+   public:
+       vector<vector<string>> groupAnagrams(vector<string>& strs) {
+           if(strs.empty()) return {};
+           vector<vector<string>> res;
+           unordered_map<string, vector<string>> hash;
+           for(int i = 0; i < strs.size(); i++)
+           {
+               string temp = strs[i];
+               sort(temp.begin(), temp.end());
+               hash[temp].push_back(strs[i]);
+           }
+           for(auto it = hash.begin(); it != hash.end(); it++)
+           {
+               res.push_back(it->second);
+           }
+           return res;
+       }
+       
+   };
+   ~~~
+
+2. 采用质数手动计算hash值
+
+   ~~~C++
+   class Solution {
+   private:
+       int primeNum[26];
+   public:
+       void initializePrime()
+       {
+           bool flag[150];
+           for(int i = 0; i < sizeof(flag); i++)
+           {
+               flag[i] = true;
+           }
+           for(int i = 2; i < sizeof(flag); i++)
+           {
+               if(flag[i])
+               {
+                   int k = 2;
+                   while(i * k < sizeof(flag))
+                   {
+                       flag[i * k] = false;
+                       k++;
+                   }
+               }
+           }
+           int i = 0;
+           int j = 2;
+           while(i < 26)
+           {
+               while(!flag[j]) j++;
+               primeNum[i++] = j++;
+           }
+           return;
+       }
+       unsigned long calcHash(const string& str)
+       {
+           unsigned long res = 1;
+           for(int i = 0; i < str.size(); i++)
+           {
+               res *= primeNum[str[i] - 'a'];
+           }
+           return res;
+       }
+       vector<vector<string>> groupAnagrams(vector<string>& strs) {
+           if(strs.empty()) return {};
+           vector<vector<string>> res;
+           unordered_map<unsigned long, vector<string>> hash;
+           initializePrime();
+           for(int i = 0; i < strs.size(); i++)
+           {
+               unsigned long cur = calcHash(strs[i]);
+               auto it = hash.find(cur);
+               if(it != hash.end())
+               {
+                   it->second.push_back(strs[i]);
+               }
+               else
+               {
+                   hash[cur] = {strs[i]};
+               }
+           }
+           for(auto it = hash.begin(); it != hash.end(); it++)
+           {
+               res.push_back(it->second);
+           }
+           return res;
+       }
+       
+   };
+   ~~~
+
+## VII. 策略性枚举
 
 ### 17M. 电话号码的字母组合
 
@@ -886,37 +1347,38 @@ public:
 };
 ~~~
 
-### 22M. 产生括号对
+### 46M. 排列组合
 
-**问题描述**：给出应产生的括号对数n，生成所有符合条件的括号对。其中任何一对括号对中不能包含未闭合的单个括号，如`(()`是错误的，而`((()()))`等是正确的。
+问题描述：给出一个字母彼此互不相同的字符串，输出这些字母的所有可能的排列方式。
 
-**思路**：这个问题属于最基本的卡特兰数问题，但是弄清一共有多少个还不够，把每一种情况确定下来需要用到递归。我们知道左括号和右括号的初始数量都是n，每使用一个左括号或右括号都把变量left或right减去1，递归终止条件是左括号和右括号的数量都为0。
+我的思路：考虑递推，假设前边n个字母的所有排列方式都已经举出，那么对于每一种**排列方式**，第n+1个字母都有n+1个位置放置（每两个字母之间以及第一个字母之前和最后一个字母之后），依此递推。
 
-**代码**：
+坑：
+
+代码；
 
 ~~~C++
-class Solution{
+class Solution {
 public:
-    vector<string> generateParenthesis(int n)
-    {
-        if(n == 0) return {""};
-        vector<string> res = {};
-        helper(n, n, "", res);
-        
-        return res;  
-    }
-    void helper(int left, int right, string s, vector<string>& res)
-    {
-        if(left == 0 && right == 0)
+    vector<vector<int>> permute(vector<int>& nums) {
+        vector<vector<int>> res = {};
+        if(nums.size() == 0) return res;
+        res = {{nums[0]}};
+        for(int i = 1; i < nums.size(); i++)
         {
-            res.push_back(s);
-            return;
+            int size = res.size();
+            for(int j = 0; j < size; j++)
+            {
+                for(int k = 0; k < i; k++)
+                {
+                    vector<int> temp(res[j]);
+                    temp.insert(temp.begin() + k, nums[i]);
+                    res.push_back(temp);
+                }
+                res[j].push_back(nums[i]);
+            }
         }
-        if(left > 0)
-            helper(left - 1, right, s + "(", res);
-        if(left < right)
-            helper(left, right - 1, s + ")", res);
-        return;
+        return res;
     }
 };
 ~~~
@@ -1017,11 +1479,46 @@ public:
 };
 ~~~
 
-## 8. 广度优先搜索
+## VIII. 广度优先搜索
 
-## 9. 深度优先搜索
+## IX. 深度优先搜索(DFS)
 
-### 36M. 有效的数独
+### 22M. 产生括号对
+
+**问题描述**：给出应产生的括号对数n，生成所有符合条件的括号对。其中任何一对括号对中不能包含未闭合的单个括号，如`(()`是错误的，而`((()()))`等是正确的。
+
+**思路**：这个问题属于最基本的卡特兰数问题，但是弄清一共有多少个还不够，把每一种情况确定下来需要用到递归。我们知道左括号和右括号的初始数量都是n，每使用一个左括号或右括号都把变量left或right减去1，递归终止条件是左括号和右括号的数量都为0。
+
+**代码**：
+
+~~~C++
+class Solution{
+public:
+    vector<string> generateParenthesis(int n)
+    {
+        if(n == 0) return {""};
+        vector<string> res = {};
+        helper(n, n, "", res);
+        
+        return res;  
+    }
+    void helper(int left, int right, string s, vector<string>& res)
+    {
+        if(left == 0 && right == 0)
+        {
+            res.push_back(s);
+            return;
+        }
+        if(left > 0)
+            helper(left - 1, right, s + "(", res);
+        if(left < right)
+            helper(left, right - 1, s + ")", res);
+        return;
+    }
+};
+~~~
+
+### 36M. 有效的数独*
 
 **问题描述**：判定一个完成/未完成的数独是否有效。
 
@@ -1076,6 +1573,166 @@ public:
 
 **优化**：最好能一次遍历完，需要更改数据结构，使用bitmap效率会很高。
 
+### 39M. 组合之和
+
+**问题描述**：给出一组数据candidates，其中无重复数据，另外给出一个目标target，求所有可能组成和为target的组合，不能有重复的解，并且**candidates中每个元素都可以无限制次数地使用**。
+
+**我的思路**：按照深度优先搜索的思路，从后往前遍历，对每个数，判断当前remain是否为0（每次加入解集一个数，remain即减去这个数），接下来可以用两种方法实现这道题，第一种：可以分为将这个数加入当前解集和不加入当前解集，然后氛围两个支路继续递归。需要注意的是，对于加入这个数到当前解集这个递归支路，由于每个数可用的次数不限制，那么这个支路相当于又会产生若干次递归，一直加到remain小于当前这个数为止，因此递归的次数非常之多。第二种方法：是正统的深度优先搜索，对于每一次递归，如果遍历到了当前序号为i的元素，那么都从i开始依次将剩下的元素加入解集，每加入一次都将产生一次递归。
+
+**代码**：
+
+方法一（效率低）：
+
+~~~C++
+class Solution {
+public:
+    void recurHelper(const vector<int>& candidates, vector<vector<int>>& res, vector<int> curVec, int remain, int pointer)
+    {
+        if(remain == 0)
+        {
+            res.push_back(curVec);
+            return;
+        }
+        int current = candidates[pointer];
+        if(pointer == 0)
+        {
+            if(remain < current || remain % current != 0)
+                return;
+            else
+            {
+                while(remain != 0)
+                {
+                    remain -= current;
+                    curVec.push_back(current);
+                }
+                res.push_back(curVec);
+                return;
+            }
+        }
+        else
+        {
+            recurHelper(candidates, res, curVec, remain, pointer - 1);
+            while(remain >= current)
+            {
+                remain -= current;
+                curVec.push_back(current);
+                recurHelper(candidates, res, curVec, remain, pointer - 1);
+            }
+            return;
+        }
+    }
+    vector<vector<int>> combinationSum(vector<int>& candidates, int target) {
+        vector<vector<int>> res = {};
+        if(candidates.empty()) return res;
+        sort(candidates.begin(), candidates.end());
+        if(target == 0)
+        {
+            res = {{}};
+            return res;
+        }
+        else if(candidates[0] > target) return res;
+        vector<int> curVec = {};
+        recurHelper(candidates, res, curVec, target, candidates.size() - 1);
+        return res;
+    }
+};
+~~~
+
+方法二（效率高）：
+
+~~~C++
+class Solution {
+public:
+    void recurHelper(const vector<int>& candidates, vector<vector<int>>& res, vector<int>& curVec, const int remain, const int pointer)
+    {
+#ifdef DEBUG
+        res.push_back({0,0,0,remain,pointer,0,0,0});
+#endif
+        if(remain < 0) return;
+        //找到合法解
+        if(remain == 0)
+        {
+            res.push_back(curVec);
+            return;
+        }
+        for(int i = pointer; i >= 0; i--)
+        {
+            curVec.push_back(candidates[i]);
+            recurHelper(candidates, res, curVec, remain - candidates[i], i);
+            curVec.pop_back();
+            
+        }
+        return;
+    }
+    vector<vector<int>> combinationSum(vector<int>& candidates, int target) {
+        vector<vector<int>> res = {};
+        sort(candidates.begin(), candidates.end());
+        if(candidates.empty() || candidates[0] > target) return res;
+        vector<int> curVec = {};
+        recurHelper(candidates, res, curVec, target, candidates.size() - 1);
+        return res;
+    }
+};
+~~~
+
+### 40M. 组合之和II
+
+**问题描述**：给出一组数据candidates，其中可能有重复的数；另外给出一个目标target，求所有可能组成和为target的组合，并且不能有重复的解。
+
+**我的思路**：按照深度优先搜索的思路，从后往前遍历，对每个数，判断当前remain是否为0（每次加入解集一个数，remain即减去这个数），可以分为将这个数加入当前解集合和不加入当前解集合，然后分为两个支路继续递归。需要注意的是如何排除重复的解：出现重复解的原因在于，给出的candidates中本身有重复的元素，那么则需要在上边两个递归前加入条件判断语句——**如果前后两个相同的元素，前者没有被加入到本次解集中，那么在前者所产生的支路，后者也不加入解集。**举例：
+
+```C++
+candidates: [5,4,4,3,2,1]
+target: 10
+```
+
+可能重复的解是[5,4,1]，原因是有两个4。在循环中，如果第一个4没有被加入到当前解集中，那么第二个4也不加入到当前解集，否则会和之前加入第一个4的解集重复。这样的判断不会漏掉任何一个解集，比用哈希表每次加入前判断是否已存在当前解效率要高很多。
+
+**代码**：
+
+```C++
+class Solution {
+public:
+    void recurHelper(vector<vector<int>>& res, vector<int>& candidates, vector<int>& curSol, int remain, int index, vector<bool>& flag)
+    {
+        if(remain == 0)
+        {
+            res.push_back(curSol);
+            return;
+        }
+        else if(remain < 0 || index < 0)
+            return;
+        recurHelper(res, candidates, curSol, remain, index - 1, flag);
+        
+        //如果前一个数和当前数相等且前一个数没被选中，那么这个数页不选，直接跳过本次迭代，为了避免重复的情况。
+        if((index < candidates.size() - 1) && candidates[index] == candidates[index + 1] && !flag[index + 1])  
+        {
+            return;
+        }
+        flag[index] = true;
+        curSol.push_back(candidates[index]);
+        recurHelper(res, candidates, curSol, remain - candidates[index], index - 1, flag);
+        curSol.pop_back();
+        flag[index] = false;
+        
+        return;
+    }
+    
+    vector<vector<int>> combinationSum2(vector<int>& candidates, int target) {
+        if(candidates.empty() || target == 0) return {{}};
+        sort(candidates.begin(), candidates.end());
+        vector<vector<int>> res = {};
+        vector<bool> flag(candidates.size(), false);
+        vector<int> curSol = {};
+        recurHelper(res, candidates, curSol, target, candidates.size() - 1, flag);
+        
+        return res;
+    }
+};
+```
+
+
+
 **优化后的代码**：
 
 ~~~C++
@@ -1119,9 +1776,9 @@ public:
 };
 ~~~
 
-## 10. 分治法
+## X. 分治法
 
-## 11. 贪心法
+## XI. 贪心法
 
 ### 3M. 不含重复字母的最长子串
 
@@ -1159,6 +1816,8 @@ public:
 
 > The reason is that if *s*[*j*] have a duplicate in the range [*i*,*j*) with index '*j*′, we don't need to increase *i* little by little. We can skip all the elements in the range [*i*,*j*′] and let *i* to be *j*′+1 directly. 
 
+因为j只从1遍历到n，所以复杂度降为O(n)。
+
 ~~~c++
 class Solution {
 public:
@@ -1179,11 +1838,11 @@ public:
 };
 ~~~
 
-因为j只从1遍历到n，所以复杂度降为O(n)。
-
 ### 11M. 能盛最多水的容器
 
 **问题描述**·；有若干相距为1的立起来的板子，他们的高度依次被存在给定的数组中。现在需要找到个板子，使得这两个板子之间能盛的水最多。
+
+![avatar](https://s3-lc-upload.s3.amazonaws.com/uploads/2018/07/17/question_11.jpg)
 
 **我的思路**：这道题如果暴力求解需要找出两两配对的情况，复杂度在O(n^2)。现在比较巧妙的方法是，首先取首尾两个板子，然后逐渐向中间移动，直到碰头，规则是：左右两边较低一侧的指针往中间移动。这样能保证最大的情况一定能被遍历到，且只用O(n)的时间。（证明略，用反证法比较容易想清楚。）
 
@@ -1249,11 +1908,11 @@ public:
 
 
 
-## 12. 动态规划
+## XII. 动态规划
 
-## 13. 图
+## XIII. 图
 
-## 14. 细节实现题
+## XIV. 细节实现题
 
 ### 6M. ZigZag转换
 
@@ -1345,6 +2004,225 @@ public:
 };
 ~~~
 
+### 43M. 字符串相乘
+
+**问题描述**：给出两字符串，分别代表两个数字，返回一个字符串作为其乘积。
+
+**我的思路**：将每个数看成这个位数上的数字和10的相应次幂的组合。那么两个位数相乘，如第四位数（10^3）和第五位（10^4）数相乘，得到的结果就是10^7上的结果。这第一个数字中的每个数字都与另一个数字中的每个数字两两组合，得到的结果加到相应的位置上，最后结果再进位。
+
+**坑**：
+
+* 需要对输入数字的合法性进行检测。
+* string里的输入是符合人们正常书写习惯的，即左边的是高位，那么string里的低索引是高位。但是我们保存结果的时候希望10的次幂按照位数保存，所以需要一个转换，如果有k位数（k是string的size或者length），那么第i位数就是10的（k - i - 1）次。两个组合起来就是size1 + size2 - i - j - 2，这个容易弄错。
+* 在输出时也按照读数的习惯，从高位向低位输出。有可能前几位高位都是0，这个时候应该作预判，从第一位非零最高位往下读取。
+* 理论上来说，n位数乘m位数结果位数不大于m+n位数，不小于m+n-1位数。
+
+**代码**：
+
+~~~C++
+class Solution {
+public:
+    string multiply(string num1, string num2) {
+        if(num1.empty() || num2.empty()) return "";
+        if(num1[0] == '0' || num2[0] == '0') return "0";
+        //低索引是高位，
+        int resInt[num1.size() + num2.size()] = {0};
+        for(int i = 0; i < num1.size(); i++)
+            for(int j = 0; j < num2.size(); j++)
+                resInt[num1.size() + num2.size() - i - j - 2] += (num1[i] - '0') * (num2[j] - '0');
+        
+        for(int i = 1; i < num1.size() + num2.size(); i++)
+        {
+            resInt[i] += resInt[i - 1] / 10;
+            resInt[i - 1] = resInt[i - 1] % 10;
+        }
+        bool flag = false;
+        string res = "";
+        for(int i = num1.size() + num2.size() - 1; i >= 0; i--)
+        {
+            if(!flag)
+                if(resInt[i] != 0) flag = true;
+            if(flag) res = res += to_string(resInt[i]);
+        }
+        return res;
+    }
+};
+~~~
+
+### 50M. 实现幂函数
+
+问题描述：实现幂函数pow(double x, int n)的功能，其中x在[-100, 100]范围内，n是int类型的整数。
+
+坑：这道题看似简单有无数个坑，其中第一个，如果首先把n是负数转化为正数来做，当n为-2147483648的时候，他的相反数无法用int来表示，会报错。同时，如果只是用单纯的循环n次来做这道题，当n取为2147483647时，runtime会超时，因此必须采用效率更高的做法。这里是用的是对n的折半算法。
+
+我的思路：当n是偶数时，n折半，这时对应的是**当前的x**平方运算，如果n是奇数，将当前的x乘到res上作为折半后的补偿。最后如果n是负数才将res取倒数。
+
+代码：
+
+~~~C++
+class Solution {
+public:
+    double myPow(double x, int n) {
+        double res = 1.0;
+        for(int i = n; i != 0; i /= 2)
+        {
+            if(i % 2 == 1 || i % 2 == -1)
+                res *= x;
+            x *= x;
+        }
+        return n < 0 ? 1.0 / res : res;
+    }
+};
+~~~
+
+### 55M. 跳跃游戏
+
+**问题描述**：给出一个数组，每个数代表从当前位置能够跳跃的最大距离，问是否存在一条路径从头跳到尾。
+
+**我的思路**：一开始想递归，后来发现有更简单的方法。极端情况：如果数组里边都是正数，那么一定可以，比如每个只走一步就行。发现：不能到达最后的情况一定是由数组中的0导致的，加入所有的0都能被逾越，那么一定可以完成。检查每个0，从0开始往前回溯，看是否有一个位置m能够从这里跳过这个0，并且之后从m继续往后检查。时间复杂度O(n)。
+
+**代码**：宏定义中RECUR代表使用递归的方法，因为给出的测试用例太大，导致runtime limit exceeded，无法通过。
+
+~~~C++
+#define ERASE0
+
+#ifdef ERASE0
+class Solution
+{
+public:
+    bool canJump(vector<int>& nums) {
+        if(nums.size() < 2) return true;
+        for(int i = nums.size() - 2; i >= 0;)
+        {
+            int k = i - 1;
+            if(nums[i] == 0)
+            {
+                int flag = false;
+                while(k >= 0)
+                {
+                    if(nums[k] > i - k)
+                    {
+                        flag = true;
+                        break;
+                    }
+                    k--;
+                }
+                if(!flag) return false;
+            }
+            i = k;
+        }
+        return true;
+    }
+};
+#endif
+
+#ifdef RECUR
+class Solution {
+public:
+    void recurHelper(vector<int>& nums, int layer, bool& flag)
+    {
+        if(layer == 0)
+        {
+            flag = true;
+            return;
+        }
+        for(int i = layer - 1; i >= 0; i--)
+        {
+            if(nums[i] >= layer - i)
+            {
+                recurHelper(nums, i, flag);
+                if(flag) return;
+            }
+        }
+        return;
+    }
+    bool canJump(vector<int>& nums) {
+        if(nums.empty()) return false;
+        auto it = min_element(nums.begin(), nums.end());
+        if(*it > 0) return true;
+        int layer = nums.size() - 1;
+        bool flag = false;
+        recurHelper(nums, layer, flag);
+        return flag;
+    }
+};
+#endif
+~~~
+
+### 60M. 组合的顺序
+
+**问题描述**：给出一组数{1, 2, ... , n}, 他们的排列方式有n!种，问第k种排序方式是什么？例如：n = 3时，
+
+~~~
+1."123"
+2."132"
+3."213"
+4."231"
+5."312"
+6."321"
+~~~
+
+**我的思路**：观察上边的排序原则，发现排序总是从第一位选，将选出来的数放到第一位，然后剩下的依次按原顺序再接着选，因此把所有的排序看成若干分组，所有排序可以分成n组，然后每一组可以再分为n - 1组。那么对k而言，k能直接决定它位于每个组的位置，方法就是取余数实现。
+
+坑：由于这里k是从1开始的，而非从0开始，取余数运算过程中往往是从0开始的，因此k带入运算时最好将范围从1~n!变为0~n!-1。
+
+**代码**：
+
+~~~C++
+class Solution {
+public:
+    int getFac(int n)
+    {
+        int res = 1;
+        while(n != 1)
+        {
+            res *= n;
+            n--;
+        }
+        return res;
+    }
+    string getPermutation(int n, int k) {
+        if(n > 9 || k <= 0) return "";
+        //结果
+        string res = "";
+        //用于保存每次挑剩下的字符串
+        vector<int> num(n, 0);
+        for(int i = 0; i < n; i++)
+        {
+            num[i] = i + 1;
+        }
+        //保存阶乘
+        int fac[n + 1];
+        for(int i = 0; i < n + 1; i++)
+        {
+            fac[i] = 1;
+        }
+        //用于遍历产生阶乘和确定字符串的顺序
+        int tra = 1;
+        //产生阶乘
+        while(tra <= n)
+        {
+            fac[tra] = fac[tra - 1] * tra;
+            tra++;
+        }
+        //确定顺序
+        if(k > fac[n]) return "";
+        //从n-1的阶乘开始找自己的分组
+        tra = n;
+      	//将k的范围前移一个，使其从0开始计数
+        k = k-1;
+        while((--tra) >= 0)
+        {
+            int cur = k / fac[tra];            
+            res += to_string(num[cur]);
+            num.erase(num.begin() + cur);
+            k = k % fac[tra];
+        }
+        return res;
+    }
+};
+~~~
+
 ### 136E. 孤独的数
 
 **问题描述**：给出一数组，其中每个数都出现了两次，只有一个数出现了一次，找出这个数。
@@ -1406,4 +2284,6 @@ public:
 ~~~
 
 参见异或的用法<https://starkschroedinger.github.io/2020/01/31/LeetCode-Notes/>
+
+最后编辑时间 2020-02-20
 
