@@ -2,15 +2,12 @@
 layout:     post
 title:      "LeetCode 刷题记录"
 subtitle:   "思路与坑"
-date:       2020-02-21
+date:       2019-12-10
 author:     "Felix Zhang"
 header-img: "img/in-post/2019-12-10-LeetCode-Records/bg.jpg"
 catalog: true
 tags:
    - LeetCode
-
-
-
 ---
 
 # LeetCode 刷题记录
@@ -779,6 +776,155 @@ public:
         else res += "IX";
         
         return res;
+    }
+};
+~~~
+
+### 151M.翻转字符串中的单词
+
+问题描述：给一字符串，将所有单词的顺序颠倒并隔空格组成新的字符串，其中单词本身不改变。所有非空格字符都看成单词的一部分，字符串收尾的空格在输出时要忽略。
+
+思路：遍历后组成新的字符串，可用vector和stack来实现；也可直接在原字符串上进行更改，下边用这三种方法实现，其中因为在原字符串上涉及到很多erase操作，所有效率最低，vector效率最高。
+
+代码：
+
+stack实现：
+
+~~~c++
+class Solution {
+public:
+    string reverseWords(string s) {
+        stack<string> stk;
+        int pos = 0;
+        string res;
+
+        while (pos < s.length()) {
+            int end, start;
+            
+            while(s[pos] == ' ' && pos < s.length())
+                pos++;
+            
+            start = pos;
+            
+            while (s[pos] != ' ' && pos < s.length())
+                pos++;
+            
+            end = pos;
+            //s末尾的一段空格
+            if (end == start)
+                break;
+            
+            stk.push(s.substr(start, end - start));
+        }
+
+        while (!stk.empty()) {
+            res += stk.top();
+            stk.pop();
+            if (!stk.empty())
+                res += " ";
+        }
+
+        return res;
+    }
+};
+~~~
+
+vector实现：
+
+~~~c++
+class Solution {
+public:
+    string reverseWords(string s) {
+        vector<string> vkt;
+        int pos = 0;
+        string res = "";
+
+        while (pos < s.length()) {
+            int end, start;
+            
+            while(s[pos] == ' ' && pos < s.length())
+                pos++;
+            
+            start = pos;
+            
+            while (s[pos] != ' ' && pos < s.length())
+                pos++;
+            
+            end = pos;
+            //s末尾的一段空格
+            if (end == start)
+                break;
+            
+            vkt.push_back(s.substr(start, end - start));
+        }
+        for(int i = vkt.size() - 1; i >= 0; i--)
+        {
+            res += vkt[i];
+            if(i != 0)
+                res += " ";
+        }
+        return res;
+    }
+};
+~~~
+
+在原字符串上更改：
+
+~~~C++
+class Solution
+{
+public:
+    string reverseWords(string s) {
+        if(s.empty()) return s;
+        bool flag = false;
+        unsigned start = s.size() - 1;
+        for(int i = s.size() - 1; i >= 0; i--)
+        {
+            //当前是空格分为是空格的开头和已经有一串空格在其身后
+            if(isspace(s[i]))
+            {
+                if(flag)
+                {
+                    s += s.substr(i + 1, start - i) + " ";
+                    //i不删start要删
+                    s.erase(s.begin() + i + 1, s.begin() + start + 1);
+                    //这里的start记录的是空格的开始。
+                    start = i;
+                    flag = false;
+                }
+                continue;
+            }
+            else
+            {
+                if(!flag)
+                {
+                    //i不删start要删
+                    s.erase(s.begin() + i + 1, s.begin() + start + 1);
+                    //这里start记录的是单词的开始  
+                    start = i;
+                    flag = true;
+                }
+            }
+        }
+        //处理最前边的单词
+        if(flag)
+        {
+            s += s.substr(0, start + 1);
+            s.erase(s.begin(), s.begin() + start + 1);
+        }
+        else
+        {
+            //开头的删掉空格
+            s.erase(s.begin(), s.begin() + start + 1);
+            int i = s.size() - 1;
+            while(i >=0 && isspace(s[i]))
+            {
+                i--;
+            }
+            //删除最后的一个空格，或者全是空格的时候删除全部
+            s.erase(s.begin() + i + 1, s.end());
+        }
+        return s;
     }
 };
 ~~~
