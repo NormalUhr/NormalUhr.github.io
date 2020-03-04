@@ -8,6 +8,7 @@ header-img: "img/in-post/2020-01-31-LeetCode-Notes/bg.jpg"
 catalog: true
 tags:
    - LeetCode 
+   - Algorithm
 ---
 
 # 按位异或"^"的用法 #

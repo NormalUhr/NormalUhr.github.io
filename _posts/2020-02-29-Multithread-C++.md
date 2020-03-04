@@ -1,7 +1,7 @@
 ---
 layout:     post
 title:      "多线程"
-subtitle:   "C++学习笔记 六"
+subtitle:   "C++学习笔记 七"
 date:       2020-02-29
 author:     "Felix Zhang"
 header-img: "img/in-post/2020-02-29-Multithread/bg.jpg"
@@ -9,9 +9,6 @@ catalog: true
 tags:
    - C++
    - Multithread
-
-
-
 ---
 
 # C++与多线程

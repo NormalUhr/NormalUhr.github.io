@@ -8,7 +8,6 @@ header-img: "img/in-post/2020-01-22-Effective-C++/bg.jpg"
 catalog: true
 tags:
    - C++
-
 ---
 
 # Effective C++

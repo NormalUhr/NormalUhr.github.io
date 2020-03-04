@@ -8,6 +8,7 @@ header-img: "img/in-post/2020-02-01-LeetCode-Notes/bg.jpg"
 catalog: true
 tags:
    - LeetCode
+   - Algorithm
 ---
 
 # 滑动窗口 #

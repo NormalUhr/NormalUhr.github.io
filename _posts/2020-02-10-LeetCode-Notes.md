@@ -8,7 +8,7 @@ header-img: "img/in-post/2020-02-10-LeetCode-Notes/bg.jpg"
 catalog: true
 tags:
    - LeetCode
-
+   - Algorithm
 ---
 
 # 卡特兰数(Catalan Number)

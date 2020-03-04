@@ -8,9 +8,8 @@ header-img: "img/in-post/2020-02-12-Niuke-Notes/bg.jpg"
 catalog: true
 tags:
    - Niuke
-
-
-
+   - C++
+   - Algorithm
 ---
 
 # 牛客网刷题笔记
@@ -78,6 +77,14 @@ tags:
   * sstream
 
     将字符串转化为数字：stringstream ss;
+
+  * algorithm头文件
+
+    sort函数在此文件中
+
+    reverse函数在此文件中
+
+    stable_sort在此文件中，有可能会用到。
 
 * 不稳定的排序算法有：希快选堆，分别希尔排序，快速排序，直接选择排序，堆排序
 

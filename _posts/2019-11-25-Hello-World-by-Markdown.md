@@ -57,3 +57,6 @@ tags:
   | :------ | :-----------------------------------: |
   | Version |                 0.0.1                 |
   | Editor  | [Felix](StarkSchroedinger.github.com) |
+
+* Mac 实用快捷键：<https://www.jianshu.com/p/4dd914b93555>
+
