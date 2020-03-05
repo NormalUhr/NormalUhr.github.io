@@ -2,7 +2,7 @@
 layout:     post
 title:      "LeetCode 刷题记录"
 subtitle:   "思路与坑"
-date:       2019-12-10
+date:       2020-03-05
 author:     "Felix Zhang"
 header-img: "img/in-post/2019-12-10-LeetCode-Records/bg.jpg"
 catalog: true
@@ -24,7 +24,7 @@ tags:
 
 **坑**：在遍历的时候因为需要判断的条件太多，使用while循环很容易忘记判断角标i是否超出str的size。另一个坑就是判断溢出。
 
-优化：判断是否溢出的代码`if((res > INT_MAX / 10) || (temp >= INT_MAX % 10 && res == INT_MAX / 10)) return INT_MAX;` 和`if((res == INT_MIN / 10 && -temp <= INT_MIN % 10) || res < INT_MIN / 10) return INT_MIN;`。
+**优化**：判断是否溢出的代码`if((res > INT_MAX / 10) || (temp >= INT_MAX % 10 && res == INT_MAX / 10)) return INT_MAX;` 和`if((res == INT_MIN / 10 && -temp <= INT_MIN % 10) || res < INT_MIN / 10) return INT_MIN;`。
 
 **代码**：
 
@@ -86,7 +86,7 @@ public:
 
 **坑：**通常删去链表结点的方法是让被删结点前一个节点指向被删结点后一个节点，但是此方法对head不起作用，需额外判断。
 
-代码：
+**代码**：
 
 ~~~C++
 /**
@@ -121,11 +121,11 @@ public:
 
 ### 21E. 合并两有序链表
 
-问题描述：将两个有序链表合并成一个有序链表。
+**问题描述**：将两个有序链表合并成一个有序链表。
 
-我的思路：思路其实很简单，从小到大两链表都有对应的指针，一个一个遍历比较大小即可，但是实现的时候把代码写的简洁却不是一件容易的事。下边放出官方给出的效率最高的代码之一。
+**我的思路**：思路其实很简单，从小到大两链表都有对应的指针，一个一个遍历比较大小即可，但是实现的时候把代码写的简洁却不是一件容易的事。下边放出官方给出的效率最高的代码之一。
 
-代码：
+**代码**：
 
 ~~~C++
 * Definition for singly-linked list.
@@ -161,11 +161,11 @@ public:
 
 ### 24M. 成对地交换链表结点
 
-问题描述：给出一个链表，成对交换节点的第1、2，3、4...个节点。要求不能改变节点的值，只能改变节点的指向。
+**问题描述**：给出一个链表，成对交换节点的第1、2，3、4...个节点。要求不能改变节点的值，只能改变节点的指向。
 
-我的思路：很平常的思路，一道练习链表节点操作的题。
+**我的思路**：很平常的思路，一道练习链表节点操作的题。
 
-代码：
+**代码**：
 
 ~~~C++
 /**
@@ -489,11 +489,11 @@ public:
 
 ### 61M. 轮换链表
 
-问题描述：给出一个链表和一个非负整数k，旋转链表，将链表每个节点向右移动k个位置，链表尾移动后变为链表头。
+**问题描述**：给出一个链表和一个非负整数k，旋转链表，将链表每个节点向右移动k个位置，链表尾移动后变为链表头。
 
-我的思路：思路可分为寻找支点(pivot)和寻找移动过后的链表头。支点即位倒数第k个数的前一个数。
+**我的思路**：思路可分为寻找支点(pivot)和寻找移动过后的链表头。支点即位倒数第k个数的前一个数。
 
-代码：
+**代码**：
 
 1. 寻找支点：
 
@@ -676,6 +676,51 @@ public:
 };
 ~~~
 
+### 1365E. 数组中有多少数小于当前数
+
+**问题描述**：给出一个数组，返回大小相同的数组，每个位置保存着原数组中有多少数小于对应位置的数。其中每个数不大于100且不小于0，总数量不大于100。
+
+**我的思路**：建立一个大小为101的数组，每个数组都代表给定序列中这个数的个数，计数后相加。
+
+**代码**：
+
+~~~C++
+static auto magic = []() {ios_base::sync_with_stdio(false); cin.tie(nullptr); return false; }();
+
+class Solution {
+public:
+	int n;
+
+	vector<int> smallerNumbersThanCurrent(vector<int>& nums) {
+		vector<int> count(105, 0);
+		n = static_cast<int>(nums.size());
+		for (int  i = 0; i < n; i++)
+		{
+			count[nums[i]]++;
+		}
+		for (int i = 1; i < 105; i++)
+		{
+			count[i] += count[i - 1];
+		}
+		vector<int> ans;
+		for (int i = 0; i < n; i++)
+		{
+			if (nums[i] == 0)
+			{
+				ans.push_back(0);
+			}
+			else
+			{
+				ans.push_back(count[nums[i] - 1]);
+			}
+		}
+		return ans;
+	}
+};
+~~~
+
+
+
 ## II. 字符串
 
 ### 12M. 阿拉伯数字到罗马数字转换
@@ -782,11 +827,11 @@ public:
 
 ### 151M.翻转字符串中的单词
 
-问题描述：给一字符串，将所有单词的顺序颠倒并隔空格组成新的字符串，其中单词本身不改变。所有非空格字符都看成单词的一部分，字符串收尾的空格在输出时要忽略。
+**问题描述**：给一字符串，将所有单词的顺序颠倒并隔空格组成新的字符串，其中单词本身不改变。所有非空格字符都看成单词的一部分，字符串收尾的空格在输出时要忽略。
 
-思路：遍历后组成新的字符串，可用vector和stack来实现；也可直接在原字符串上进行更改，下边用这三种方法实现，其中因为在原字符串上涉及到很多erase操作，所有效率最低，vector效率最高。
+**思路**：遍历后组成新的字符串，可用vector和stack来实现；也可直接在原字符串上进行更改，下边用这三种方法实现，其中因为在原字符串上涉及到很多erase操作，所有效率最低，vector效率最高。
 
-代码：
+**代码**：
 
 stack实现：
 
@@ -933,15 +978,15 @@ public:
 
 ### 20E. 有效的括号对
 
-问题描述：判断一个给定字符串是否是有效的括号对。有效的括号对只任何两个配对的括号对中间都必须是完整的配对括号对。如：` "{[]}"`、`"[[{}{()}]]"`等。
+**问题描述**：判断一个给定字符串是否是有效的括号对。有效的括号对只任何两个配对的括号对中间都必须是完整的配对括号对。如：` "{[]}"`、`"[[{}{()}]]"`等。
 
-我的思路：一个自然的思路自然是stack，如果当前的是左括号就压入stack，如果是右括号就把stack顶部元素弹出，符合要求的一定会与当前括号匹配。否则返回无效。
+**我的思路**：一个自然的思路自然是stack，如果当前的是左括号就压入stack，如果是右括号就把stack顶部元素弹出，符合要求的一定会与当前括号匹配。否则返回无效。
 
-坑：注意判断stack的时候需要注意没有右括号的case，如`"(("`，在判断的时候由于没有弹出stack判断的操作自然会没有因此判断为无效，因此在末尾要判断stack内是否还有元素。
+**坑**：注意判断stack的时候需要注意没有右括号的case，如`"(("`，在判断的时候由于没有弹出stack判断的操作自然会没有因此判断为无效，因此在末尾要判断stack内是否还有元素。
 
-优化：如果本身括号的个数是奇数，那么一定不会是有效的。
+**优化**：如果本身括号的个数是奇数，那么一定不会是有效的。
 
-代码：
+**代码**：
 
 ~~~C++
 #define XIAO    0
@@ -1016,7 +1061,654 @@ public:
 };
 ~~~
 
+### 150M. 逆波兰表达式
+
+**题目描述**：给出一个字符串序列，分别表示逆波兰表达式的各项，求出这个表达式的运算结果。
+
+**我的思路**：首先弄清楚逆波兰表达式的原则就简单了，使用栈来保存数，遇到运算符号取栈内前两个数运算，运算结果再压入栈。
+
+**坑**：减法和除法中减数和除数都是位于栈顶的；注意判断是否是字符时负数的符号也位于字符串首，不要误判为减号。
+
+**代码**：
+
+~~~C++
+class Solution {
+public:
+    void calc(stack<int>& nums, char sign)
+    {
+        int num1 = nums.top();
+        nums.pop();
+        int num2 = nums.top();
+        nums.pop();
+        int res;
+        if(sign == '+')
+            res = num1 + num2;
+        else if(sign == '-')
+            res = num2 - num1;
+        else if(sign == '*')
+            res = num1 * num2;
+        else
+            res = num2 / num1;
+        nums.push(res);
+        
+        return;
+        
+    }
+    int evalRPN(vector<string>& tokens) {
+        stack<int> nums;
+        for(int i = 0; i< tokens.size(); i++)
+        {
+            if(isdigit(tokens[i][0]) || (tokens[i][0] == '-' && tokens[i].size() > 1))
+            {
+                stringstream ss(tokens[i]);
+                int num;
+                ss >> num;
+                nums.push(num);
+            }
+            else
+            {
+                char sign = tokens[i][0];
+                calc(nums, sign);
+            }
+        }
+        return nums.top();
+    }
+};
+~~~
+
+
+
+### 1019M. 链表中下一个更大的节点
+
+**题目描述**：给定一个链表，返回一个数组，存入每个节点后第一个比他大的节点的值，如果不存在那么存入0。
+
+**思路**：依靠单调栈的特性，我们按照上述法则依次存入节点至栈，遇到比栈顶大的，那么就在这个节点对应的数组位置处存下这个数。需要注意的是，链表并不能直接靠索引找到相应的位置，因此在未确定的时候，在数组中相应节点的位置存入的是原节点的值，这样就可以在数组中采用索引的方式加速算法。
+
+**注**：参考单调栈 [Leetcode刷题总结 五](https://starkschroedinger.github.io/2020/03/02/Monotonous-Stack/)。
+
+**代码**：
+
+~~~C++
+/**
+ * Definition for singly-linked list.
+ * struct ListNode {
+ *     int val;
+ *     ListNode *next;
+ *     ListNode(int x) : val(x), next(NULL) {}
+ * };
+ */
+class Solution {
+public:
+    vector<int> nextLargerNodes(ListNode* head) {
+        if(!head) return {};
+        vector<int> res = {};
+        stack<int> stk;
+        ListNode* cur = head;
+      	// 用size来标记索引
+        int size = 0;
+        while(cur)
+        {
+            if(stk.empty() || res[stk.top()] >= cur->val)
+            {
+                res.push_back(cur->val);
+                stk.push(size);
+                cur = cur->next;
+                size++;
+            }
+            else
+            {
+                res[stk.top()] = cur->val;
+                stk.pop();
+            }
+        }
+        while(!stk.empty())
+        {
+            res[stk.top()] = 0;
+            stk.pop();
+        }
+        return res;
+    }
+};
+~~~
+
 ## IV. 树
+
+### 101E. 对称树
+
+**问题描述**：检查一棵树是不是对称树。
+
+**我的思路**：分为用队列迭代和递归的方法，前者用队列实现，后者递归的时候左树和右树传进去的子节点应刚好左右相反。
+
+**代码**：
+
+~~~C++
+/**
+ * Definition for a binary tree node.
+ * struct TreeNode {
+ *     int val;
+ *     TreeNode *left;
+ *     TreeNode *right;
+ *     TreeNode(int x) : val(x), left(NULL), right(NULL) {}
+ * };
+ */
+#define Recursion
+
+//The first method is recursion.
+#ifdef Recursion
+class Solution 
+{
+public:
+    bool isSymmetric(TreeNode* root) 
+    {
+        if(!root) return true;
+        return isMirror(root->left, root->right);
+    }
+    bool isMirror(TreeNode* left, TreeNode* right)
+    {
+        if(!left && !right) return true;
+        else if(!left || !right) return false;
+        
+        if(left->val != right->val) return false;
+        bool b1 = isMirror(left->left, right->right);
+        bool b2 = isMirror(left->right, right->left);
+        if(!b1 || !b2) return false;
+        return true;
+    }
+};
+#endif
+
+#ifdef Iteration
+class Solution
+{
+public:
+    bool isSymmetric(TreeNode* root)
+    {
+        if(!root) return true;
+        if(!root->left && !root->right) return true;
+        else if(!root->left || !root->right) return false;
+        
+        std::queue<TreeNode*> treeQ;
+        treeQ.push(root->left); treeQ.push(root->right);
+        
+        while(!treeQ.empty())
+        {
+            TreeNode *l, *r;
+            l = treeQ.front(); treeQ.pop();
+            r = treeQ.front(); treeQ.pop();
+            if(!l && !r) continue;
+            else if(!l || !r) return false;
+            
+            if(l->val != r->val) return false;
+            
+            treeQ.push(l->left);
+            treeQ.push(r->right);
+            treeQ.push(l->right);
+            treeQ.push(r->left);
+        }
+        return true;
+    }
+};
+#endif
+~~~
+
+### 102M. 二叉树的层序遍历
+
+**问题描述**：完成对二叉树的层序遍历。
+
+**我的思路**：一般层序遍历都是用队列实现，每次压入一层，弹出时将弹出节点的非空左右孩子再压入队列，直到队列为空，这里需要计数来区分不同层。这里也可以用迭代遍历，迭代函数中有一引用形参表示当前的层数，在对应层数的vector中压入val。
+
+**代码**：
+
+* 队列：
+
+~~~C++
+/**
+ * Definition for a binary tree node.
+ * struct TreeNode {
+ *     int val;
+ *     TreeNode *left;
+ *     TreeNode *right;
+ *     TreeNode(int x) : val(x), left(NULL), right(NULL) {}
+ * };
+ */
+class Solution {
+public:
+    vector<vector<int>> levelOrderBottom(TreeNode* root) {
+        vector<vector<int>> res;
+        if(!root) return res;
+        
+        queue<TreeNode*> treeQ;
+        treeQ.push(root);
+        
+        while(!treeQ.empty())
+        {
+            vector<int> cur;
+            int sizeQ = treeQ.size();
+            for(int i = 0; i < sizeQ; i++)
+            {
+                TreeNode* nD = treeQ.front();
+                treeQ.pop();
+                cur.push_back(nD->val);
+                if(nD->left) treeQ.push(nD->left);
+                if(nD->right) treeQ.push(nD->right);
+            }
+            res.push_back(cur);
+        }
+        reverse(res.begin(), res.end());
+        return res;
+    }
+};
+~~~
+
+* 递归：
+
+~~~C++
+/**
+ * Definition for a binary tree node.
+ * struct TreeNode {
+ *     int val;
+ *     TreeNode *left;
+ *     TreeNode *right;
+ *     TreeNode(int x) : val(x), left(NULL), right(NULL) {}
+ * };
+ */
+class Solution {
+public:
+    vector<vector<int>> levelOrder(TreeNode* root) {
+        if(!root) return {};
+        vector<vector<int>> res = {};
+        int depth = 0;
+        recurHelper(root, depth, res);
+        return res;
+    }
+    void recurHelper(TreeNode* root, int depth, vector<vector<int>>& res)
+    {
+        if(!root) return;
+        if(res.size() < depth + 1)
+        {
+            vector<int> temp = {root->val};
+            res.push_back(temp);
+        }
+        else
+        {
+            res[depth].push_back(root->val);
+        }
+        recurHelper(root->left, depth + 1, res);
+        recurHelper(root->right, depth + 1, res);
+        return;
+    }
+};
+~~~
+
+### 103M. 二叉树之字形层序遍历
+
+**问题描述**：之字形层序遍历二叉树，即第一层从左往右遍历，第二层从右往左遍历。
+
+**我的思路**：这种循环往复的自然想到用栈来实现，但是和队列有所不同的是，这里是用两个栈实现，并且从左到右和从右到左的时先压入左孩子还是先压入右孩子也不同，需要具体事例具体分析。
+
+**代码**：
+
+~~~C++
+/**
+ * Definition for a binary tree node.
+ * struct TreeNode {
+ *     int val;
+ *     TreeNode *left;
+ *     TreeNode *right;
+ *     TreeNode(int x) : val(x), left(NULL), right(NULL) {}
+ * };
+ */
+class Solution {
+public:
+    vector<vector<int>> zigzagLevelOrder(TreeNode* root) {
+        if(!root) return {};
+        stack<TreeNode*> left, right;
+        left.push(root);
+        //order向左为true向右为false
+        bool order = true;
+        vector<vector<int>> res = {};
+        while(1)
+        {
+            vector<int> temp = {};
+            stack<TreeNode*> *out = nullptr, *in = nullptr;
+            if(order)
+            {
+                out = &left;
+                in = &right;
+            }
+            else
+            {
+                out = &right;
+                in = &left;
+            }
+            while(!out->empty())
+            {
+                if(out->top() == nullptr) 
+                {
+                    out->pop();
+                    continue;
+                }
+                temp.push_back(out->top()->val);
+                if(order)//这次向左就先加左
+                {
+                    in->push(out->top()->left);
+                    in->push(out->top()->right);
+                }
+                else//这次向右就先加右
+                {
+                    in->push(out->top()->right);
+                    in->push(out->top()->left);
+                }
+                out->pop();
+            }
+            //遍历次序翻转
+            order = order ? false : true;
+            if(!temp.empty()) res.push_back(temp);
+            else break;
+        }
+        return res;
+    }
+};
+~~~
+
+### 104E. 二叉树的最大深度
+
+**问题描述**：求出二叉树的最大深度
+
+**我的思路**：递归没话说
+
+**代码**：
+
+~~~C++
+/**
+ * Definition for a binary tree node.
+ * struct TreeNode {
+ *     int val;
+ *     TreeNode *left;
+ *     TreeNode *right;
+ *     TreeNode(int x) : val(x), left(NULL), right(NULL) {}
+ * };
+ */
+class Solution {
+public:
+    int maxDepth(TreeNode* root) {
+        if(!root) return 0;
+        
+        return max(maxDepth(root->left), maxDepth(root->right)) + 1;
+    }
+};
+~~~
+
+### 105M. 由先序遍历和中序遍历恢复二叉树
+
+### 107M. 二叉树的层序遍历 II
+
+**问题描述**：从最底层到最顶层层序遍历二叉树。
+
+**我的思路**：从最顶层开始遍历然后再reverse。
+
+**代码**：
+
+~~~C++
+/**
+ * Definition for a binary tree node.
+ * struct TreeNode {
+ *     int val;
+ *     TreeNode *left;
+ *     TreeNode *right;
+ *     TreeNode(int x) : val(x), left(NULL), right(NULL) {}
+ * };
+ */
+class Solution {
+public:
+    vector<vector<int>> levelOrderBottom(TreeNode* root) {
+        vector<vector<int>> res;
+        if(!root) return res;
+        
+        queue<TreeNode*> treeQ;
+        treeQ.push(root);
+        
+        while(!treeQ.empty())
+        {
+            vector<int> cur;
+            int sizeQ = treeQ.size();
+            for(int i = 0; i < sizeQ; i++)
+            {
+                TreeNode* nD = treeQ.front();
+                treeQ.pop();
+                cur.push_back(nD->val);
+                if(nD->left) treeQ.push(nD->left);
+                if(nD->right) treeQ.push(nD->right);
+            }
+            res.push_back(cur);
+        }
+        reverse(res.begin(), res.end());
+        return res;
+    }
+};
+~~~
+
+### 108E. 将有序链表转化为二叉搜索树
+
+**问题描述**：将有序链表转化为二叉搜索树，要求树是平衡的。
+
+**我的思路**：因为平衡二叉树的左右子树深度相差最多为1，所以从中间开始加入树，然后将原列表分成两半，分别对应左右子树进行迭代。
+
+**代码**：
+
+~~~C++
+/**
+ * Definition for a binary tree node.
+ * struct TreeNode {
+ *     int val;
+ *     TreeNode *left;
+ *     TreeNode *right;
+ *     TreeNode(int x) : val(x), left(NULL), right(NULL) {}
+ * };
+ */
+class Solution {
+public:
+    TreeNode* sortedArrayToBST(vector<int>& nums) {
+        if(nums.size() == 0) return NULL;
+        TreeNode* root;
+        return helper(nums, 0, nums.size() - 1, root);
+    }
+    TreeNode* helper(vector<int>& nums, int left, int right, TreeNode* current)
+    {
+        
+        if(left > right) return NULL;
+        if(left == right) return new TreeNode(nums[left]);
+        
+        int middle = (left + right) / 2;
+        current = new TreeNode(nums[middle]);
+        current->left = helper(nums, left, middle - 1, current->left);
+        current->right = helper(nums, middle + 1, right, current->right);
+        return current;
+    }
+};
+~~~
+
+### 110E. 平衡二叉树
+
+**问题描述**：检查一棵树是不是平衡二叉树。
+
+**我的思路**：形参返回左该树的高度，然后一层一层比较，遇到不一样的返回false。
+
+**代码**：
+
+~~~C++
+/**
+ * Definition for a binary tree node.
+ * struct TreeNode {
+ *     int val;
+ *     TreeNode *left;
+ *     TreeNode *right;
+ *     TreeNode(int x) : val(x), left(NULL), right(NULL) {}
+ * };
+ */
+class Solution {
+public:
+    bool isBalanced(TreeNode* root) {
+        return search(root)>=0;
+    }
+    
+    int search(TreeNode* root){
+        if (root==NULL) return 0;
+        
+        int left = search(root->left);
+        int right = search(root->right);
+        
+        if (right<0 || left<0 || abs(right-left)>1) return -1;
+        else return max(left,right)+1;
+    }
+};
+~~~
+
+### 111E. 二叉树的最小深度
+
+问题描述：返回二叉树的最小深度。
+
+我的思路：递归，每次比较左子树和右子树的最小深度，遇到叶子返回。
+
+代码：
+
+~~~C++
+/**
+ * Definition for a binary tree node.
+ * struct TreeNode {
+ *     int val;
+ *     TreeNode *left;
+ *     TreeNode *right;
+ *     TreeNode(int x) : val(x), left(NULL), right(NULL) {}
+ * };
+ */
+
+class Solution {
+public:
+    int minDepth(TreeNode* root) {
+        if(!root)
+            return 0;
+        if(!root->left)
+            return 1 + minDepth(root->right);
+        if(!root->right)
+            return 1 + minDepth(root->left);
+        
+        return 1 + min(minDepth(root->left), minDepth(root->right));
+    }
+};
+~~~
+
+### 112E. 路径之和
+
+**问题描述**：给出一个二叉树和一个target，问是否有一个从根到叶子的路径，使得路径上叶子的node之和等于target。
+
+**我的思路**：递归，递归参数中有一个当前之和是多少，遇到叶子检查是否等于target，如果是的就返回true，否则返回到上个节点重新迭代。
+
+坑：注意因为树中节点可能含有负数，所以并不能用当前和与
+
+**代码**：
+
+~~~C++
+class Solution {
+public:
+    bool hasPathSum(TreeNode* root, int sum) {
+        if (root == NULL) {
+            return false;
+        }
+        return helper2(root, sum);
+    }
+    
+    bool helper2(TreeNode* root, int sum) {
+        // std::cout << root->val << std::endl;
+
+        if (root->right == NULL && root->left == NULL) {
+            return (sum - root->val) == 0;
+        }
+        if (root->right == NULL) {
+            return helper2(root->left, sum - root->val);
+        }
+        if (root->left == NULL) {
+            return helper2(root->right, sum - root->val);
+        }
+        return helper2(root->right, sum - root->val) || helper2(root->left, sum - root->val);
+    }
+~~~
+
+### 113M. 路径之和 II
+
+问题描述：同112E，只不过这道题目要求将所有满足条件的路径找出并输出。
+
+
+
+### 114M. 展开树为链表
+
+**问题描述**：给出一棵二叉树，将它展成如下左子树均为空的“链表”。
+
+~~~
+    1
+   / \
+  2   5
+ / \   \
+3   4   6
+~~~
+
+将上树展成如下形式：
+
+~~~
+1
+ \
+  2
+   \
+    3
+     \
+      4
+       \
+        5
+         \
+          6
+~~~
+
+**我的思路**：如何选择合适的递归函数是关键，假设如果对于一棵树的左子树和右子树都成了链表形式，那么只需要找到左子树最右下的节点，将这个节点的下一个指向root的右节点，再将root的右节点指向root的左节点，root的左节点置空，就成功地将左子树插入到了右子树当中且不破坏形式，需要注意的是对左右节点为空的情况的判断。
+
+**代码**：
+
+~~~C++
+/**
+ * Definition for a binary tree node.
+ * struct TreeNode {
+ *     int val;
+ *     TreeNode *left;
+ *     TreeNode *right;
+ *     TreeNode(int x) : val(x), left(NULL), right(NULL) {}
+ * };
+ */
+class Solution {
+public:
+    void flatten(TreeNode* root) {
+        recurHelper(root);
+        return;
+    }
+    
+private:
+    void recurHelper(TreeNode* cur)
+    {            
+        if(!cur) return;
+        recurHelper(cur->right);
+        recurHelper(cur->left);
+        TreeNode* last = cur->left;
+      	//如果左子树为空
+        if(!last) return;
+      	//寻找左子树的最右下节点
+        while(last->right)
+            last = last->right;
+      	//将左子树插入到root和右子树中间
+        last->right = cur->right;
+        cur->right = cur->left;
+        cur->left = NULL;
+        return;
+    }
+};
+~~~
 
 ## V. 排序
 
@@ -1067,11 +1759,86 @@ public:
 };
 ~~~
 
+### 1366M. 计数投票给team排序 周赛178
+
+**问题描述**：n a special ranking system, each voter gives a rank from highest to lowest to all teams participated in the competition. The ordering of teams is decided by who received the most position-one votes. If two or more teams tie in the first position, we consider the second position to resolve the conflict, if they tie again, we continue this process until the ties are resolved. If two or more teams are still tied after considering all positions, we rank them alphabetically based on their team letter. Given an array of strings `votes` which is the votes of all voters in the ranking systems. Sort all teams according to the ranking system described above.
+
+Return *a string of all teams* **sorted** by the ranking system.
+
+Example:
+
+~~~
+Input: votes = ["ABC","ACB","ABC","ACB","ACB"]
+Output: "ACB"
+Explanation: Team A was ranked first place by 5 voters. No other team was voted as first place so team A is the first team.
+Team B was ranked second by 2 voters and was ranked third by 3 voters.
+Team C was ranked second by 3 voters and was ranked third by 2 voters.
+As most of the voters ranked C second, team C is the second team and team B is the third.
+~~~
+
+**我的思路**：给每一支队伍创建一个特殊的记分数据结构，如果有n支队伍参与排名，这个积分结构则是大小为n+1的`vector<int>`,其中前n项的第i项为这个队伍被当作第i名投了多少票，最后一项是字母顺序，a是0，z是25。给这个vector重新拍一下序，利用`<algorithm>`头文件中的sort函数的第三项自定义排序函数，两个队伍在比较时从第一项开始比，如果前n项都一样则比较最后一项字母大小，自动完成排序。
+
+**代码**：
+
+~~~C++
+class Solution {
+public:
+    string rankTeams(vector<string>& votes) {
+        if(votes.size() == 1) return votes[0];
+        int num = votes[0].size();
+        unordered_map<char, int> hash;
+        //在统计的最后加上他们的ASCII码
+        for(int i = 0; i < num; i++)
+        {
+            hash[votes[0][i]] = i;
+        }
+        vector<int> single(num, 0);
+        vector<vector<int>> all(num, single);
+        for(int i = 0; i < votes.size(); i++)
+        {
+            for(int j = 0; j < num; j++)
+            {
+                char cur = votes[i][j];
+                all[hash[cur]][j]++;
+            }
+        }
+        for(int i = 0; i < num; i++)
+        {
+            all[i].push_back((int)(votes[0][i] - 'A'));
+        }
+        //排序
+        sort(all.begin(), all.end(), voteTurn);
+        string res = "";
+        for(int i = 0; i < num; i++)
+        {
+            char cur = all[i].back() + 'A';
+            string s(1, cur);
+            res += s;
+        }
+        return res;
+    }
+    
+private:
+    static bool voteTurn(const vector<int>& a, const vector<int>& b)
+    {
+        for(int i = 0; i < a.size() - 1; i++)
+        {
+            if(a[i] > b[i]) return true;
+            else if(a[i] < b[i]) return false;
+            else continue;
+        }
+        if(a.back() < b.back())
+            return true;
+        else return false;
+    }
+};
+~~~
+
 ## VI. 查找
 
 ### 2M. 两数相加。
 
-问题描述：给定两已知链表由低到高保存两数的各位，将两数相加后返回一链表。
+**问题描述**：给定两已知链表由低到高保存两数的各位，将两数相加后返回一链表。
 
 ~~~
 Input: (2 -> 4 -> 3) + (5 -> 6 -> 4)
@@ -1495,13 +2262,13 @@ public:
 
 ### 46M. 排列组合
 
-问题描述：给出一个字母彼此互不相同的字符串，输出这些字母的所有可能的排列方式。
+**问题描述**：给出一个字母彼此互不相同的字符串，输出这些字母的所有可能的排列方式。
 
-我的思路：考虑递推，假设前边n个字母的所有排列方式都已经举出，那么对于每一种**排列方式**，第n+1个字母都有n+1个位置放置（每两个字母之间以及第一个字母之前和最后一个字母之后），依此递推。
+**我的思路**：考虑递推，假设前边n个字母的所有排列方式都已经举出，那么对于每一种**排列方式**，第n+1个字母都有n+1个位置放置（每两个字母之间以及第一个字母之前和最后一个字母之后），依此递推。
 
-坑：
+**坑**：
 
-代码；
+**代码**；
 
 ~~~C++
 class Solution {
@@ -1569,13 +2336,42 @@ private:
 };
 ~~~
 
-### 264M. 丑数II
+### 78M. 子集
 
-问题描述：丑数是质因子只有2、5和8的数，规定1是第一个丑数。求第n个丑数。
+问题描述：给出一个包含不同的元素的序列，求出他的所有子集并输出。
 
-我的思路：采用三指针法。因为每一个丑数都能看作从前边某个丑数与2、5或8相乘得到。因此，我们从1开始创建三个附属于丑数序列的虚序列。每个指针都指向当前2、3或5作为比较的对象，当当前对象乘以相应因子后仍小于最大的丑数时，则不断循环前进。这样不会漏掉任何一个丑数。
+我的思路：采用递推的形式，由于包含n个元素的集合就是在包含n-1个元素的集合的所有子集上添上这个元素并和原来的子集合并，因此可以一步一步推出所有子集。
 
 代码：
+
+~~~C++
+class Solution {
+public:
+    vector<vector<int>> subsets(vector<int>& nums) {
+        if(nums.empty()) return {};
+        vector<vector<int>> res = {{}, {nums[0]}};
+        for(int i = 1; i < nums.size(); i++)
+        {
+            int size = res.size();
+            for(int j = 0; j < size; j++)
+            {
+                vector<int> temp = res[j];
+                temp.push_back(nums[i]);
+                res.push_back(temp);
+            }
+        }
+        return res;
+    }
+};
+~~~
+
+### 264M. 丑数II
+
+**问题描述**：丑数是质因子只有2、5和8的数，规定1是第一个丑数。求第n个丑数。
+
+**我的思路**：采用三指针法。因为每一个丑数都能看作从前边某个丑数与2、5或8相乘得到。因此，我们从1开始创建三个附属于丑数序列的虚序列。每个指针都指向当前2、3或5作为比较的对象，当当前对象乘以相应因子后仍小于最大的丑数时，则不断循环前进。这样不会漏掉任何一个丑数。
+
+**代码**：
 
 ~~~C++
 class Solution {
@@ -2055,6 +2851,170 @@ public:
 
 
 ## XII. 动态规划
+
+### 53E. 最大的子序列
+
+**问题描述**：给出一个序列，寻找其中一个连续的子序列，使得这个子序列的所有元素和最大。
+
+**我的思路**：
+
+* 动态规划：假设我们从头到尾遍历，那么对于当前的这个数有加入和不加入子序列的两种选择，如果前边的子序列的和为正数，那么我们可以选择加入这个子序列，这时我们称前面这个子序列是有贡献的，我们将前边的子序列加入candidates；反之如果前边子序列已经为负了，那么前边的子序列就可以抛弃了，我们从当前这个数再起一个新的子序列，最后在candidate不断比较的过程中选出最优解。
+* 分治法：对于每一个序列，我们都可将其分为如下序列：`[l, m]`和` [m + 1, r]`，我们对这两个序列分别计算五个数: lmax, rmax, lbmax, rbmax, max，其中前两个指的是左半子序列和右半子序列的最大子序列和，中间两个是指包含靠中间边界的最大子序列和，最后一个是整个序列的最大子序列和，即` max(lmax, rmax, max(rbmax, lbmax, rbmax + lbmax))`。
+
+**我的代码**：
+
+~~~C++
+#define DC
+
+#ifdef DP
+//Dynamic programming
+//Note that if we find the contiguous subarray (i, j) which contains the largest sum, then for each k(i < k < j), the sum of subarray (i, k) should not be negative, otherwise we can simply remove the (i, k) and get a subarray (k+1, j) with a larger sum.
+class Solution {
+public:
+    int maxSubArray(vector<int>& nums) {
+        if(nums.empty()) return 0;
+        int partialSum = 0;
+        int maxSum = INT_MIN;
+        for(int i = 0; i < nums.size(); i++){
+            partialSum += nums[i];
+            maxSum = (maxSum > partialSum)?maxSum:partialSum;
+            if(partialSum < 0) partialSum = 0;
+        }
+        return maxSum;
+    }
+};
+#endif
+
+#ifdef DC
+/*
+Devide and Conquer
+For each array (l, r), we devide it into the left(l, m) and right(m + 1, r) subarrays and calculate five values:
+lmax: the max sum in the left subarray
+rmax: the max sum in the right subarray
+lbmax: the max sum of the boundary subarray ending at m,
+rbmax: the max sum of the boundary subarray starting at m+1,
+max: the max sum of the subarrays of this array, which is max(lmax, rmax, lbmax+rbmax).
+*/
+class Solution{
+public:
+    int maxSubArray(vector<int>& nums){
+        if(nums.size() == 0) return 0;
+        else if(nums.size() == 1) return nums[0];
+        
+        int res = maxSubArrayDC(nums, 0, nums.size() - 1);
+        return res;
+    }
+    
+    int maxSubArrayDC(vector<int>& nums, int l, int r){
+        int lmax = 0, rmax = 0;
+        int lbmax, rbmax;
+        int bmax, max;
+        if(nums.size() == 2){
+            max = nums[0] > nums[1] ? nums[0] : nums[1];
+            max = max > nums[0] + nums[1] ? max : nums[0] + nums[1];
+            return max;
+        }
+        int m = (l + r) >> 1;
+        if(l < m - 1){
+            lmax = maxSubArrayDC(nums, l, m);
+            int temp = 0;
+            lbmax = nums[m];
+            for(int i = m; i > -1; i--){
+            temp += nums[i];
+            lbmax = lbmax>temp?lbmax:temp;
+            }
+        }   
+        else {
+            if(l == m){
+                lmax = nums[m];
+                lbmax = nums[m];
+            } else {
+                lmax = nums[l] > nums[m] ? nums[l] : nums[m];
+                lmax = lmax > nums[l] + nums[m] ? lmax : nums[l] + nums[m];
+                if(nums[l] > 0) lbmax = nums[l] + nums[m];
+                else lbmax = nums[m];
+            }
+        }
+        if(m + 1 < r - 1){
+            rmax = maxSubArrayDC(nums, m + 1, r);
+            int temp = 0;
+            rbmax = nums[m + 1];
+            for(int i = m + 1; i < nums.size(); i++){
+            temp += nums[i];
+            rbmax = rbmax>temp?rbmax:temp;
+            }
+        } 
+        else{
+            if(r == m + 1){
+                rmax = nums[m + 1];
+                rbmax = nums[m + 1];
+            } else {
+                rmax = nums[r] > nums[m + 1] ? nums[r] : nums[m + 1];
+                rmax = rmax > nums[r] + nums[m + 1] ? rmax : nums[r] + nums[m + 1];
+                if(nums[r] > 0) rbmax = nums[m + 1] + nums[r];
+                else rbmax = nums[m + 1];
+            }
+        }
+        
+        
+        bmax = rbmax + lbmax;
+        bmax = bmax > rbmax ? bmax : rbmax;
+        bmax = bmax > lbmax ? bmax : lbmax;
+        
+        max = lmax>rmax?lmax:rmax;
+        max = max>bmax?max:bmax;
+        return max;
+    }
+};
+#endif
+~~~
+
+### 120M. 三角形的最短路径
+
+**问题描述**：给出一个从上到下排列的二维数组组成的三角阵，找出一个从最上层移动到最下层的路径使得途径点的值的和最小。移动的规则是当前点只能向下或向右下移动一格。能否用O(n)的空间复杂度解决问题呢？
+
+~~~
+[
+     [2],
+    [3,4],
+   [6,5,7],
+  [4,1,8,3]
+]
+~~~
+
+**我的思路**：这是个动态规划问题，我们找出每一个位置对应的值，即从(i, j)这一点移动到最下层的最小路径，那么我们知道当前点只能从正上方的点和左上方的点移动过来，因此` d[i][j] = min(d[i - 1][j], d[i - 1][j - 1]) + triangle[i][j]`。为了使用最少的空间，我们只分配一个大小为n的数组，从头到尾只利用这一个数组的空间，同时利用一些临时变量做一些记录（代码中的temp用来记录被覆盖的左上方数据，t用来记录即将被覆盖的正上方数据）。
+
+**代码**：
+
+~~~C++
+class Solution {
+public:
+    int minimumTotal(vector<vector<int>>& triangle) {
+        if(triangle.size() == 0) return 0;
+        else if(triangle.size() == 1) return triangle[0][0];
+        int size = triangle.size();
+        vector<int> res(size, INT_MAX);
+        res[0] = triangle[1][0] + triangle[0][0];
+        res[1] = triangle[1][1] + triangle[0][0];
+        for(int i = 2; i < triangle.size(); i++)
+        {
+          	//用来记录左上方的点的结果，即将被覆盖
+            int temp = res[0];
+            res[0] = res[0] + triangle[i][0];
+            res[i] = res[i - 1] + triangle[i][i];
+            for(int j = 1; j < i; j++)
+            {
+              	//用来计算正上方点的结果，即将被覆盖
+                int t = res[j];
+                res[j] = min(temp, t) + triangle[i][j];
+                temp = t;
+            }
+        }
+        int min = *min_element(res.begin(), res.end());
+        return min;
+    }
+};
+~~~
 
 ## XIII. 图
 

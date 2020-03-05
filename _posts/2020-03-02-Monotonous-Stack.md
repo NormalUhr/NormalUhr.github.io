@@ -4,7 +4,7 @@ title:      "单调栈"
 subtitle:   "Leetcode刷题总结 五"
 date:       2020-03-02
 author:     "Felix Zhang"
-header-img: "img/in-post/2020-03-02-Monotonous-Stack/bg1.jpg"
+header-img: "img/in-post/2020-03-02-Monotonous-Stack/bg.jpg"
 catalog: true
 tags:
    - Leetcode
