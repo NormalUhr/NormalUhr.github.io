@@ -2349,7 +2349,7 @@ class Solution {
 public:
     vector<vector<int>> subsets(vector<int>& nums) {
         if(nums.empty()) return {};
-        vector<vector<int>> res = {{}, {nums[0]}};
+        vector<vector<int>> res = { {}, {nums[0]} };
         for(int i = 1; i < nums.size(); i++)
         {
             int size = res.size();
