@@ -7,7 +7,7 @@ author:     "Felix Zhang"
 header-img: "img/in-post/2020-03-02-Monotonous-Stack/bg.jpg"
 catalog: true
 tags:
-   - Leetcode
+   - LeetCode
 ---
 
 # 单调栈
