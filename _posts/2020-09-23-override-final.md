@@ -97,11 +97,11 @@ tags:
  }
 ```
 
-关于`final`和`override`关键字位置的一个小提示：这两者哦度英方在`const`，`volatile`等其他关键字后边，但是应该在纯虚标记，也就是"`=0`"的前边。一个`final`的纯虚函数是没什么意义的，因为本身就是一个抽象函数又不让后边的子类覆写给与它实际意义。另外就是`override final`和`final override`并没有什么区别，只是后者读起来可能更顺一些吧。只写一个`final`并不会像`override`那样检查覆写类型，所以最好还是两个都写上。
+关于`final`和`override`关键字位置的一个小提示：这两者应放在在`const`，`volatile`等其他关键字后边，但是应该在纯虚标记，也就是"`=0`"的前边。一个`final`的纯虚函数是没什么意义的，因为本身就是一个抽象函数又不让后边的子类覆写给与它实际意义。另外就是`override final`和`final override`并没有什么区别，只是后者读起来可能更顺一些吧。只写一个`final`并不会像`override`那样检查覆写类型，所以最好还是两个都写上。
 
 现在再去覆写`ChildOfBase`类的`dontChangeMe`函数就不可能了，但是写一个新的子类继承`Base`再覆写`dontChangeMe`还是允许的。
 
-## 被`Final`修饰的类
+## 被`final`修饰的类
 
 `final`还有第二种用法，直接用在类上，紧跟着类名，表示这个类禁止任何其他类继承它，无论是`public`继承还是`private`继承。
 
