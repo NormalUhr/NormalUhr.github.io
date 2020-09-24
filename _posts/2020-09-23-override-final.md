@@ -2,7 +2,7 @@
 layout:     post
 title:      "override和final让你的虚函数更安全"
 subtitle:   "C++学习笔记"
-date:       2020-09-24
+date:       2020-09-23
 author:     "Felix Zhang"
 header-img: "img/in-post/2020-02-12-Niuke-Notes/bg.jpg"
 catalog: true
