@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "快慢指针"
+title:      "刷题笔记——快慢指针"
 subtitle:   "LeetCode刷题总结 三"
 date:       2020-02-02
 author:     "Felix"

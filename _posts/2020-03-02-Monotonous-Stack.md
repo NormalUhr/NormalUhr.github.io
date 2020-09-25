@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "单调栈"
+title:      "算法笔记——单调栈"
 subtitle:   "Leetcode刷题总结 五"
 date:       2020-03-02
 author:     "Felix Zhang"

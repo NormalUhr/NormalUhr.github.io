@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "卡特兰数"
+title:      "刷题笔记——卡特兰数"
 subtitle:   "LeetCode刷题总结 四"
 date:       2020-02-10
 author:     "Felix"

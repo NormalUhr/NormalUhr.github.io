@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "滑动窗口"
+title:      "刷题笔记——滑动窗口"
 subtitle:   "LeetCode刷题总结 二"
 date:       2020-02-01
 author:     "Felix"

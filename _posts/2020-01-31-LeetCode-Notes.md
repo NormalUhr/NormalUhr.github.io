@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "异或的用法"
+title:      "刷题笔记——异或的用法"
 subtitle:   "LeetCode 刷题总结一"
 date:       2020-01-31
 author:     "Felix"

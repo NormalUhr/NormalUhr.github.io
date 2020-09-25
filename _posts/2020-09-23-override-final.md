@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "override和final让你的虚函数更安全"
+title:      "漫谈C++——override和final让你的虚函数更安全"
 subtitle:   "C++学习笔记"
 date:       2020-09-23
 author:     "Felix Zhang"
