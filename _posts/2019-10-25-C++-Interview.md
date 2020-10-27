@@ -1,8 +1,8 @@
 ---
 layout:     post
-title:      "C++面试汇总*"
+title:      "C++面试汇总"
 subtitle:   "C++学习笔记"
-date:       2020-10-25
+date:       2019-10-25
 author:     "Felix Zhang"
 header-img: "img/in-post/2020-03-02-Monotonous-Stack/bg.jpg"
 catalog: true
