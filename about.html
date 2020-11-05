@@ -25,7 +25,7 @@ header-img: "img/about-bg.jpg"
 </div>
 
 <!-- Deutsch Version -->
-<div class="en post-container">
+<div class="de post-container">
     {% capture about_de %}{% include about/de.md %}{% endcapture %}
     {{ about_de | markdownify }}
 </div>
@@ -60,8 +60,8 @@ header-img: "img/about-bg.jpg"
         }else{
             // not trigger onChange, otherwise cause a loop call.
             $select.selectedIndex = 0;
-            $zh.style.display = "block";
-            $en.style.display = "none";
+            $zh.style.display = "none";
+            $en.style.display = "block";
             $de.style.display = "block";
         }
     }
