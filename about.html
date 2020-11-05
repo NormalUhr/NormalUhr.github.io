@@ -49,19 +49,20 @@ header-img: "img/about-bg.jpg"
             $select.selectedIndex = 1;
             $en.style.display = "block";
             $zh.style.display = "none";
-            $de.style.display = "none";
+            $de.style.display = "block";
+        // de
         }else if(_hash == "#de"){
             $select.selectedIndex = 2;
-            $de.style.display = "block";
-            $zh.style.display = "none";
-            $en.style.display = "none";
+            $de.style.display = "none";
+            $zh.style.display = "block";
+            $en.style.display = "block";
         // zh by default
         }else{
             // not trigger onChange, otherwise cause a loop call.
             $select.selectedIndex = 0;
             $zh.style.display = "block";
             $en.style.display = "none";
-            $de.style.display = "none";
+            $de.style.display = "block";
         }
     }
 
