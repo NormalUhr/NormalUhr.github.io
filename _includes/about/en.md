@@ -1,11 +1,12 @@
+>I betrayed a girl. I did it badly. I will keep this here forever. I use these words to remind me all over and over again, how she shaped me and how bad I hurt her. I will never forgive myself.
+>
+>This is my confession.
 
-It didn't occur to me that someone should notice this little space. Anyway, since you are here, why not have a cup of tea.
+It didn't occur to me that someone should notice this little hidden space. Anyway, since you are here, why not have a cup of tea.
 
-Hi, I am Felix Zhang. I am a Chinese who have lived in China and Europe. You probably noticed that I did not mention a specific country in Europe, that's becuase I traveled a lot of places and did not settle down.
+I am a big fan of Harry Potter and Marvel movies, so in my blogs you can easily find many interesting pictures on these two topics. Btw, I have read the Harry Potter books for over eight times but there are still a lot fun to discover. 
 
-As my posts suggest, I am quite into C++. Generally, my research of interests include Computer Vision(that's a huge topic!), SLAM and Deep Learning(like everyone else in this world...). I plan to take a PhD but haven't made any agreement with any Professor. If you happened to be a Professor in the related area and are interested in me, pffff..., please wake me up.
+As my posts suggest, I am quite into C++, but during the research and daily work, I use python primarily. For me, C++ is like a transparent plastic bottle, each and every detail being displayed in it. Theoretically, you can manipulate this language and design your program with the most flexibility. That's where the beauty of programming lies, I suppose. I planed to take a PhD in CS and I believe it will begin soon, hopefully in Fall 2021 in the US.
 
-I am a big fan of Harry Potter and Marvel movies, so in my blogs you can easily find many interesting pictures on these two topics. Btw I have read the Harry Potter books for over eight times but there are still a lot fun in it to discover.
-
-Anyway, I still wish you have a great time here, for whatever purposes. 
+Anyway, I wish you have a great time here, for whatever purposes. You are welcome drop me a message with this [address](zhangyihua2020@outlook.com). Wish you safe throught the pandemic.
 
