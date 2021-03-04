@@ -130,7 +130,7 @@ $$
 
 与white-box attack完全相反的是，我们在black-box场景下并没有访问模型本身参数或梯度的权限。这种攻击常常用于已经被封装成API的商业识别模型中，如Google Could Vision System。攻击者能够获取到的信息仅仅是该模型针对输入作出的预测，更极端的情况模型甚至不返回每个类别具体的probability得分，而仅仅返回Top1或Top5的类别label，这也使攻击更加困难。在上述情况中，我们将无法通过back-propagation获得模型关于输入的梯度，因此对该梯度合理的估计（estimation）就成了black-box攻击的重点研究方向。
 
-![](/Users/normaluhr/Documents/Git/StarkSchroedinger.github.io-master/img/in-post/2021-01-20-evasion-attack/1.png)
+![](https://github.com/StarkSchroedinger/StarkSchroedinger.github.io/blob/master/img/in-post/2021-01-20-evasion-attack/1.png?raw=true)
 
 Black-box optimization问题形式依旧为：
 $$
