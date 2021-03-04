@@ -27,11 +27,11 @@ Data Poisoning攻击区别于Evasion攻击，是攻击者通**过对模型的训
 
 下图[<sup>4</sup>](#refer-anchor-4)完整的展示了攻击过程，下图中的trigger是一张白块。由此可见，这个trigger就像是模型给攻击者留好的后门，首先它在使用时不易被发现——如果不加trigger，模型就会照常工作，不会表现出任何异样；当攻击者准备使用它时只需要在test input上加入事先预留的trigger，模型就会乖乖的把input分类成攻击者想要的类别。
 
-![1](/Users/normaluhr/Documents/Git/StarkSchroedinger.github.io-master/img/in-post/2021-02-02-data-poisoning/1.png)
+![1](https://github.com/StarkSchroedinger/StarkSchroedinger.github.io/blob/master/img/in-post/2021-02-02-data-poisoning/1.png?raw=true)
 
 可用于攻击的trigger可以有很多种形式，例如[<sup>3</sup>](#refer-anchor-3)：
 
-![2](/Users/normaluhr/Documents/Git/StarkSchroedinger.github.io-master/img/in-post/2021-02-02-data-poisoning/2.png)
+![2](https://github.com/StarkSchroedinger/StarkSchroedinger.github.io/blob/master/img/in-post/2021-02-02-data-poisoning/2.png?raw=true)
 
 对此类攻击手段而言，最重要的是两个指标：
 
@@ -40,7 +40,7 @@ Data Poisoning攻击区别于Evasion攻击，是攻击者通**过对模型的训
 
 该方法的优势：计算量小，poison策略和模型本身是无关的（model- agnostic）；而该方法的劣势：需要同时改变训练样本的数据和标签、同时在测试过程也要改变测试数据[<sup>4</sup>](#refer-anchor-4)。
 
-![3](/Users/normaluhr/Documents/Git/StarkSchroedinger.github.io-master/img/in-post/2021-02-02-data-poisoning/3.png)
+![3](https://github.com/StarkSchroedinger/StarkSchroedinger.github.io/blob/master/img/in-post/2021-02-02-data-poisoning/3.png?raw=true)
 
 我们自然而然会问：有没有办法来设计一套**不需要改变**训练数据**label**的攻击方法（因为一旦改变，攻击就比较容易检测出来了）？有没有办法设计一套**不需要在测试集上加trigger**的攻击手段（让不知情的使用者也会中招）？前者的答案是Clean-label，后者的答案是training-only attack。
 
@@ -63,7 +63,7 @@ $$
 
 一般的DNN图像分类模型总是由以下两部分组成，Feature Extractor以及Classifier，最终组成总的$g \circ f(\mathbf x)$即为整个模型：
 
-![](/Users/normaluhr/Documents/Git/StarkSchroedinger.github.io-master/img/in-post/2021-02-02-data-poisoning/4.png)
+![](https://github.com/StarkSchroedinger/StarkSchroedinger.github.io/blob/master/img/in-post/2021-02-02-data-poisoning/4.png?raw=true)
 
 Hidden Trigger Backdoor的思想是，首先我们选中某一被攻击的类别（如下图的airplane）加上trigger$\mathbf x_{trigger}$，对另一类别（下图的dog）进行perturb优化，优化的方向是使被污染图片$\mathbf x_p$的被提取到的特征$f(\mathbf x_p)$尽量和有trigger的图片相似:
 $$
@@ -72,7 +72,7 @@ s.t. \| \mathbf {x' - x} \|_{\infty} \le \epsilon
 $$
 这种做法的思想实际上是让被perturb的类别**模仿**加上trigger的另一类别，这样做在实际训练的过程中，**训练集的所有图像都没有加trigger**，trigger被“隐藏”在了perturbation中，因此称为hidden trigger。加在Dog类上的Perturbation被用来**在特征层面模仿**附有trigger的Airplane类。因而在测试的时候，输入加上trigger的Airplane类会被模型误认为Dog，以达到利用trigger实施攻击的目的。
 
-![](/Users/normaluhr/Documents/Git/StarkSchroedinger.github.io-master/img/in-post/2021-02-02-data-poisoning/5.png)
+![](https://github.com/StarkSchroedinger/StarkSchroedinger.github.io/blob/master/img/in-post/2021-02-02-data-poisoning/5.png?raw=true)
 
 对以上两种方法做比较，可以发现Adversarial Perturbation-Enabled Attack是一种无向的（untargeted）攻击，而后者则是有向的。
 
@@ -91,7 +91,7 @@ $$
 
 针对Backdoor Attack防御的基本思路是，我们能不能从一个被攻击的模型$\mathbf{\theta_p}$中恢复出攻击者预留的trigger？这里就涉及到一个估计的问题：对于任意一个输入$\mathbf x$，也一定有一不变的trigger使得加上trigger后的输入$\mathbf x_p$ 的预测结果是错误的。
 
-![](/Users/normaluhr/Documents/Git/StarkSchroedinger.github.io-master/img/in-post/2021-02-02-data-poisoning/6.png)
+![](https://github.com/StarkSchroedinger/StarkSchroedinger.github.io/blob/master/img/in-post/2021-02-02-data-poisoning/6.png?raw=true)
 
 如果我们用$\mathbf m$表征trigger的位置，$\mathbf{\delta}$表征trigger本身，就可以通过优化以下误分类率来恢复$\mathbf m$和$\delta$：
 $$
