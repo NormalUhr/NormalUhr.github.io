@@ -1,21 +1,21 @@
 ---
 layout:     post
 title:      "Adversarial ML——Backdoor Attack"
-subtitle:   "论文总结"
+subtitle:   "Paper Summary"
 date:       2021-02-02
 author:     "Felix Zhang"
 header-img: "img/in-post/2021-02-02-data-poisoning/bg.JPG"
 catalog: true
 tags:
-   - adversarial machine learning
-   - adversarial attack
+   - Adversarial Machine Learning
+   - Paper Summary
 ---
 
 # Poisoning Attack in Adversarial Machine Learning
 
 Data Poisoning攻击区别于Evasion攻击，是攻击者通**过对模型的训练数据做手脚**来达到**控制模型输出**的目的，是一种在**训练过程中**产生的对模型安全性的威胁。Data Poisoning，即对训练数据“下毒”或“污染”。这种攻击手段常见于外包模型训练工作的场景，例如我们常常将模型训练任务委托给第三方云平台（如Google Colab等等），此时第三方平台就掌握了我们的所有训练数据，很容易在训练数据上做手脚，以达到不为人知的目的。
 
-此类data poisoning攻击一般分为两大类：分别是**Backdoor attack**和Training-only attack，区别在于前者需要接触到模型的训练数据（training data）以及验证数据（test data），而后者仅需要接触到模型的训练数据即可完成攻击。前者进一步可以分为**Basic backdoor attack**和clean-label backdoor attack，区别在于是否需要对训练数据的label进行污染（更改）。
+此类data poisoning攻击一般分为两大类：分别是**Backdoor attack**和Training-only attack，区别在于前者需要接触到模型的训练数据（training data）以及验证数据（test data），而后者仅需要接触到模型的训练数据即可完成攻击。前者进一步可以分为**Basic backdoor attack**和clean-label backdoor attack，区别在于是否需要对训练数据的label进行perturb（更改）。
 
 ## Backdoor Data Poisoning
 
@@ -54,7 +54,7 @@ Data Poisoning攻击区别于Evasion攻击，是攻击者通**过对模型的训
 
 这种攻击方法首先会将目标类别尽量污染成其他类别，然后再对该类别施加trigger。先解释前半句话：
 $$
-\mathbf{x_p = \mathop{\arg\max}_{x'} \ell_{tr}(x', y, \theta) \\
+\mathbf{x_p = \mathop{\arg\max}_{x'} \ell_{tr}(x', y, \boldsymbol\theta) \\
 s.t. {\|x' - x \|}_p \le \epsilon}
 $$
 对于选定的图像$\mathbf x$（例如猫这一类的训练图片）做perturbation，实际上是一个优化过程，优化方向是让一个pretrained model认为$\mathbf x$不像$\mathbf x$，数学上即使得pretrained model的loss $\ell_{tr}$最大。注意这里的perturbation是没有给定方向的（untargeted），即一张猫的图片perturb后模型可能会按照像狗的方向优化，另一张猫的图片按照像马的方向优化，这取决于每张图片在pretrained model上不同标签的打分结果。接着我们在污染过的训练样本$\mathbf{x_p}$上加trigger，让目标模型去用这样的样本集训练$(\mathbf{x_p} + trigger, \mathbf y)$。注意，因为污染样本的方向是随机的，实际上是让模型学习到：“狗+trigger、马+trigger、驴+trigger...”这些特征应该被分类成猫，这里的“狗、马、驴”的特征实际上是猫被向“狗、马、驴”方向污染而产生的，这也就是为什么能够不改变训练集的label也能下backdoor的原因。
@@ -93,11 +93,48 @@ $$
 
 ![](https://github.com/StarkSchroedinger/StarkSchroedinger.github.io/blob/master/img/in-post/2021-02-02-data-poisoning/6.png?raw=true)
 
-如果我们用$\mathbf m$表征trigger的位置，$\mathbf{\delta}$表征trigger本身，就可以通过优化以下误分类率来恢复$\mathbf m$和$\delta$：
+如果我们用$\mathbf m$表征trigger的位置，$\mathbf m$是一个和$\mathbf x$大小相同的掩膜（mask）矩阵，仅有$0$和$1$组成；$\boldsymbol{\delta}$表征trigger本身，就可以通过优化以下误分类率来恢复$\mathbf m$和$\boldsymbol\delta$：
 $$
-(\hat{\mathbf m}, \hat{\mathbf\delta}) = \mathop{\arg\max}_{\mathbf m, \mathbf \delta} \ell_{tr}(\mathbf{(1 - m) \circ x + m \circ \delta, y; \theta_{poison}}) + \lambda \|\mathbf m\|_1
+(\hat{\mathbf m}, \hat{\boldsymbol\delta}) = \mathop{\arg\max}_{\mathbf m, \boldsymbol{\delta}} \ell_{tr}(\mathbf{(1 - m) \circ x + m \circ \boldsymbol\delta, y; \boldsymbol\theta_{poison}}) + \lambda \|\mathbf m\|_1
 $$
 通过这种方法产生的$\mathbf m$是稀疏的，因为最后的正则项采用的是$\ell_1$范数。
+
+## A Generalization view on Data Poisoning - Bi-level Optimization
+
+所谓Bi-level optimization问题是指形如：
+$$
+\min_{\mathbf x} = \ell(\mathbf x, \mathbf y^{*}(\mathbf x))\\
+s.t. \mathbf y^{*}(\mathbf x) = \mathop{\arg\min}_{\mathbf y}g(\mathbf y, \mathbf x)
+$$
+的优化问题。其中该问题包含两层优化，第一层是outer loop，其中$\ell$一般是定义好的损失函数，而$\mathbf y^*$也是关于$\mathbf x$的优化函数，即inner loop优化问题。特别的，如果$g = -\ell$那么该问题就特殊化为$min-max$问题：
+$$
+\min_{\mathbf x}\max_{\mathbf y} \ell(\mathbf{x, y})
+$$
+特别的，我们可以将Data Poisoning写成该问题的形式[<sup>12</sup>](#refer-anchor-12) [<sup>13</sup>](#refer-anchor-13)：
+
+* $\mathbf x$即为被优化的poisoned data，最优解为$\mathbf x_p = \mathbf{(1-m)\circ x + m \circ \boldsymbol\delta}$，其中$(\mathbf m, \boldsymbol\delta)$即为实际被优化的参数对。
+* $\mathbf y$是被攻击的模型参数，将在poisoned data上被训练。
+* $\ell$是Attack loss $\ell_{atk}$
+* $g$是模型训练时的loss:$\ell_{tr}$。
+
+因此可以讲bi-level的形式改写为：
+$$
+\min_{\mathbf m, \boldsymbol\delta} \ell_{atk}(\mathcal{X}_{p}^{val}, \boldsymbol{\theta^*})\\
+s.t. \quad \boldsymbol\theta^* = \mathop{\arg\min}_{\boldsymbol\theta}\ell_{tr}(\boldsymbol\theta; \mathcal{X}_p\cup\mathcal{X}_{clean})\\
+where \quad\mathcal{X}_{p} = \{\mathbf{x_p^{(i)}} = \mathbf{(1-m)\circ x_{p}^{(i)} + m \circ \boldsymbol\delta}\}
+$$
+注意这里$\mathcal{X}_{clean}$和$\mathcal{X}_{p}$分别是原始的和被污染的训练集数据，而$\mathcal{X}_{p}^{val}$是验证集加上trigger的数据。trigger的形式和位置可以是和数据无关的（data- agnostic）也可以是和数据有关的，此时对于每个训练数据，都会有自己的$(\mathbf{m_i}, \boldsymbol\theta_i)$。
+
+该类问题的解法可以采用Alternating Optimization，也就是给定$\boldsymbol\theta(0)$和$(\mathbf{m}(0),\boldsymbol\delta(0))$，分别对inner loop和outer loop进行迭代优化：
+$$
+\boldsymbol\theta(k) = \mathop{\arg\min}_{\boldsymbol\theta}\ell_{tr}(\boldsymbol\theta; \mathcal{X}_p(k-1)\cup\mathcal{X}_{clean})\qquad (\boldsymbol\theta-step)
+$$
+
+$$
+(\mathbf m(k), \boldsymbol\delta(k)) = (\mathbf m(k-1), \boldsymbol\delta(k-1))-\alpha\nabla_{\mathbf m, \boldsymbol\delta}\ell_{atk}(\mathcal{X}_{p}^{val}(k-1), \boldsymbol\theta(k)) \\ ((\mathbf m, \boldsymbol\delta)-step))
+$$
+
+可以看出，在$(\boldsymbol\theta-step)$中，可以用N-step的PGD方法；而在$((\mathbf m, \boldsymbol\delta)-step)$中，可以使用梯度下降法。关于如何求梯度$\nabla_{\mathbf m, \boldsymbol\delta}\ell_{atk}(\mathcal{X}_{p}^{val}(k-1), \boldsymbol\theta(k))$，可以参考[<sup>11</sup>](#refer-anchor-11)
 
 ## Reference
 
@@ -118,3 +155,9 @@ $$
 <div id="refer-anchor-9"></div> [9] F. Bach, R. Jenatton, J. Mairal, and G. Obozinski. Optimization with sparsity-inducing penalties. Foundations and Trends® in Machine Learning, 4(1):1–106, 2012.
 
 <div id="refer-anchor-10"></div> [10] Mingjie Sun, Siddhant Agarwal, and J Zico Kolter. Poisoned classifiers are not only backdoored, they are fundamentally broken. arXiv preprint arXiv:2010.09080, 2020. 
+
+<div id="refer-anchor-11"></div> [11] Mingyi Hong, Hoi-To Wai, Zhaoran Wang, and Zhuoran Yang. A two-timescale framework for bilevel optimization: Complexity analysis and application to actor-critic. arXiv preprint arXiv:2007.05170, 2020.
+
+<div id="refer-anchor-12"></div> [12] Matthew Jagielski, Alina Oprea, Battista Biggio, Chang Liu, Cristina Nita-Rotaru, and Bo Li. Manipulating machine learning: Poisoning attacks and countermeasures for regression learning. In 2018 IEEE Symposium on Security and Privacy (SP), pages 19–35. IEEE, 2018.
+
+<div id="refer-anchor-13"></div> [13] Micah Goldblum, Dimitris Tsipras, Chulin Xie, Xinyun Chen, Avi Schwarzschild, Dawn Song, Aleksander Madry, Bo Li, and Tom Goldstein. Data security for machine learning: Data poisoning, backdoor attacks, and defenses. arXiv preprint arXiv:2012.10544, 2020. 
