@@ -128,7 +128,7 @@ $$
 
 ## Black-Box Attack
 
-与white-box attack完全相反的是，我们在black-box场景下并没有访问模型本身参数或梯度的权限。这种攻击常常用于已经被封装成API的商业识别模型中，如Google Could Vision System。攻击者能够获取到的信息仅仅是该模型针对输入作出的预测，更极端的情况模型甚至不返回每个类别具体的probability得分，而仅仅返回Top1或Top5的类别label，这也使攻击更加困难。在上述情况中，我们将无法通过back-propagation获得模型关于输入的梯度，因此对该梯度合理的估计（estimation）就成了black-box攻击的重点研究方向。
+与white-box attack完全相反的是，我们在black-box场景下并没有访问模型本身参数或梯度的权限。这种攻击常常用于已经被封装成API的商业识别模型中，如Google Could Vision System[<sup>14</sup>](#refer-anchor-14)。攻击者能够获取到的信息仅仅是该模型针对输入作出的预测，更极端的情况模型甚至不返回每个类别具体的probability得分，而仅仅返回Top1或Top5的类别label，这也使攻击更加困难。在上述情况中，我们将无法通过back-propagation获得模型关于输入的梯度，因此对该梯度合理的估计（estimation）就成了black-box攻击的重点研究方向。
 
 ![](https://github.com/StarkSchroedinger/StarkSchroedinger.github.io/blob/master/img/in-post/2021-01-20-evasion-attack/1.png?raw=true)
 
@@ -138,16 +138,18 @@ $$
 $$
 不同点在于，对于white-box attack，在迭代：
 $$
-\boldsymbol\delta^{(k)} = \boldsymbol\delta^{(k-1)} - \alpha \cdot \nabla_{\boldsymbol\delta}\ell(\boldsymbol\theta^{(k-1)})
+\boldsymbol\delta^{(k)} = \boldsymbol\delta^{(k-1)} - \alpha \cdot \nabla_{\boldsymbol\delta}\ell(\boldsymbol\delta^{(k-1)})
 $$
-中我们可以通过模型的back-propagation得到$\nabla_{\boldsymbol\delta}\ell(\boldsymbol\theta^(k-1))$，但是在black-box中，上式被替换为：
+中我们可以通过模型的back-propagation得到$\nabla_{\boldsymbol\delta}\ell(\boldsymbol\delta^{(k-1)})$，但是在black-box中，上式被替换为：
 $$
-\boldsymbol\delta^{(k)} = \boldsymbol\delta^{(k-1)} - \alpha \cdot \underbrace{\hat\nabla_{\boldsymbol\delta}\ell(\boldsymbol\theta^{(k-1)})}_{\text{ZO gradient estimation}}
+\boldsymbol\delta^{(k)} = \boldsymbol\delta^{(k-1)} - \alpha \cdot \underbrace{\hat\nabla_{\boldsymbol\delta}\ell(\boldsymbol\delta^{(k-1)})}_{\text{ZO gradient estimation}}
 $$
 
 ###  Zeroth-Order Optimization
 
-首先我们要完成对上述梯度的估计，我们首先对目标损失函数做一个常规的假设—Lipschitz Smoothness。即对loss function$\ell(\cdot)$，存在常数$L < \infty$使得对任意$\mathbf x$和$\mathbf y \in dom(\ell)$都有
+#### 梯度估计
+
+首先我们要完成对上述的**梯度估计**，我们首先对目标损失函数做一个常规的假设—**Lipschitz Smoothness**。即对损失函数$\ell(\cdot)$，存在常数$L < \infty$使得对任意$\mathbf x$和$\mathbf y \in dom(\ell)$都有
 $$
 \ell(\mathbf y) - \ell(\mathbf x) - \nabla\ell(\mathbf x)^{T}(\mathbf{y-x}) \leq \frac{L}{2}\|\mathbf{y-x}\|^2_2
 $$
@@ -165,13 +167,80 @@ $$
 $$
 {[\hat\nabla_{\boldsymbol\delta}\ell(\boldsymbol\delta)]}_i = \frac{\ell(\boldsymbol\delta + \mu\mathbf{e_i}) - \ell(\boldsymbol\delta - \mu\mathbf{e_i})}{2\mu}, \quad \forall i \in [d]
 $$
-在上式中，$\mu$是差分step的大小，也是smoothing parameter。而$\mathbf{e_i}$代表着数据的第$i$个维度，只有第$i$个分量是1，其余是0，数据维度等于像素个数乘以通道数，$d$代表总数据维度。上式是对梯度的第$i$个维度分量上的估计。如此估计的误差该如何估计呢？
+在上式中，$\mu$是差分step的大小，也是smoothing parameter。而$\mathbf{e_i}$代表着数据的第$i$个维度，只有第$i$个分量是1，其余是0，数据维度等于像素个数乘以通道数，$d$代表总数据维度。上式是对梯度的第$i$个维度分量上的估计。如此估计的误差$|{[\hat\nabla_{\boldsymbol\delta}\ell(\boldsymbol\delta)]}_i-[\nabla_{\boldsymbol\delta}\ell(\boldsymbol\delta)]]_i|$如何估计呢？由[<sup>13</sup>](#refer-anchor-13)给出的估计表明：
+$$
+|{[\hat\nabla_{\boldsymbol\delta}\ell(\boldsymbol\delta)]}_i-[\nabla_{\boldsymbol\delta}\ell(\boldsymbol\delta)]_i| \leq \frac{\mu L}{2}
+$$
+由Triangle不等式和L-smooth的性质易证。从这个结论我们就可以看出，该方法的优点在于当$\mu \rightarrow 0$时，该估计就变成了无偏估计，但同时$\mu$过小会造成该方法缺乏稳定性。这个方法更大的问题在于，我们要非常频繁得去掉用API来为我们做预测，每一次梯度估计都要做$\mathcal{O}(d)$数量级的查询（即调用API获得预测结果），这不论是时间上还是计算上都是非常昂贵的。
 
 * Randomized Gradient Estimator
 
+利用随机向量$\mathbf u$之间查询结果的差分来估计梯度
+$$
+\hat{\nabla}_{\boldsymbol\delta}\ell(\boldsymbol\delta) = \phi(d)\frac{\ell(\boldsymbol\delta + \mu\mathbf u) - \ell(\boldsymbol\delta)}{\mu} \mathbf u
+$$
+其中$\phi(d) = 1$如何选择的噪声满足高斯分布$\mathbf u \sim \mathcal{N}(\mathbf{0, I})$，$\phi(d)=d$如何噪声是单位向量$\mathbf u \leftarrow \frac{\mathbf u}{\|\mathbf u\|_2}$。如此估计所得误差估计由[<sup>15</sup>](#refer-anchor-15)给出：
+$$
+\mathbb{E}_{\mathbf u}[\|{\hat\nabla_{\boldsymbol\delta}\ell(\boldsymbol\delta)}-\nabla_{\boldsymbol\delta}\ell(\boldsymbol\delta)\|_2^2] = \mathcal{O}(d)\|\nabla_{\boldsymbol\delta}\ell(\boldsymbol\delta)\|_2^2 + \frac{\mu^2d^3 + \mu^2d}{\phi(d)}
+$$
+这种估计方法的优势很明显：只需要两此查询即可得到梯度的完整估计，但缺点是即使$\mu \rightarrow 0$估计还是有误差，
 
+* Query Efficiency 和 Estimation Quality的权衡
 
-# Non-$\ell_p$ Evasion Attack
+由Randomized Gradient Estimator很容易有多次查询并去平均值的想法，这样通过增加查询次数来减小估计误差，也就是Query Efficiency和Estimation Quality之间的权衡。考虑$n$个随机向量$\{\mathbf{u}_i\}$，那么多点查询后的梯度估计由下式给出：
+$$
+\hat{\nabla}_{\boldsymbol\delta}\ell(\boldsymbol\delta) = \frac{1}{n}\sum_{i=1}^n[\phi(d)\frac{\ell(\boldsymbol\delta + \mu\mathbf u_i) - \ell(\boldsymbol\delta)}{\mu} \mathbf u_i]
+$$
+那么此时估计所得到的误差的估计为：
+$$
+\mathbb{E}_{\mathbf u}[\|{\hat\nabla_{\boldsymbol\delta}\ell(\boldsymbol\delta)}-\nabla_{\boldsymbol\delta}\ell(\boldsymbol\delta)\|_2^2] = \mathcal{O}(\frac{d}{\textcolor{red}{n}})\|\nabla_{\boldsymbol\delta}\ell(\boldsymbol\delta)\|_2^2 + \frac{\mu^2d^3}{\textcolor{red}{n}\phi(d)} + \frac{\mu^2d}{\phi(d)}
+$$
+可见随着采样点数的增加，误差估计会下降很多。
+
+#### 一般过程
+
+当完成梯度估计后，我们就可以进一步采用类似于white-box attack的方法进行attack example的优化，整个过程（包含梯度估计）分三步进行：
+$$
+\text{(1) ZO gradtient estimation} \qquad\hat{\mathbf g}^{(k)} = \hat{\nabla}\ell(\boldsymbol\delta_{k-1})
+$$
+
+$$
+\text{(2) Descent Operation} \qquad \mathbf m^{(k)} = \psi(\hat{\mathbf g}^{(k)})
+$$
+
+$$
+\text{(3) Projection Operation} \qquad \mathbf m^{(k)} \leftarrow \text{Proj}_C(\mathbf m^{(k)})
+$$
+
+其中第三步投影操作和white-box非常类似，不做赘述。重点介绍第二部Descent Operation，旨在对已经估计好的梯度做一些优化或处理，让整个算法更稳定或更快速。常用的Descent Operation有：
+
+* ZO-GD/ZO-SGD，即最普通的不做任何改变$\psi(\hat{\mathbf g}^{(k)}) = \hat{\mathbf g}^{(k)}$
+* ZO-sign-GD/SGD，类似FGSM将估计出来的梯度符号信息（方向信息）提取出来$\psi(\hat{\mathbf g}^{(k)}) = \text{sign}(\hat{\mathbf g}^{(k)})$
+
+后者比前者收敛更快速，但在早期迭代过程中，前者比后者的准确性要高。
+
+### ZO-Optimization with Non-Smooth Objective
+
+注意在之前的分析中我们做了Lipschitz-Smoothness的假设，之所以可以做出这个假设，一个隐藏的大前提是我们可以从模型得到针对输入图片的每一类的probability得分（如是狗的可能性为60%，是卡车的可能性是20%...），我们称之为Soft-label Attack。与之对应的是Hard-label Attack，又称为label-only attack，即模型不会返回给用户每一类的得分，而只是一个Top1结果[<sup>18</sup>](#refer-anchor-18) [<sup>19</sup> ](#refer-anchor-19)[<sup>20</sup>](#refer-anchor-20)。这种情况下就不能对损失函数$\ell_{atk}$做Lipschitz-Smoothness假设。那么如何对使用ZO方法来处理non-smooth的问题呢？
+
+**Randomized Smoothing**：该方法提供了一个代理函数(surrogate function)[<sup>17</sup> ](#refer-anchor-17)[<sup>21</sup> ](#refer-anchor-21)：
+$$
+\ell_{\mu}(\boldsymbol\delta) = \mathbb{E}_{\mathbf \mu \sim \mathcal N(\mathbf{0, I}}[\ell_{atk}(\mathbf x + \boldsymbol\delta + \mu \mathbf u; \boldsymbol\theta)]\\
+\approx \frac{1}{N}\sum_{i=1}^{N}\ell_{atk}(\mathbf x + \boldsymbol\delta + \mu \mathbf u; \boldsymbol\theta)
+$$
+该函数的性质是：即使$\ell_{atk}$不是smooth的，也能保证$\ell_{\mu}$的l-smooth特性。内在原因是，两个函数的卷积(convolution)的l-smooth特性至少和这两个函数中l-smooth最好的一样。这里$\ell_{\mu}$可以视作离散版本的卷积$\int_\mu[\ell_{atk}(\mathbf x + \boldsymbol\delta + \mu \mathbf u; \boldsymbol\theta)p(\mathbf u)]d \mathbf u$。原始的损失函数和smoothing过后的loss的landscape见下图：
+
+![](/Users/normaluhr/Documents/Git/StarkSchroedinger.github.io-master/img/in-post/2021-01-20-evasion-attack/4.png)
+
+## 收敛分析
+
+对于white-box attack，准确的梯度信息可以直接得到，那么利用SGD可以得到收敛速率：经过$K$次迭代后，$\mathbb{E}[\|\nabla_{\boldsymbol\delta}\ell(\boldsymbol\delta^{(K)})\|_2^2] = \mathcal{O}(\frac{1}{\sqrt{K}})$，见下图[<sup>16</sup>](#refer-anchor-16)：
+
+![](/Users/normaluhr/Documents/Git/StarkSchroedinger.github.io-master/img/in-post/2021-01-20-evasion-attack/2.png)
+
+对于black-box attack，由于梯度是估计而得到的，而这样的估计带来很大的方差，因而同样迭代次数下收敛效果要比white-box要差一些：$\mathbb{E}[\|\nabla_{\boldsymbol\delta}\ell(\boldsymbol\delta^{(K)})\|_2^2] = \mathcal{O}(\frac{\sqrt{d}}{\sqrt{K}})$，被称为dimension-based slowdown[<sup>17</sup>](#refer-anchor-17):
+
+![](/Users/normaluhr/Documents/Git/StarkSchroedinger.github.io-master/img/in-post/2021-01-20-evasion-attack/3.png)
 
 
 
@@ -196,3 +265,21 @@ $$
 <div id="refer-anchor-11"></div> [11] Anish Athalye and Ilya Sutskever. Synthesizing robust adversarial examples. arXiv preprint arXiv:1707.07397, 2017. Sijia
 
 <div id="refer-anchor-12"></div> [12] Sijia Liu, Pin-Yu Chen, Bhavya Kailkhura, Gaoyuan Zhang, Alfred Hero, and Pramod K Varshney. A primer on zeroth-order optimization in signal processing and machine learning. arXiv preprint arXiv:2006.06224, 2020. 
+
+<div id="refer-anchor-13"></div> [13] X. Lian, H. Zhang, C.-J. Hsieh, Y. Huang, and J. Liu. A comprehensive linear speedup analysis for asynchronous stochastic parallel optimization from zeroth-order to first-order. In Advances in Neural Information Processing Systems, pages 3054–3062, 2016.
+
+<div id="refer-anchor-14"></div> [14] Anish Athalye and Ilya Sutskever. Synthesizing robust adversarial examples. arXiv preprint arXiv:1707.07397, 2017.
+
+<div id="refer-anchor-15"></div> [15] S. Liu, B. Kailkhura, P.-Y. Chen, P. Ting, S. Chang, and L. Amini. Zeroth-order stochastic variance reduction for nonconvex optimization. Advances in Neural Information Processing Systems, 2018a.
+
+<div id="refer-anchor-16"></div> [16] S.Ghadimi and G. Lan. Stochastic first-and zeroth-order methods for nonconvex stochastic programming. SIAM Journal on Optimization, 23(4):2341–2368, 2013.
+
+<div id="refer-anchor-17"></div> [17] J. C. Duchi, M. I. Jordan, M. J. Wainwright, and A. Wibisono. Optimal rates for zero-order convex optimization: The power of two function evaluations. IEEE Transactions on Information Theory, 61 (5):2788–2806, 2015.
+
+<div id="refer-anchor-18"></div> [18] A. Ilyas, L. Engstrom, A. Athalye, and J. Lin. Black-box adversarial attacks with limited queries and information. arXiv preprint arXiv:1804.08598, 2018.
+
+<div id="refer-anchor-19"></div> [19] Minhao Cheng, Thong Le, Pin-Yu Chen, Jinfeng Yi, Huan Zhang, and Cho-Jui Hsieh. Query-efficient hard-label black-box attack: An optimization-based approach. arXiv preprint arXiv:1807.04457, 2018.
+
+<div id="refer-anchor-20"></div> [20] Minhao Cheng, Simranjit Singh, Patrick Chen, Pin-Yu Chen, Sijia Liu, and Cho-Jui Hsieh. Sign-opt: A query-efficient hard-label adversarial attack. arXiv preprint arXiv:1909.10773, 2019.
+
+<div id="refer-anchor-21"></div> [21] John C Duchi, Peter L Bartlett, and Martin J Wainwright. Randomized smoothing for stochastic optimization. SIAM Journal on Optimization, 22(2):674–701, 2012.
