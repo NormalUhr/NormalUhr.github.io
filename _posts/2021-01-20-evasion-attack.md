@@ -18,9 +18,13 @@ Evasion Attack旨在不干涉模型任何训练的基础上，设计出让训练
 # $\ell_p$ Evasion Attack
 
 记$\mathbf x$为一个输入，$\boldsymbol \delta$是要被设计的perturbation，那么一个adversarial example可以记为：
+
+
 $$
 \mathbf{x'} := \mathbf{x} + \boldsymbol{\delta}
 $$
+
+
 同时对perturbation的大小我们做出限制：
 $$
 \|\boldsymbol\delta\|_p \leq \epsilon
