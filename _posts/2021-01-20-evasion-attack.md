@@ -37,9 +37,10 @@ $$
 其中$\ell_{atk}$是一个确定的attack loss，$\boldsymbol\theta$是被攻击模型的参数。如果我们想要解这个优化问题，有两个关键点很重要：
 
 * 如何确定$\ell_{atk}$对$\boldsymbol\delta$的梯度，即$\nabla_{\boldsymbol\delta}\ell_{atk}(\mathbf x + \boldsymbol\delta; \boldsymbol\theta)$
+
 * 要将解出的结果投影到$\|\boldsymbol\delta\|_p \leq \epsilon$上。
 
-  根据我们是否能拿到模型的梯度信息，$\ell_p$Evasion Attack又可分为白盒攻击（white-box attack）和黑盒情形（black-box attack）。
+根据我们是否能拿到模型的梯度信息，$\ell_p$Evasion Attack又可分为白盒攻击（white-box attack）和黑盒情形（black-box attack）。
 
 ## White-Box Attack
 
