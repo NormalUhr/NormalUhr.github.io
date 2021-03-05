@@ -230,17 +230,17 @@ $$
 $$
 该函数的性质是：即使$\ell_{atk}$不是smooth的，也能保证$\ell_{\mu}$的l-smooth特性。内在原因是，两个函数的卷积(convolution)的l-smooth特性至少和这两个函数中l-smooth最好的一样。这里$\ell_{\mu}$可以视作离散版本的卷积$\int_\mu[\ell_{atk}(\mathbf x + \boldsymbol\delta + \mu \mathbf u; \boldsymbol\theta)p(\mathbf u)]d \mathbf u$。原始的损失函数和smoothing过后的loss的landscape见下图：
 
-![](/Users/normaluhr/Documents/Git/StarkSchroedinger.github.io-master/img/in-post/2021-01-20-evasion-attack/4.png)
+![](https://github.com/StarkSchroedinger/StarkSchroedinger.github.io/blob/master/img/in-post/2021-01-20-evasion-attack/4.png?raw=true)
 
 ## 收敛分析
 
 对于white-box attack，准确的梯度信息可以直接得到，那么利用SGD可以得到收敛速率：经过$K$次迭代后，$\mathbb{E}[\|\nabla_{\boldsymbol\delta}\ell(\boldsymbol\delta^{(K)})\|_2^2] = \mathcal{O}(\frac{1}{\sqrt{K}})$，见下图[<sup>16</sup>](#refer-anchor-16)：
 
-![](/Users/normaluhr/Documents/Git/StarkSchroedinger.github.io-master/img/in-post/2021-01-20-evasion-attack/2.png)
+![](https://github.com/StarkSchroedinger/StarkSchroedinger.github.io/blob/master/img/in-post/2021-01-20-evasion-attack/2.png?raw=true)
 
 对于black-box attack，由于梯度是估计而得到的，而这样的估计带来很大的方差，因而同样迭代次数下收敛效果要比white-box要差一些：$\mathbb{E}[\|\nabla_{\boldsymbol\delta}\ell(\boldsymbol\delta^{(K)})\|_2^2] = \mathcal{O}(\frac{\sqrt{d}}{\sqrt{K}})$，被称为dimension-based slowdown[<sup>17</sup>](#refer-anchor-17):
 
-![](/Users/normaluhr/Documents/Git/StarkSchroedinger.github.io-master/img/in-post/2021-01-20-evasion-attack/3.png)
+![](https://github.com/StarkSchroedinger/StarkSchroedinger.github.io/blob/master/img/in-post/2021-01-20-evasion-attack/3.png?raw=true)
 
 
 
