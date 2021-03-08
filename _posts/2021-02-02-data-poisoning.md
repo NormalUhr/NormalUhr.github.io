@@ -9,6 +9,7 @@ catalog: true
 tags:
    - Adversarial Machine Learning
    - Paper Summary
+   - Backdoor Attack
 ---
 
 # Poisoning Attack in Adversarial Machine Learning

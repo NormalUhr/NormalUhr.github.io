@@ -9,6 +9,7 @@ catalog: true
 tags:
    - Adversarial Machine Learning
    - Paper Summary
+   - Evasion Attack
 ---
 
 # Evasion Attack in Adversarial Machine Learning
@@ -80,7 +81,7 @@ $$
 
 ### PGD Attack - A Principled Attack Generator
 
-PGD Attack[<sup>6</sup>](#refer-anchor-6)是现在被使用最广泛的攻击手段，他是一种基于迭代的攻击。问题描述还是一样：
+PGD Attack[<sup>6</sup>](#refer-anchor-6)是现在被使用最广泛的攻击手段，是一种基于迭代的攻击。问题描述不变：
 
 $$
 \min_{\boldsymbol\delta} \ell_{atk}(\mathbf x + \boldsymbol\delta; \boldsymbol\theta)\\
@@ -90,11 +91,11 @@ $$
 PGD一共进行k步迭代，每一步重复：
 
 $$
-\hat{\boldsymbol\delta}^{(k)} = \boldsymbol\delta^{(k-1)} - \alpha \cdot \nabla_{\mathbf x}\ell_{atk}(\mathbf x + \boldsymbol\delta^{(k-1)}; \boldsymbol\theta)
+\text{(1)} \qquad \hat{\boldsymbol\delta}^{(k)} = \boldsymbol\delta^{(k-1)} - \alpha \cdot \nabla_{\mathbf x}\ell_{atk}(\mathbf x + \boldsymbol\delta^{(k-1)}; \boldsymbol\theta)
 $$
 
 $$
-\boldsymbol\delta^{(k)} = Proj_{\|\boldsymbol\delta\|_p \le \epsilon}(\hat{\boldsymbol\delta}^{(k)})
+\text{(2)} \qquad \boldsymbol\delta^{(k)} = Proj_{\|\boldsymbol\delta\|_p \le \epsilon}(\hat{\boldsymbol\delta}^{(k)})
 $$
 
 可以看出，每次迭代的第一步是在给定梯度下降步长的情况下，无约束得下降到下一优化位置，第二步是在第一步的基础上将无约束的位置投影到符合约束条件的区域。因此第一步成为descent update，第二步成为projection。PGD方法可以看成FGSM的一般化，特殊的，当$k=1$、$\alpha=\epsilon$以及$\hat{\boldsymbol\delta}^{(0)} = 0$时，PGD方法就转化成了FGSM，同时$\hat{\boldsymbol\delta}^{(k)} = \boldsymbol\delta^{(k)}$。
