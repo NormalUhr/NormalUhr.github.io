@@ -51,7 +51,7 @@ tags:
 
 ImageNet-R和原始的ImageNet拥有相同的class label，只是在数据上ImageNet-R给数据加上了各种各样的texture。需要注意的是，这些texture不是人为加上去的，而是对现实世界中存在的texture拍成的照片，比如：剪纸、油画、雕塑、塑料制品、刺绣等。因此从数据特征角度上，这些没有人为改动过的天然texture能够测试出natural robustness。训练集包含30k张图片对应着200个类别。
 
-![](/Users/normaluhr/Documents/Git/StarkSchroedinger.github.io-master/img/in-post/2021-03-03-robustness-uncertainty/1.png)
+![](https://github.com/StarkSchroedinger/StarkSchroedinger.github.io/blob/master/img/in-post/2021-03-03-robustness-uncertainty/1.png?raw=true)
 
 ### StreetView StoreFronts(SVSF)
 
@@ -65,7 +65,7 @@ ImageNet-R和原始的ImageNet拥有相同的class label，只是在数据上Ima
 
 最后介绍的不是数据集，而是一种全新的数据增强手段。以往的数据增强如裁剪、旋转、加噪声等都是和数据本身无关的增强手段（data-agnostic），而Deep Augment是采用深度神经网络为图像产生一对一的数据增强。具体手段是通过随机得改变神经网络中的weights和activation，例如随机得将神经网络中某个系数正负反转或置为零，从而达到更改图像视觉效果但是保持图片**语义信息不变**的目的。
 
-![](/Users/normaluhr/Documents/Git/StarkSchroedinger.github.io-master/img/in-post/2021-03-03-robustness-uncertainty/2.png)
+![](https://github.com/StarkSchroedinger/StarkSchroedinger.github.io/blob/master/img/in-post/2021-03-03-robustness-uncertainty/2.png?raw=true)
 
 这样的数据增强手段比以往的数据增强更加多样化，但是语义信息的保留正是对数据的一定程度的保护。
 
@@ -96,7 +96,7 @@ Self-Attention：在有Self-Attention之处增加了CBAM和SE模型，这两种�
 6. Only IID Accuracy Matters：以上IID/OOD gap的变化规律并不能证明Only IID Accuracy Matters的有效性。
 7. Synthetic does not lead to Natural：因为人为的数据增强都一定程度增加了natural robustness并缩小了IID/OOD gap，因此证伪了这个理论。
 
-![](/Users/normaluhr/Documents/Git/StarkSchroedinger.github.io-master/img/in-post/2021-03-03-robustness-uncertainty/3.png)
+![](https://github.com/StarkSchroedinger/StarkSchroedinger.github.io/blob/master/img/in-post/2021-03-03-robustness-uncertainty/3.png?raw=true)
 
 ### SVSF
 
@@ -104,7 +104,7 @@ SVSF主要是测试不同数据增强方法对改善natural robustness的效果�
 
 实验结果说明要么数据增强只能在图片Texture上做改进，要么就是现有的数据增强手段还不能处理高维度如“建筑风格”这类的语义信息。
 
-![](/Users/normaluhr/Documents/Git/StarkSchroedinger.github.io-master/img/in-post/2021-03-03-robustness-uncertainty/4.png)
+![](https://github.com/StarkSchroedinger/StarkSchroedinger.github.io/blob/master/img/in-post/2021-03-03-robustness-uncertainty/4.png?raw=true)
 
 ### DFR
 
