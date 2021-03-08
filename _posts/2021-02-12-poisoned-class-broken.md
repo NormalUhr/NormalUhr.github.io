@@ -31,7 +31,7 @@ tags:
 
 因此，如果我们把一个被backdoor攻击过的模型做防御（robustify），同时再对这个防御加强后的模型在大/无 L范数的约束下优化出adversarial example，那么这个adversarial example上很有可能就带有隐藏的trigger pattern。具体过程如下图：
 
-![](/Users/normaluhr/Documents/Git/StarkSchroedinger.github.io-master/img/in-post/2021-02-12-poisoned-class-broken/1.png)
+![](https://github.com/StarkSchroedinger/StarkSchroedinger.github.io/blob/master/img/in-post/2021-02-12-poisoned-class-broken/1.png?raw=true)
 
 剩下的几个问题：
 
@@ -44,11 +44,11 @@ tags:
 
 第一个初步的实验，作者使用混接彩块（下图中的Trigger A）作为training trigger，使用上述方法求出robustified model的adversarial example，结果发现真的会有肉眼可见的彩色斑块出现，且随着perturbation大小限制放宽($\epsilon$从20到60)彩斑越来越明显。但是与之形成对比的是，没有backdoor的clean classifier的adversarial example却未发现类似的彩斑。
 
-![](/Users/normaluhr/Documents/Git/StarkSchroedinger.github.io-master/img/in-post/2021-02-12-poisoned-class-broken/2.png)
+![](https://github.com/StarkSchroedinger/StarkSchroedinger.github.io/blob/master/img/in-post/2021-02-12-poisoned-class-broken/2.png?raw=true)
 
 进一步实验，作者将单色彩块作为training trigger，结果发现adversarial example中这种视觉特点更加明显。
 
-![](/Users/normaluhr/Documents/Git/StarkSchroedinger.github.io-master/img/in-post/2021-02-12-poisoned-class-broken/3.png)
+![](https://github.com/StarkSchroedinger/StarkSchroedinger.github.io/blob/master/img/in-post/2021-02-12-poisoned-class-broken/3.png?raw=true)
 
 这也印证了之前的猜想，说明adversarial example的visual trigger确实和training trigger有很强的关联。
 

@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "Adversarial ML——Robustness and Unvertainty"
+title:      "Adversarial ML——Robustness and Frequency"
 subtitle:   "Paper Summary"
 date:       2021-03-07
 author:     "Felix Zhang"
