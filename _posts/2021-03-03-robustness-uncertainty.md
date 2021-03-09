@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "Adversarial ML——Robustness and Unvertainty"
+title:      "Adversarial ML——Robustness and Uncertainty"
 subtitle:   "Paper Summary"
 date:       2021-03-03
 author:     "Felix Zhang"
@@ -13,6 +13,8 @@ tags:
 ---
 
 # Natural Robustness and Uncertainty in Machine Learning
+
+> **Improving distributional robustness** is an important step towards safely deploying models in complex, real-world settings.
 
 在这篇文章中我们主要关心一个词——uncertainty。首先什么是深度神经网络的uncertainty？
 
