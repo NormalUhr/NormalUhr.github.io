@@ -1,8 +1,8 @@
 # Site settings
 title: Blog von Felix
 SEOTitle: 张逸骅的博客 | Blog von Felix
-header-img: img/home-bg.png
-email: zhangyihua1997@gmail.com
+header-img: img/post-bg-universe.jpg
+email: zhangyihua1997@gmail.coml
 description: "算法与音乐 | 张逸骅， | 这里是 @FelixZhnag 的个人博客，与你一起发现更大的世界。"
 keyword: "张逸骅, FelixZhang, Computer Vision, Algorithm, 音乐, Piano"
 url: "https://StarkSchroedinger.github.io"              # your host, for absolute URL
