@@ -38,12 +38,12 @@ header-img: "img/self.jpg"
         var _hash = window.location.hash;
         // en
         if(_hash == "#en"){
-            $select.selectedIndex = 1;
+            $select.selectedIndex = 0;
             $zh.style.display = "none";
             $en.style.display = "block";
         }else{
             // not trigger onChange, otherwise cause a loop call.
-            $select.selectedIndex = 0;
+            $select.selectedIndex = 1;
             $en.style.display = "none";
             $zh.style.display = "block";
         }
@@ -51,7 +51,7 @@ header-img: "img/self.jpg"
 
     // handle select change
     function onLanChange(index){
-        if(index == 0){
+        if(index == 1){
             window.location.hash = "#zh"
         }else{
             window.location.hash = "#en"
