@@ -4,7 +4,7 @@ title:      "Debugging the Foundation Models: Pitfalls and Pains in Machine Unle
 subtitle:   "Notes in Machine Unlearning"
 date:       2024-12-15
 author:     "Yihua Zhang"
-header-img: "img/in-post/2024-12-15-unlearning-pitfalls/bg.JPG"
+header-img: "img/in-post/2024-12-15-unlearning-pitfalls/bg.jpg"
 catalog: true
 tags:
    - C++	
