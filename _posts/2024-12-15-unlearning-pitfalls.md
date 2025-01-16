@@ -76,7 +76,7 @@ AI models frequently replicate societal biases present in their training data. F
     </div>
 </div>
 <div class="caption">
-    Diffusion model’s generated images given the text condition “A Mexican person”, usually involving old man with sombrero[<sup>2</sup>](#refer-anchor-2).
+    Diffusion model’s generated images given the text condition “A Mexican person”, usually involving old man with sombrero<a href="#refer-anchor-2"><sup>2</sup></a>.
 </div>
 
 
@@ -151,7 +151,7 @@ As shown in the figure below, unlearned models may exhibit high unlearning effec
     </div>
 </div>
 <div class="caption">
-  Adversarial attacks significantly reduce the unlearning effectiveness of all state-of-the-art methods in diffusion models[<sup>4</sup>](#refer-anchor-4).
+  Adversarial attacks significantly reduce the unlearning effectiveness of all state-of-the-art methods in diffusion models<a href="#refer-anchor-4"><sup>4</sup></a>.
 </div>
 
 
@@ -193,7 +193,7 @@ In such cases, knowledge forgotten earlier resurfaces due to the accumulation of
     </div>
 </div>
 <div class="caption">
-  Sequential unlearning tasks often experience a surge in forget accuracy for earlier unlearning targets, as seen in multiple diffusion model methods in the UnlearnCanvas benchmark[<sup>4</sup>](#refer-anchor-4).
+  Sequential unlearning tasks often experience a surge in forget accuracy for earlier unlearning targets, as seen in multiple diffusion model methods in the UnlearnCanvas benchmark<a href="#refer-anchor-4"><sup>4</sup></a>.
 </div>
 
 **Implication**: Fake unlearning introduces instability in sequential unlearning tasks, risking recovery of forgotten knowledge with each subsequent unlearning operation.
@@ -211,7 +211,7 @@ As demonstrated in existing literature[<sup>6</sup>](#refer-anchor-6), most quan
     </div>
 </div>
 <div class="caption">
-  Quantized models show reduced performance on forgetting metrics, revealing the fragility of fake unlearning under structural changes[<sup>6</sup>](#refer-anchor-6).
+  Quantized models show reduced performance on forgetting metrics, revealing the fragility of fake unlearning under structural changes<a href="#refer-anchor-6"><sup>6</sup></a>.
 </div>
 
 **Implication**: Fake unlearning makes the model fragile to structural changes, such as quantization or pruning, which can inadvertently recover forgotten knowledge.
@@ -263,7 +263,7 @@ The figure below illustrates this issue. Our preliminary study reveals that the 
     </div>
 </div>
 <div class="caption">
-  The distribution of the Min-K=20% score [<sup>8</sup>](#refer-anchor-8) (memorization level) for the pretrained Zephyr-7B-beta [<sup>9</sup>](#refer-anchor-9) with respect to the WMDP forget set. Lower scores indicate data better grasped by the model, while higher scores reflect poorly learned samples.
+  The distribution of the Min-K=20% score <a href="#refer-anchor-8"><sup>8</sup></a> (memorization level) for the pretrained Zephyr-7B-beta <a href="#refer-anchor-9"><sup>9</sup></a> with respect to the WMDP forget set. Lower scores indicate data better grasped by the model, while higher scores reflect poorly learned samples.
 </div>
 
 To address this, we explored a very straightforward selective unlearning approach by omitting forget set samples based on their prediction confidence. The figure below demonstrates that unlearning effectiveness and retainability remain nearly the same when approximately 10%–20% of low-confidence samples are excluded. Notably, removing around 30% of these samples achieves a better forgetting-retaining tradeoff, as shown by the fitted curve nearer to the top-right corner. This represents a win-win scenario: reducing data samples in the forget set not only improves the tradeoff but also boosts unlearning efficiency.
