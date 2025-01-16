@@ -89,7 +89,7 @@ The process of machine unlearning can be formalized mathematically for both diff
 In diffusion models, the aim of unlearning is to prevent the generation of harmful or unwanted content while preserving image quality. The optimization problem can be expressed as:
 
 $$
-\min_{\Delta \theta} L_{\text{unlearn}}^{\text{DM}}(\theta_u) = \mathbb{E}_{(x, c) \sim \mathcal{D}_f, t, \epsilon \sim \mathcal{N}(0, 1), c' \neq c} \left[\| \epsilon_{\theta_u}(x_t | c') - \epsilon_{\theta_u}(x_t | c) \|_2^2 \right] + \beta \ell_{\text{MSE}}(\theta_u; \mathcal{D}_r),
+\min_{\Delta \theta} L_{\text{unlearn}}^{\text{DM}}(\theta_u) = \mathbb{E}_{(x, c) \sim D_f, t, \epsilon \sim \mathcal{N}(0, 1), c' \neq c} \left[\| \epsilon_{\theta_u}(x_t | c') - \epsilon_{\theta_u}(x_t | c) \|_2^2 \right] + \beta \ell_{\text{MSE}}(\theta_u; D_r),
 $$
 
 where:
@@ -97,7 +97,7 @@ where:
 - $$c$$: Harmful concept (e.g., nudity).
 - $$c'$$: A different, unrelated concept.
 - $$\ell_{\text{MSE}}$$: Mean squared error loss for image reconstruction.
-- $$\mathcal{D}_f$$ and $$\mathcal{D}_r$$: Forgetting and retaining datasets.
+- $$D_f$$ and $$D_r$$: Forgetting and retaining datasets.
 - $$\beta$$: Regularization parameter balancing unlearning and retaining objectives.
 
 ### 2. Large Language Models
@@ -105,13 +105,13 @@ where:
 For LLMs, the objective is to eliminate undesirable responses (e.g., toxic or copyrighted content) while preserving general language capabilities. The optimization is defined as:
 
 $$
-\min_{\theta} \mathbb{E}_{(x, y_f) \in \mathcal{D}_f} \left[\ell(y_f | x; \theta) \right] + \lambda \mathbb{E}_{(x, y) \in \mathcal{D}_r} \left[\ell(y | x; \theta)\right],
+\min_{\theta} \mathbb{E}_{(x, y_f) \in D_f} \left[\ell(y_f | x; \theta) \right] + \lambda \mathbb{E}_{(x, y) \in D_r} \left[\ell(y | x; \theta)\right],
 $$
 
 where:
 - $$\ell(\cdot)$$: Loss function for the model's prediction.
 - $$y_f$$: Desired response post-unlearning.
-- $$\mathcal{D}_f$$ and $$\mathcal{D}_r$$: Forgetting and retaining datasets.
+- $$D_f$$ and $$D_r$$: Forgetting and retaining datasets.
 - $$\lambda$$: Regularization parameter.
 
 ### Balancing Removal and Preservation
