@@ -63,7 +63,7 @@ Foundation models are often trained on large, internet-scraped datasets that may
     </div>
 </div>
 <div class="caption">
-    The Times sues OpenAI and Microsoft over A.I. use of copyrighted work[<sup>1</sup>](#refer-anchor-1).
+    The Times sues OpenAI and Microsoft over A.I. use of copyrighted work<a href="#refer-anchor-1"><sup>1</sup></a>.
 </div>
 
 
