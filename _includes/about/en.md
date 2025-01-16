@@ -1,9 +1,13 @@
-It didn't occur to me that someone should notice this little hidden space. Anyway, since you are here, why not have a cup of tea.
+Welcome to “Yihua Zhang’s Corner”!
 
-I am a big fan of Harry Potter and Marvel movies, so in my blogs you can easily find many interesting pictures on these two topics. Btw, I have read the Harry Potter books for over eight times but there is still a lot fun to discover. 
+This is my little digital garden—no cabbages here, just seeds of ideas and moments of curiosity taking root. I’m Yihua Zhang, an ordinary researcher constantly on the lookout for that next “eureka” moment in both research and daily life. Here, you’ll find me deep in thought, unraveling the mysteries of machine learning algorithms, or casually venting about the quirks of academic life. And no, this isn’t a diary—who keeps a diary these days anyway? 😄
 
-As my posts suggest, I am quite into C++, but during the research and daily work, I use python primarily. For me, C++ is like a transparent plastic bottle, each and every detail being displayed in it. Theoretically, you can manipulate this language and design your program with the most flexibility. That's where the beauty of programming lies, I suppose. 
+🌟 About This Space 🌟
+This virtual space is where I jot down ideas that make me go “Wow!”, technical deep dives, and insights I’ve gathered from papers and books. It’s more than a personal archive—it’s a chronicle of my growth and a place for sharing knowledge.
 
-I am joining Professor Sijia Liu's group at MSU in the coming fall in 2021 and I will work on adversarial machine learning and safe AI!
+⚙️ If you’re into tech discussions, you’ll find notes on machine learning, LLMs, Trustworthy ML, and Efficient ML.
+📚 If you enjoy reading reflections, you might just stumble upon something surprisingly engaging.
+💡 If you’re hunting for inspiration, feel free to “pick” any interesting thought that catches your eye!
 
-Anyway, I wish you have a great time here for whatever purposes. You are welcome to drop me a message with this [address](zhangyihua2020@outlook.com). Wish you safe through the pandemic.
+In short, this is both a garden of thoughts and a research lab in progress—where ideas are planted, pruned, and (hopefully) flourish. As for how fruitful it turns out? Well, that depends on my “green thumb” as a researcher. I hope this little corner brings you some joy, and feel free to drop a comment if you want to chat about those “aha!” moments that make life interesting!
+

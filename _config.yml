@@ -1,11 +1,11 @@
 # Site settings
-title: Blog von Felix
-SEOTitle: 张逸骅的博客 | Blog von Felix
+title: Yihua's Blog
+SEOTitle: 张逸骅的博客 | Yihua's Blog
 header-img: img/post-bg-universe.jpg
-email: zhangyihua1997@gmail.coml
-description: "算法与音乐 | 张逸骅， | 这里是 @FelixZhnag 的个人博客，与你一起发现更大的世界。"
-keyword: "张逸骅, FelixZhang, Computer Vision, Algorithm, 音乐, Piano"
-url: "https://StarkSchroedinger.github.io"              # your host, for absolute URL
+email: zhan1908@msu.edu
+description: "算法与音乐 | 张逸骅， | 这里是 @YihuaZhang 的个人博客，与你一起发现更大的世界。"
+keyword: "张逸骅, Yihua Zhang, Trustworthy AI, Efficient AI"
+url: "https://normaluhr.github.io"              # your host, for absolute URL
 baseurl: ""                             # for example, '/blog' if your blog hosted on 'host/blog'
 
 # Publish posts or collection documents with a future date.
@@ -13,11 +13,11 @@ future: true
 
 # SNS settings
 RSS: false
-weibo_username:     5831509829
+# weibo_username:     5831509829
 zhihu_username:     chi-bo-li-de-xi
 github_username:    NormalUhr
-# twitter_username:   FelixZh07754915
-# facebook_username:  huxpro
+twitter_username:   zyh2022
+# facebook_username:  
 linkedin_username:  zhangyihua
 
 
@@ -60,7 +60,7 @@ kramdown:
 
 # Disqus settings
 disqus_share: false
-disqus_username: Felix Zhang
+disqus_username: Yihua Zhang
 
 # Netease setttings
 netease_comment: false
@@ -103,7 +103,7 @@ friends: [
         href: "https://lsjxjtu.github.io"
     },
     {
-        title: "Shiyu Chang",
-        href: "https://people.csail.mit.edu/chang87/"
-    }
+        title: "Tianlong Chen",
+        href: "https://tianlong-chen.github.io/"
+    },
 ]
