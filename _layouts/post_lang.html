@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+
+{% include head.html %}
+
+<body ontouchstart="">
+
+    {% include nav.html %}
+
+    <!-- Language Selector -->
+    <select class="sel-lang" onchange="onLanChange(this.value)">
+        <option value="en" selected> English </option>
+        <option value="zh"> 中文 </option>
+    </select>
+
+    <!-- English Version -->
+    <div class="en post-container">
+        {% comment %}
+          We will capture the English content from the .md snippet 
+          that we'll define in the post's front matter (page.content_en).
+        {% endcomment %}
+        {% capture content_en %}{% include {{ page.content_en }} %}{% endcapture %}
+        {{ content_en | markdownify }}
+    </div>
+
+    <!-- Chinese Version -->
+    <div class="zh post-container">
+        {% capture content_zh %}{% include {{ page.content_zh }} %}{% endcapture %}
+        {{ content_zh | markdownify }}
+    </div>
+
+    {% include footer.html %}
+
+    <!-- Zero-width image hack for WeChat, if you want -->
+    <img src="/img/icon_wechat.png" width="0" height="0" />
+
+    <!-- MathJax scripts if needed -->
+    <script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+      tex2jax: {
+        inlineMath: [['$','$'], ['\\(','\\)']],
+        processEscapes: true
+      }
+    });
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS-MML_HTMLorMML" type="text/javascript"></script>
+
+    <!-- Language switcher JavaScript -->
+    <script type="text/javascript">
+        // get nodes
+        var $zh = document.querySelector(".zh");
+        var $en = document.querySelector(".en");
+        var $select = document.querySelector("select");
+
+        // bind hashchange event
+        window.addEventListener('hashchange', _render);
+
+        // handle render
+        function _render(){
+            var _hash = window.location.hash;
+            if(_hash === "#zh"){
+                $select.value = "zh";
+                $en.style.display = "none";
+                $zh.style.display = "block";
+            } else {
+                // fallback or #en
+                $select.value = "en";
+                $zh.style.display = "none";
+                $en.style.display = "block";
+            }
+        }
+
+        // handle select change
+        function onLanChange(val){
+            if(val === "zh"){
+                window.location.hash = "#zh";
+            } else {
+                window.location.hash = "#en";
+            }
+        }
+
+        // init
+        _render();
+    </script>
+
+</body>
+</html>
