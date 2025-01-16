@@ -11,6 +11,6 @@ tags:
    - Effective C++
 
 # Indicate the actual snippet files that contain the content
-content_en: "posts/2020-12-31-effective-C++_en.md"
-content_zh: "posts/2020-12-31-effective-C++_zh.md"
+content_en: "posts/2020-12-31-effective-c++_en.md"
+content_zh: "posts/2020-12-31-effective-c++_zh.md"
 ---
