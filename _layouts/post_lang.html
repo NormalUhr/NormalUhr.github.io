@@ -1,40 +1,202 @@
+---
+layout: default
+---
+
 <!DOCTYPE html>
 <html lang="en">
-
 {% include head.html %}
 
 <body ontouchstart="">
-
     {% include nav.html %}
 
-    <!-- Language Selector -->
-    <select class="sel-lang" onchange="onLanChange(this.value)">
-        <option value="en" selected> English </option>
-        <option value="zh"> 中文 </option>
-    </select>
+    <!-- Post Header (displays big background image + title/subtitle) -->
+    {% include intro-header.html type='post' %}
 
-    <!-- English Version -->
-    <div class="en post-container">
-        {% comment %}
-          We will capture the English content from the .md snippet 
-          that we'll define in the post's front matter (page.content_en).
-        {% endcomment %}
-        {% capture content_en %}{% include {{ page.content_en }} %}{% endcapture %}
-        {{ content_en | markdownify }}
-    </div>
+    <!-- Main Article Block -->
+    <article>
+        <div class="container">
+            <div class="row">
 
-    <!-- Chinese Version -->
-    <div class="zh post-container">
-        {% capture content_zh %}{% include {{ page.content_zh }} %}{% endcapture %}
-        {{ content_zh | markdownify }}
-    </div>
+                <!-- Post Container (the main column for post content) -->
+                <div class="
+                    col-lg-8 col-lg-offset-2
+                    col-md-10 col-md-offset-1
+                    post-container">
+
+                    <!-- Language Selector -->
+                    <select class="sel-lang" onchange="onLanChange(this.value)">
+                        <option value="en" selected> English </option>
+                        <option value="zh"> 中文 </option>
+                    </select>
+
+                    <!-- English Version -->
+                    <div class="en bilingual-content">
+                        {% comment %}
+                          We will capture the English content from the snippet
+                          defined in the front matter: content_en
+                        {% endcomment %}
+                        {% capture content_en %}{% include {{ page.content_en }} %}{% endcapture %}
+                        {{ content_en | markdownify }}
+                    </div>
+
+                    <!-- Chinese Version -->
+                    <div class="zh bilingual-content">
+                        {% capture content_zh %}{% include {{ page.content_zh }} %}{% endcapture %}
+                        {{ content_zh | markdownify }}
+                    </div>
+
+                    <hr style="visibility: hidden;">
+
+                    <!-- Pager for previous/next post -->
+                    <ul class="pager">
+                        {% if page.previous.url %}
+                        <li class="previous">
+                            <a href="{{ page.previous.url | prepend: site.baseurl | replace: '//', '/' }}"
+                               data-toggle="tooltip" data-placement="top"
+                               title="{{ page.previous.title }}">
+                                Previous<br>
+                                <span>{{ page.previous.title }}</span>
+                            </a>
+                        </li>
+                        {% endif %}
+                        {% if page.next.url %}
+                        <li class="next">
+                            <a href="{{ page.next.url | prepend: site.baseurl | replace: '//', '/' }}"
+                               data-toggle="tooltip" data-placement="top"
+                               title="{{ page.next.title }}">
+                                Next<br>
+                                <span>{{ page.next.title }}</span>
+                            </a>
+                        </li>
+                        {% endif %}
+                    </ul>
+
+                    <hr style="visibility: hidden;">
+
+                    <!-- Disqus Comment Section (if enabled in site config) -->
+                    {% if site.disqus_username %}
+                    <div class="comment">
+                        <div id="disqus_thread" class="disqus-thread"></div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Netease Comment Section (if enabled) -->
+                    {% if site.netease_comment %}
+                    <div id="cloud-tie-wrapper" class="cloud-tie-wrapper"></div>
+                    {% endif %}
+                </div>  <!-- end .post-container -->
+
+                <!-- Catalog Sidebar -->
+                {% if page.catalog %}
+                <div class="
+                    col-lg-2
+                    visible-lg-block
+                    sidebar-container
+                    catalog-container">
+                    <div class="side-catalog">
+                        <hr class="hidden-sm hidden-xs">
+                        <h5>
+                            <a class="catalog-toggle" href="#">CATALOG</a>
+                        </h5>
+                        <ul class="catalog-body"></ul>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Another Sidebar Container (Featured Tags, Friends, etc.) -->
+                <div class="
+                    col-lg-8 col-lg-offset-2
+                    col-md-10 col-md-offset-1
+                    sidebar-container">
+                    {% include featured-tags.html bottom=true %}
+                    {% include friends.html %}
+                </div>
+
+            </div><!-- end .row -->
+        </div><!-- end .container -->
+    </article>
 
     {% include footer.html %}
 
-    <!-- Zero-width image hack for WeChat, if you want -->
+    <!-- Zero-width image hack for WeChat (optional) -->
     <img src="/img/icon_wechat.png" width="0" height="0" />
 
-    <!-- MathJax scripts if needed -->
+    <!-- If your theme uses mathjax, you can include it here -->
+    {% if page.mathjax %}
+      {% include mathjax_support.html %}
+    {% endif %}
+
+    {% if site.netease_comment %}
+    <!-- Netease JS code -->
+    <script src="https://img1.cache.netease.com/f2e/tie/yun/sdk/loader.js"></script>
+    <script>
+      var cloudTieConfig = {
+        url: document.location.href,
+        sourceId: "",
+        productKey: "de25fc98a6fe48b3bc8a7ae765da99a0", 
+        target: "cloud-tie-wrapper"
+      };
+      var yunManualLoad = true;
+      Tie.loader("aHR0cHM6Ly9hcGkuZ2VudGllLjE2My5jb20vcGMvbGl2ZXNjcmlwdC5odG1s", true);
+    </script>
+    {% endif %}
+
+    {% if site.disqus_username %}
+    <!-- Disqus common JS code -->
+    <script type="text/javascript">
+        var disqus_shortname = "{{ site.disqus_username }}";
+        var disqus_identifier = "{{ page.id }}";
+        var disqus_url = "{{ site.url }}{{ page.url }}";
+
+        (function() {
+            var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+            dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+            (document.getElementsByTagName('head')[0]
+              || document.getElementsByTagName('body')[0])
+              .appendChild(dsq);
+        })();
+    </script>
+    {% endif %}
+
+    <!-- AnchorJS (optional, if you had it in post.html) -->
+    {% if site.anchorjs %}
+    <script>
+      function async(u, c) {
+        var d = document, t = 'script',
+        o = d.createElement(t), s = d.getElementsByTagName(t)[0];
+        o.src = u;
+        if (c) {
+          o.addEventListener('load', function (e) { c(null, e); }, false);
+        }
+        s.parentNode.insertBefore(o, s);
+      }
+    </script>
+    <script>
+      async("//cdnjs.cloudflare.com/ajax/libs/anchor-js/1.1.1/anchor.min.js", function(){
+          anchors.options = {
+            visible: 'hover',
+            placement: 'right',
+          };
+          anchors
+            .add()
+            .remove('.intro-header h1')
+            .remove('.subheading')
+            .remove('.sidebar-container h5');
+      })
+    </script>
+    <style>
+      @media all and (min-width: 800px) {
+        .anchorjs-link {
+          position: absolute;
+          left: -0.75em;
+          font-size: 1.1em;
+          margin-top : -0.1em;
+        }
+      }
+    </style>
+    {% endif %}
+
+    <!-- MathJax (if you prefer inline, as in your original) -->
     <script type="text/x-mathjax-config">
     MathJax.Hub.Config({
       tex2jax: {
@@ -43,19 +205,18 @@
       }
     });
     </script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS-MML_HTMLorMML" type="text/javascript"></script>
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS-MML_HTMLorMML"
+      type="text/javascript"></script>
 
     <!-- Language switcher JavaScript -->
     <script type="text/javascript">
-        // get nodes
-        var $zh = document.querySelector(".zh");
-        var $en = document.querySelector(".en");
+        var $zh     = document.querySelector(".zh");
+        var $en     = document.querySelector(".en");
         var $select = document.querySelector("select");
 
-        // bind hashchange event
         window.addEventListener('hashchange', _render);
 
-        // handle render
         function _render(){
             var _hash = window.location.hash;
             if(_hash === "#zh"){
@@ -70,7 +231,6 @@
             }
         }
 
-        // handle select change
         function onLanChange(val){
             if(val === "zh"){
                 window.location.hash = "#zh";
@@ -79,7 +239,7 @@
             }
         }
 
-        // init
+        // Initialize
         _render();
     </script>
 
