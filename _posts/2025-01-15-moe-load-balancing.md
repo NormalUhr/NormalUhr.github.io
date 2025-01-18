@@ -1,7 +1,7 @@
 ---
 layout:     post_lang
 title:      "A Review on the Evolvement of Load Balancing Strategy in MoE LLMs: Pitfalls and Lessons [En/中]"
-subtitle:   "混合专家（MoE）大语言模型负载均衡策略演变：陷阱与经验教训"
+subtitle:   "关于 MoE 大模型负载均衡策略演进的回顾：坑点与经验教训"
 date:       2025-01-15
 author:     "Yihua Zhang"
 header-img: "img/in-post/2025-01-15-moe-load-balancing/bg.jpg"

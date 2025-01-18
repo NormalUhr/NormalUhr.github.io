@@ -1,317 +1,310 @@
-# A Review on the Evolvement of Load Balancing Strategy in MoE LLMs: Pitfalls and Lessons
+# 关于 MoE 大模型负载均衡策略演进的回顾：坑点与经验教训
 
-Hello everyone, welcome to my nerdy-yet-fun exploration of how **Mixture-of-Experts (MoE)** has evolved over the years—particularly focusing on the clever, sometimes messy, always interesting ways researchers have tackled load balancing. This post is very much a “lab notebook” of my ongoing exploration: a mix of academic analysis and personal reflections.
+大家好，欢迎来到我这篇博文，带你探索 **Mixture-of-Experts (MoE)** 在过去几年的发展历程——尤其是研究者们如何在负载均衡这个问题上各显神通，有时候还会被搞得焦头烂额，但最终又时常收获颇丰。我把这篇文章当作我的“实验室笔记”，既有学术分析，也少不了我个人的一些思考和感悟。
 
-The story begins with GShard—back when people realized that models with billions (or trillions) of parameters can be smartly *“sparsified”* to train faster while preserving high accuracy. Since then, we’ve witnessed a cascade of innovations. Here, I want to piece together how we went from **GShard** to the latest innovations like **DeepSeek-V3**—what each one contributed, what pitfalls came up, and what big questions remain unanswered.
+故事要从 GShard 说起——当时，人们意识到拥有数十亿甚至数万亿参数的模型可以通过某种形式的“**稀疏化（sparsified）**”来在保持高精度的同时加速训练。自那以后，我们见证了各种让人眼花缭乱的创新。本文将尝试把从 **GShard** 到 **DeepSeek-V3** 这一系列关键方案串联起来，看看每一次迭代都给我们带来了什么改进，又踩过哪些坑，还有哪些重要问题尚未解决。
 
-## Introduction
+---
 
-### Why Sparse Mixture-of-Experts (MoE)?
+## 简介
 
-So, let’s start with a little bit of context. MoE architectures took the world by storm when folks realized you could dramatically increase model capacity (parameters) without linearly inflating the amount of computation (FLOPs). The big idea is that, for each token, we only “activate” a small subset of the total parameters—i.e., a few experts—rather than forcing every parameter to take part.
+### 为什么要用稀疏专家（Sparse MoE）？
 
-However, the dark side of this approach quickly reared its head: if you’re only sending tokens to a subset of experts, how do you keep the load “balanced” so that no single expert gets hammered with tokens while others stay idle? This is load balancing in a nutshell, and it’s quite the puzzle to solve at scale.
+先说点背景吧。MoE 架构之所以瞬间火起来，是因为人们发现，你可以在不等比例增加计算开销（FLOPs）的前提下，让模型拥有极其庞大的参数量。核心思路在于：对每个 token，只激活少量的专家参与计算，而不是让所有参数统统上场。
 
-###  What This Post Is About
+但这种“只让部分专家工作”的做法，很快就暴露了一大问题：如果只把 token 分给几个专家，那怎么保证负载是均衡的？要是某个专家被一大堆 token 疯狂轰炸，而其他专家却闲得无聊怎么办？这就是负载均衡的本质，也是 MoE 要大规模应用时必须解决的一道难题。
 
-I’m going to walk through some of the landmark MoE systems, starting with GShard (the earliest large-scale MoE system that went mainstream) and meandering all the way to the brand-new DeepSeek-V3. While we’ll cover the usual suspects (like Switch Transformer and GLaM), I want to highlight the pitfalls that each system ran into—and how newer architectures overcame them.
+### 这篇博文要讨论些什么？
 
-If you’re reading this to glean practical takeaways, great: I’ll try to maintain enough academic rigor so it’s useful for advanced practitioners and researchers. But hopefully it’ll stay lighthearted enough that you don’t nod off after a few paragraphs—this is a blog, not a final exam!
+我会带着大家依次走过几个标志性的 MoE 系统，从 GShard（最早把大规模 MoE 推向主流的方案）一直到最新的 DeepSeek-V3。在过程中，我们也会顺带聊聊 Switch Transformer、GLaM 这些经典“选手”，重点剖析它们在负载均衡上遇过的坑和后来的改进思路。
 
-### Key Themes I’ve Noticed
+如果你想获得一些实践层面的启发——没问题，我会尽量保持足够的学术严谨，让研究人员或资深从业者也能从中受益。也希望我这篇文章能写得有点意思，让你不会看几段就昏昏欲睡——毕竟这是篇博客，又不是考试题嘛！
 
-1. **Routing Approaches**: top-2 gating, single-expert gating, top-K gating, correlation-aware gating… yes, we love gating terminology!
-2. **Auxiliary Loss**: helps push balanced usage of experts, but can also hamper performance if it’s too heavy-handed.
-3. **Capacity Constraints**: “capacity factor” is a fancy name for “how many tokens can each expert handle before we drop the extras.”
-4. **Implementation Details**: from “random dispatch” to hierarchical all-to-all. The HPC (high-performance computing) perspective is super relevant.
-5. **Scalability**: we’re talking thousands of experts in some cases, so distributed computing overhead is non-trivial.
+### 我注意到的一些关键主题
 
+1. **路由方式**：top-2 gating、single-expert gating、top-K gating、correlation-aware gating……我们对 gating 的花式名词似乎永远都不嫌多。  
+2. **辅助损失 (Auxiliary Loss)**：用来帮助专家均衡使用，但如果过于强势，也会让模型的性能受限。  
+3. **容量约束（Capacity Constraints）**：所谓“capacity factor”，其实就是“每个专家最多能接收多少 token，超了就丢”。  
+4. **实现细节**：从“随机分配”到分层的 all-to-all 传输，高性能计算（HPC）的那一套在这里特别重要。  
+5. **可扩展性**：有时候我们要上千个专家，因此分布式计算的开销非常值得关注。
 
-## Historical Progression: From GShard to Switch
+---
 
-### GShard: The Pioneer
+## 历史脉络：从 GShard 到 Switch
 
-**GShard** (introduced by Google) is widely cited as among the first large-scale, super-sparse MoE frameworks. It changed the conversation by showing that you could train ~600B parameter models if you carefully sharded the layers and balanced tokens among experts.
+### GShard：先锋之作
 
-GShard’s gating approach typically selects the **top-2** experts for each token. Let’s denote:
+**GShard**（谷歌提出）通常被视为最早实现大规模超稀疏 MoE 的框架之一。它让人们真正意识到，只要把层和 token 智能拆分并均衡地分配给各个专家，训练几百亿甚至上千亿参数的模型是可以做到的。
 
-$$\text{GATE}(x)=\text{Top2}(W_{gate}\cdot x)$$
-where $x$ is the token embedding and $W_{gate}$ is the router's weight matrix. Only the top 2 experts get activated. However, to keep each expert from being overloaded, we need to introduce:
+GShard 的路由通常采用 **top-2** 的 gating 方式，即：
 
-1. **Expert capacity**, $C \approx \frac{2N}{E}$ if $N$ tokens and $E$ experts. If an expert is overloaded beyond capacity, some tokens are dropped (or overflowed to the next layer).
-2. **An auxiliary load-balancing loss**, often of the form
-$$ \mathcal{L}_{\text{aux}} \ \sum_{e=1}^E f_e P_e$$
-    where $f_e$ is the fraction of tokens routed to expert $e$, and $P_e$ is the average gating probability for expert $e$. This loss nudges the system toward distributing tokens more evenly across experts.
-**3. Local groups** so that not every token competes with every other token globally.
+$$
+\text{GATE}(x)=\text{Top2}(W_{gate}\cdot x)
+$$
 
-**Pitfall**: You guessed it—dropping tokens is not super glamorous. If tokens exceed capacity, they might get incomplete processing. Also, the overhead of top-2 gating and random dispatch can get heavy at scale. Also, the over-dependence on an auxiliary loss sometimes forced a “fake” distribution of tokens, hurting specialized learning. But still, GShard proved that MoE could be done and that it’s worth the trouble. The concept of capacity constraints was spot on and we still see that in almost every subsequent MoE method.
+其中 $x$ 是 token 的嵌入向量，$W_{gate}$ 是路由器（router）的权重矩阵。 只有排名前两名的专家会被激活。不过，为了防止某些专家超负荷，训练时一般会引入以下概念：
 
-### Switch Transformer: When “Less is More”
+1. **专家容量 (Expert Capacity)**，约为 $C \approx \frac{2N}{E}$（如果共有 $N$ 个 token，$E$ 个专家）。一旦某个专家被分配的 token 超过了这个容量，就可能丢弃一些 token（或者在下一层再处理）。  
+2. **辅助负载均衡损失 (Auxiliary Loss)**，形式通常如下：  
+   $$
+   \mathcal{L}_{\text{aux}} \ \sum_{e=1}^E f_e P_e
+   $$  
+   其中 $f_e$ 表示实际路由到专家 $e$ 的 token 比例，$P_e$ 是专家 $e$ 的平均 gating 概率。这个损失会“鼓励”各专家负载更加均衡。  
+3. **本地分组 (Local Groups)**：不是所有 token 都在全局竞争，而是先进行分组后再分配给专家。这样能缩小混乱程度。
 
-Switch Transformer essentially said, “Hey, let’s only route each token to one expert.” This made the gating simpler (pick whichever expert has the highest gating logit) and drastically reduced the compute overhead. The gating function goes as:
-$$g_i(x) = \text{softmax}(W_{\text{router}} \cdot x)_i$$
-and we pick
-$$\text{expert_index}(x)={\text{argmax}}_i g_i(x)$$.
+**痛点**：没错，token 被丢弃肯定不是什么好事——如果超容量了，就只好忍痛割爱。而且 top-2 gating 在规模很大时会带来不小的通信和计算开销，再加上依赖辅助损失有时会让路由分布变得“人为”偏均匀，反而牺牲了一定的性能。不过，GShard 为后续所有的 MoE 研究铺好了路：它证明了稀疏专家是有价值的，还为后来的方案指明了“容量因子”这些关键概念的重要性。
 
-The primary innovation of Switch Transformer is its single-expert routing, as fewer experts activated in general gives you simpler code, and further typically faster training speeds. In order to better balance the load, they keep an auxiliary load-balancing loss akin to GShar's approach. They also define a **capacity factor** to let experts handle more tokens than naive fraction. For example,
-$$C = \text{CF} \times \frac{\text{tokens per batch}}{\text{number of experts}}$$
+### Switch Transformer：当“少就是多”
 
-The **gains vs. trade-offs** of Switch Transformer is rather obvious: you have better speed because you only do one feed-forward path per token, but you might risk bigger token overflow (you only have one expert to handle them!). Some tokens are "dropped" or forcibly passed to a residual pathway.
+Switch Transformer 的思路很直接：“我们干脆只给每个 token 选一个专家得了。” 这样做一来简化了 gating 的逻辑（直接挑最高 logit 的专家），二来也极大降低了计算和通信负担。具体做法是：
 
-**Pitfalls and Lessons**: Single-expert routing is conceptually simpler and often faster. But if the CF (capacity factor) is set incorrectly, you might get too many tokens dropped or too many tokens assigned to one expert. Switch Transformer basically spelled out how a bit of well-chosen hyperparameter tuning can do wonders. Switch simplified MoE gating—showing that scaling up is possible even with top-1 routing. This spurred follow-up work on “which K is best?” and “how do we best handle overflow?”
+$$
+g_i(x) = \text{softmax}(W_{\text{router}} \cdot x)_i
+$$
 
-## Refinements and Variations: GLaM, DeepSpeed-MoE, ST-MoE, Mixtral
+然后我们选
 
-### GLaM: Revisiting Top-2 with Efficiency in Mind
+$$
+\text{expert_index}(x)=\text{argmax}_i \, g_i(x).
+$$
 
-**GLaM** (Generalist Language Model) reintroduced **top-2 gating** but with a new spin on **energy efficiency**—reporting that it uses roughly 1/3 of GPT-3’s training energy with better zero-shot performance. They used:
-$$y = \sum_{i=1}^2 g_i \cdot E_i(x),$$
-where $g_i$ are gating weights and $E_i(x)$ are the two selected experts. Similarly, GLaM introduces a carefully tuned auxiliary loss to encourage an even distribution of tokens across experts. This auxiliary loss penalizes imbalanced routing by optimizing the utilization of experts:
-$$\mathcal{L}_{\text{aux}}=\alpha \cdot \sum_{i=1}^E f_i \cdot p_i,$$
-where $f_i$ is the fraction of tokens routed to expert $i$, $p_i$ is the average gating probability for expert $i$, and $\alpha$ is a weighting factor. To prevent overloading experts, GLaM also introduces capacity constraints, where the maximum token capacity per expert is defined as:
-$$C = \frac{\text{tokens per batch}}{\text{number of experts}} \cdot \text{capacity factor}.$$
-Tokens exceeding this capacity will be dropped and passed through residual connections to the next layer. A capacity factor of $1.25$ is typically used to balance token overflow and computational efficiency.
+Switch Transformer 最重要的创新点在于它的 **单专家路由**：每个 token 只走一个专家，代码好写，训练速度也快得多。为了保持负载均衡，还是会用类似 GShard 的辅助损失，并且提出了一个 **capacity factor** 的概念：  
 
-**Pitfalls and Lessons**: GLaM emphasized just how big the energy savings can be when you only activate a small fraction of the model parameters at a time. (They compared with GPT-3 and said, “Look, we’re using a fraction of the energy. Y’all should pay attention!”) Although GLaM discovered that you can indeed overshadow the cost of dense computations, you must watch out for potential imbalances in expert usage—particularly on real-world text distributions. The model’s carefully tuned gating and capacity constraints helped keep experts from overloading.
+$$
+C = \text{CF} \times \frac{\text{tokens per batch}}{\text{number of experts}}
+$$
 
+这就告诉模型每个专家能接收多少 token，多的就要丢（或者用 residual 旁路继续传递）。
 
-### DeepSpeed-MoE: Focusing on Inference
+**利弊**：从直觉上讲，单专家路由能带来更高的速度，因为每个 token 只过一个 FFN，少了大把计算开销。但问题也很明显：要是 capacity factor 调不好，某些专家可能被疯狂挤爆，造成大量 token overflow，或者路由又太松导致浪费。Switch Transformer 让我们看到，哪怕是只用 top-1 gating，也能成功扩展大规模模型——只要你肯下功夫调好那些超参。它也把问题抛给了业界：到底选 top-K 里的哪个 “K”才最优？overflow 又怎么处理才好？
 
-**DeepSpeed-MoE**, by Microsoft, is a prime example of how load balancing has matured to handle both the challenges of **token distribution** during training and efficient **expert utilization** during inference. Building on the pitfalls of earlier MoE systems, DeepSpeed-MoE introduces several innovations to address token load imbalance.
+---
 
-**Core Idea.** At its heart, DeepSpeed-MoE extends the MoE framework with a **flexible multi-expert and multi-data parallelism design** to optimize load balancing, particularly focusing on token-level distribution across experts. The goal is clear: ensure that no expert is overloaded while keeping training efficient and scalable across distributed GPUs.
+## 进一步改进与变体：GLaM、DeepSpeed-MoE、ST-MoE、Mixtral
 
-Following Switch Transformer, DeepSpeed-MoE employs a top-1 gating mechanism. This simplifies routing and reduces computational overhead compared to top-2 or top-k gating. To prevent token imbalance, an **auxiliary load-balancing loss** is added. The loss nudges the distribution of tokens to be more uniform across experts:
-$$\mathcal{L}_{aux} = \alpha \sum_{i=1}^E |f_i - \frac{1}{E}|,$$
-where $𝑓_i$ is the fraction of tokens routed to expert $i$, $E$ is the total number of experts, and $\alpha$ is a tunable weight. This term discourages over-concentration of tokens on a few experts. DeepSpeed-MoE also adopts a **dynamic token redistribution strategy**: During training, DeepSpeed-MoE dynamically redistributes tokens to prevent any single expert from becoming a bottleneck. Tokens that exceed an expert's capacity are rerouted to other, less-busy experts rather than being dropped or passed to a residual pass way. To further mitigate the impact of uneven token distribution, DeepSpeed-MoE introduces the **Residual-MoE architecture**. Here, the output of the dense MLP is combined with the output from the selected expert, treating the expert output as a “residual correction”:
-$$y=\text{MLP}(x) + g \cdot E(x),$$
-where $g$ is the gating score and $E(x)$ is the expert output. This ensures that even underutilized experts contribute meaningfully to the model's overal output.
+### GLaM：带着效率回归 Top-2
 
-**Load Balancing Across GPUs.** Leveraging the observation that deeper layers benefit more from large numbers of experts, DeepSpeed-MoE utilizes more experts in later layers. While this ensures efficient parameter usage and improved model quality, this can lead to varying number of experts across layers. In such a case, a uniform degree of parallelism is inefficient because:
-* Setting parallelism to the smallest number of experts leads to reduced batch sizes and increased memory requirements for GPUs handling larger layers.
-* Setting parallelism to the largest number of experts causes load imbalance, where some GPUs process more experts than others.
+**GLaM**（Generalist Language Model）在 Switch Transformer 之后又把 **top-2 gating** 搬了回来，但增加了对 **能耗效率** 的关注，并声称他们只用了大约 GPT-3 训练能耗的三分之一，却在 zero-shot 任务上表现更好。核心公式大概是：  
 
-The DeepSpeed-MoE system solves this problem by **dynamically adjusting the parallelism degree** across layers and distributing workloads optimally. For a given model, the system allows different parts of the model to use different degrees of expert and data parallelism. For example, layers with 32 experts might use 32-way expert parallelism and 4-way data parallelism, while layers with 128 experts might use 128-way expert parallelism and 1-way data parallelism. This ensures that **each GPU processes exactly one expert per layer** regardless of the total number of experts in the layer. By aligning the expert parallelism with the number of experts in each layer, the system avoids scenarios where some GPUs handle more experts than others. This avoids bottlenecks and ensures maximum utilization of resources.
+$$
+y = \sum_{i=1}^2 g_i \cdot E_i(x),
+$$
 
-**Pitfalls and Lessons.** While DeepSpeed-MoE achieves impressive results in balancing token loads, a few trade-offs remain:
-* **Complexity of Configuration**: Balancing the capacity factor, auxiliary loss weight, and expert parallelism settings requires careful tuning.
-* **Edge Cases in Real-World Data**: Text distributions in NLP tasks can be highly skewed, which can still strain the gating mechanism if not tuned carefully. 
+其中 $g_i$ 是 gating 权重，$E_i(x)$ 是被选中的两个专家输出。同样，GLaM 也采用了一个精心设计的辅助损失来鼓励专家负载更均衡，损失函数类似：  
 
-Nevertheless, DeepSpeed-MoE demonstrated that token load balancing isn’t just a theoretical optimization—it’s a practical necessity for training large-scale MoE systems. By combining routing innovations with system-level optimizations, it set a new standard for efficiency and scalability in MoE training. Even if you have an amazing training pipeline, you still need to handle inference well—especially if you want real-time or interactive applications.
+$$
+\mathcal{L}_{\text{aux}}=\alpha \cdot \sum_{i=1}^E f_i \cdot p_i,
+$$
 
-### ST-MoE: Capacity Factor Tuning & Router Z-Loss
+并设置了一个容量约束：  
 
-**ST-MoE (Stable and Transferable Mixture-of-Experts)** marks a significant leap forward in sparse expert models, offering solutions to some of the long-standing challenges in training stability and transferability. While previous models like Switch Transformer and GLaM laid the groundwork, ST-MoE refined these ideas, addressing pitfalls with a blend of architectural innovations and hyperparameter optimizations.
+$$
+C = \frac{\text{tokens per batch}}{\text{number of experts}} \cdot \text{capacity factor}.
+$$
 
-One of ST-MoE's standout contributions is the **router z-loss**, designed to stabilize training without degrading quality. Sparse models often grapple with instability due to the exponential functions in routing, which amplify small numerical errors. The router z-loss mitigates this by adding a penalty for large logits in the routing network, effectively controlling their magnitude:
-$$\mathcal{L}_z = \frac{1}{B} \sum_{i=1}^B(\text{log}\sum_{j=1}^N \text{exp}(x_{ij}))^2$$
-Here, $B$ is the batch size, $N$ is the number of experts and $x_{ij}$ are the logits for routing. This loss not only reduces instability but also slightly improves model quality - a win-win for sparse model training.
+超出这个容量的 token 还是要被丢弃，通过 residual 路径让网络继续往后走。一般会把 capacity factor 设为 1.25，来兼顾效率和 overflow 问题。
 
-**Tuning the Capacity Factor.** ST-MoE also emphasizes the critical role of the capacity factor (CF) in balancing efficiency and performance. To further improve load balancing, ST-MoE incorporates an auxiliary loss similar to DeepSpeed-MoE, that ensures tokens are evenly distributed across experts. 
+**坑与经验**：GLaM 让大家看到，真正只激活一小部分参数，就能在算力和能耗上吊打类似 GPT-3 的 dense 模型——这是一次在大规模模型的“能效”上非常耀眼的案例。但仍然需要提醒的是，如果真实数据分布不平衡，专家可能还是会出现负载不均，而 GLaM 也花了不少心思去调节 gating、capacity 等超参。
 
-**Pitfalls and Lessons**: ST-MoE achieves an improved Stability vs. Quality Trade-offs: Earlier approaches like GLaM and DeepSpeed-MoE made progress on load balancing but often required compromises in model quality or scalability. ST-MoE's router z-loss shows that it's possible to achieve stability without such trade-offs. However, ST-MoE is not without limitations. The complexity of tuning hyper-parameters like CF and z-loss weight demands careful experimentation. In summary, ST-MoE represents a new chapter in the evolution of MoE architectures, combining robust design principles with innovative solutions to long-standing challenges. 
+### DeepSpeed-MoE：主打推理效率
 
+**DeepSpeed-MoE**（由微软提出）算是将负载均衡做到了一个更成熟的层次，既解决了训练时如何把 token 分配给专家的问题，也兼顾了推理阶段如何让专家有效利用的挑战。它把之前很多 MoE 的坑都总结了，并提出一系列优化方案来应对。
 
-### Mixtral 8x7B: Temporal Locality & Specialized Sparse Kernels
+**核心思路**：DeepSpeed-MoE 从 Switch Transformer 的 top-1 gating 出发，通过多专家并多数据并行的设计，让负载尽可能均匀，避免任何一个专家“堵车”。辅助损失的形式一般是：
 
-**Mixtral 8x7B** stands out as an innovative Sparse Mixture-of-Experts (SMoE) language model, built to address some of the long-standing challenges in load balancing for MoE architectures. Let’s dive into its unique approach to the per-expert token load-balancing problem and uncover the lessons it provides.
+$$
+\mathcal{L}_{aux} = \alpha \sum_{i=1}^E \bigl| f_i - \frac{1}{E}\bigr|,
+$$
 
-At its core, Mixtral employs a **Top-2 gating** mechanism for routing tokens: each layer includes 8 experts, with only 2 experts activated per token at a given time. This approach ensures that by limiting each token to only two experts, Mixtral effectively caps the active parameter count at 13B per token, offering a significant reduction compared to dense models like Llama 2 70B. In the meantime, experts selected can vary across tokens and layers, enhancing the model’s adaptability to different input patterns.
+用来鼓励各个专家的分配更加均匀。与之前最大的不同在于，它会 **动态重分配** 那些超容量的 token，而不是简单地丢弃。此外，它还提出了 **Residual-MoE** 结构，把 dense MLP 的输出和专家输出相加，类似一种“微调”式的组合，以便即使是被选中较少的专家也能对最终输出作出贡献。
 
-**Temporal Locality in Expert Assignment.** One of the most striking findings from the routing analysis is the observed temporal locality in expert assignments. Tokens often retain the same expert assignments across consecutive positions, particularly in deeper layers: In layers 15 and 31, consecutive tokens are assigned the same experts much more frequently than random distribution would predict. This phenomenon is termed **Higher Repetition Rates** and indicates structured behavior, likely tied to the input's syntactic or positional features. Temporal locality offers both opportunities and challenges: it ensures smoother transitions in token assignments, minimizing abrupt workload spikes for specific experts, but it also can lead to over-concentration of tokens on a subset of experts, especially in datasets with syntatic or positional regularities. Similar to DeepSpeed-MoE, Mixtral also adopts the **Dynamic Token Redistribution** strategy: When an expert exceeds its token capacity, excess tokens are efficiently handled by redistributing them to other less-loaded experts. 
+**跨 GPU 的负载均衡**：DeepSpeed-MoE 也关注到，不同层数可能拥有不同数量的专家，导致如果用统一的并行度会不灵活。它会 **动态调整并行度**，让每张 GPU 都刚好处理一个专家的负载。例如，有些层有 32 个专家，就用 32 路专家并行加 4 路数据并行；有些层有 128 个专家，就 128 路专家并行加 1 路数据并行。这样可以保证每张 GPU 不会因为专家数不同而分配不均。
 
+**痛点与教训**：DeepSpeed-MoE 整体的负载均衡做得相当不错，但要调对 capacity factor、辅助损失权重、并行度这些仍然是一门学问，而且真实世界的文本分布通常并不均匀，如果不针对性地调参，也可能在某些场景里栽跟头。不过它一再强调，无论训练多么牛，推理时也要有一套负载均衡策略，否则延迟可能非常糟糕。
 
-**Mitigating GPU Overload with Sparse Kernels.** Mixtral employs specialized sparse kernels (e.g., Megablocks) to alleviate token overload. Megablocks handle variable token assignments efficiently, leveraging high arithmetic intensity to speed up computations. Tokens destined for specific experts are dynamically routed across GPUs. This partitioning strategy, while effective, requires careful load balancing to avoid GPU overloading.
+### ST-MoE：聚焦容量因子与路由器 Z-Loss
 
-**Pitfalls and Lessons.** Mixtral’s analysis of expert usage across diverse datasets underscores the importance of understanding domain-specific token distributions. If the dataset distribution changes (like if you go from news articles to code), the “locality” might vanish. So each approach has assumptions about your data.
+**ST-MoE (Stable and Transferable Mixture-of-Experts)** 在稀疏专家模型中迈出了稳定性和可迁移性的一大步。像 Switch Transformer 和 GLaM 其实都打下了基础，但 ST-MoE 进一步在一些老大难问题上做了提升，包括路由稳定性与超参调优等。
 
-## Next-Generation Approaches: OpenMoE, DeepSeekMoE, JetMoE, & More
+ST-MoE 有个亮点叫 **router z-loss**，主要是为了缓解训练过程中数值不稳定的问题。因为路由里的指数函数特别容易放大微小数值误差，z-loss 就是给那些过大的 logit 值加点惩罚：
 
-### OpenMoE: Context-Independent Specialization & Drop-Towards-the-End
+$$
+\mathcal{L}_z = \frac{1}{B} \sum_{i=1}^B(\log\sum_{j=1}^N \exp(x_{ij}))^2
+$$
 
-OpenMoE is another interesting spin on the standard top-k gating formula, with capacity constraints and an auxiliary balancing loss. But it’s famous for identifying certain quirky behaviors that arise in MoE systems over large training runs, namely **Context-Independent Specialization** and **Drop-Towards-the-End**. 
-* **Context-Independent Specialization**: Tokens might bet routed more by token ID or surface-level patterns, rather than deeper semantic attributes, especailly early on in pretraining.
-* **Drop-Towards-the-End**: In long sequences, capacity constraints often get triggered late in the sequence, so those later tokens are more likely to be dropped. This obviously hurts performance on tasks that rely on end-of-sequence context.
+这样能够抑制极端数值，也往往能带来一点点精度增益。
 
-Like many other MoEs, OpenMoE adopts a top-k selection with $k=2$. Similar to GShard and Switch, a load-balance loss was adopted in the form of:
-$$\mathcal{L}_b = E \cdot \sum_{i=1}^E m_i \cdot P_i,$$
-where $m_i$ is the fraction of tokens routed to expert $i$ and $P_i$ is the average gating probability for expert $i$. To stabalize the training, they also introduce the router loss by penalizing large logits:
-$$ \mathcal{L}_z = \frac{1}{B} \sum_{j=1}^B (\text{log} \sum_{i=1}^E (f(x_j)_i)).$$
+**容量因子调优**：ST-MoE 还强调了 capacity factor 的重要性，用辅助损失来让 token 尽量平均分布。相比之前的方法，它在训练稳定性和模型质量上找到了更平衡的点。当然，这些改进背后依然离不开超参的精细调试。换句话说，ST-MoE 告诉我们，通过合理的设计，你既能得到相对稳定的训练过程，也能保住最终的性能。
 
-To maintain a balanced workload, OpenMoE enforces capacity constraints on each expert. This can ensure the throughput when training and deploying the MoE model with expert parallelism, i.e., distributing different experts to different GPUs. However, OpenMoE for the first time identifies the **Drop-Towards-the-End** issue, that the later tokens would be dropped if the previous tokens have filled the expert. In decoder-only MoE architecture, due to the auto-regressive nature, the later tokens in a sequence may be dropped more. This is particularly problematic for
-sequential tasks like instruction-following, where later tokens may carry critical information.
+### Mixtral 8x7B：时间局部性与专门的稀疏 Kernel
 
-**Pitfalls and Lessons:** OpenMoE taught us to watch out for distributional quirks, especially if you are focusing on tasks that rely on full sequence coverage or want strong domain adaptation. If the gating function picks up superficial patterns (like token IDs), it might not adapt well to new domains. Because capacity constraints are a per-batch mechanism, tokens at the tail end of a batch can get starved.
+**Mixtral 8x7B** 是一个比较有意思的稀疏 MoE（SMoE）语言模型，针对负载均衡有一些独到见解。它还是用 **Top-2 gating**，每层 8 个专家，token 每次只用到其中两个专家，从而大大削减了激活的参数量（13B 级别，而不是像 Llama 2 70B 那样全部激活）。
 
-### DeepSeekMoE: Fine-Grained Experts & Shared Experts
+**时间局部性**：Mixtral 在分析路由模式时发现，token 在相邻位置往往会被分配给同样的专家——尤其在网络的深层。也就是同一个专家常常连续处理好几步的 token，这就会带来“高重复率”现象。这有利于减少专家负载的突发波动，但也可能导致专家被局部数据“霸占”，对分布多样的数据集就需要留意一下。另外，它也采用类似 DeepSpeed-MoE 的 **动态重分配**：当某个专家容量满了，就把多余 token 分给其他忙得没那么厉害的专家。
 
-Before we get to the latest version (DeepSeek-V3), let’s discuss **DeepSeekMoE**. It’s recognized for splitting each expert into finer sub-experts and isolating some **“shared experts”** that are **always activated** (i.e., bypass gating). This approach aims to reduce parameter redundancy while still giving enough diversity for specialized sub-experts.
+**稀疏 Kernel 优化**：Mixtral 利用像 Megablocks 这样专为稀疏计算优化的 GPU kernel，让 token 分配更加高效。一边分配一边做并行处理，这需要在 GPU 的层面做好负载均衡，否则还是可能出现一些 GPU 过载的问题。
 
-**Fine-Grained Expert Segmentation.** DeepSeekMoE introduces the concept of fine-grained expert segmentation to enhance expert specialization. This is achieved by splitting each expert into smaller units while maintaining the total number of parameters and computational cost constant:
-$$h_t^l = \sum_{i=1}^{mN} g_{i,t} \cdot \text{FFN}_i (u_t^l) + u_t^l,$$
+**经验**：Mixtral 强调，你需要了解数据集的“局部规律”，因为一旦数据分布换了（比如从新闻文本转到代码），它原先的路由模式就可能失效。要做大规模的 MoE，就得好好考虑数据特征和专家分配之间的关系。
 
-where $mN$ denotes the total number of fine-grained experts and $g_{i,t}$ is the gating value for expert $i$. The routing mechanism selects the top-$mK$ experts for each token.
+---
 
-Suppose you have $mN$ total sub-experts,  with $N_r=mN$ "routed" experts plus $N_s$ "shared" experts. For the $t$-th token $u_t^l$ at layer $l$:
-$$h_t^l = u_t^l + \sum_{i=1}^{N_s} \text{FFN}_i^{(s)} (u_t^l) + \sum_{j=1}^{N_r} g_{j,t} \cdot \text{FFN}_j^{(r)} (u_t^l),$$
-where $g_{j,t}$ is a gating value for sub-expert j, typically chosen among top-$K_r$.
+## 新一代方案：OpenMoE、DeepSeekMoE、JetMoE、DeepSeek-V3 等等
 
-DeepSeekMoE emplys two levels of load-balance losses to address potential routing collapes and computational bottlenecks: 
-* **Expert-Level balance loss**: this loss encourages uniform token distribution across experts:
-$$\mathcal{L}_{\text{ExpBal}} = \alpha_1 \sum_{i=1}^{mN-K_s} f_i \cdot P_i,$$
-where $f_i$ is the fraction of tokens routed to expert $i$, and $P_i$ is the average routing probability for expert $i$.
-* **Device-Level balance loss**: it ensures balanced compuation across devices:
-$$\mathcal{L}_{\text{DevBal}} = \alpha_2 \sum_{i=1}^{D} f'_i \cdot P'_i,$$
-where $D$ is the number of devices, $f'_i$ and $P'_i$ represent the average token fractions and probabilities for device $i$, respectively.
+### OpenMoE：上下文无关的“专长化”与末端 Token 的“掉队”问题
 
-### JetMoE: Dropless MoE & Pipeline Parallelism
+OpenMoE 依旧遵循常见的 top-k gating + capacity constraints + 辅助负载损失这一整套，但它提出了两个在大规模训练中比较显著的现象：
 
-Where most MoE approaches consider dropping tokens when capacity is exceeded, JetMoE tries a “dropless” approach. The design ensures that no tokens are ever flat-out discarded:
-1. **Dropless MoE**: The gating mechanism is carefully managed to not exceed each expert's maximum capacity.
-2. **Pipeline Parallelism**: instead of scattering experts across many devices, JetMoE keeps all experts of a layer on the same device, forming a pipeline for different layers
+* **上下文无关的专长化（Context-Independent Specialization）**：专家可能只根据 token 的表面特征或 ID 来决定路由，而不是更深层的语义。  
+* **末端 Token 掉队（Drop-Towards-the-End）**：在处理长序列时，如果前面 token 就把专家容量吃满了，那么后面的 token 更容易被丢弃。
 
-JetMoE adopts the top-2 routing and mechanism and has all the load balancing features previously defined, such as frequency-based auxiliary load-balancing loss and the router z-Loss. Unlike previous methods using a fixed capacity factor, JetMoE inherits from MegaBlocks, which replaces the traditional token-dropping approach with block-sparse matrix operations. MegaBlocks implements custom block-sparse GPU kernels to handle the dynamic and load-imbalanced nature of MoE computation efficiently. By constructing a block-sparse matrix topology dynamically based on expert assignments, the framework ensures all tokens are processed without being dropped, unlike traditional methods that use a fixed capacity factor.
+OpenMoE 也是用 top-2 gating，用一个和 GShard、Switch 类似的负载均衡损失。还引入了 router loss 来惩罚过大的 logits，以稳定训练。和前辈们一样，它在容量因子和专家并行上做了细致的设计，但首次严肃讨论了序列末端被丢弃的问题，尤其在自回归结构里，后面 token 常常携带关键信息，如果被丢，性能就会打折。
 
-**Pitfalls and Lessons**: Implementing dropless can get complicated. You might see overhead or suboptimal gating. If you do dropless well, you have consistent token coverage. This is attractive for tasks where dropping tokens is disastrous (like QA or code generation). But you must handle the complexities of capacity-limited gating in real time.
+**结论**：OpenMoE 提醒我们，如果你的任务特别依赖完整序列（例如指令跟随、对话系统），那就要小心这个末端 token 掉队的问题，而且要注意 gating 可能会学到一些“表面化”模式。
 
+### DeepSeekMoE：细粒度专家与共享专家
 
-### Skywork-MoE: Gating Logit Normalization & Adaptive Auxiliary
+在正式介绍最新版本 DeepSeek-V3 之前，我们先来看看 **DeepSeekMoE**。该方法的最大特点之一，是将每个专家切分为更细粒度的子专家（sub-experts），并引入一部分“共享专家”（shared experts）。这些共享专家在推理过程中总是被激活，不需要经过 gating 判断。这样做的目标是减少参数冗余，同时又保留足够的多样性，让子专家可以针对不同模式或特征进行专门化学习。
 
-**Skywork-MoE** is a high-performance Mixture-of-Experts (MoE) model with 146 billion parameters and 16 experts. The model leverages the architecture of Skywork-13B, a dense language model, using its pretrained dense checkpoints for initialization. Skywork-MoE incorporates advanced techniques like gating logit normalization and adaptive auxiliary loss coefficients to improve expert diversification and layer-specific load balancing. It introduced two neat ideas to address unbalanced experts:  
-1. **Gating Logit Normalization**: They standardized gating logits before softmax, controling the "sharpness".
-2. **Adaptive Auxiliary Loss Coefficients**: If a layer is dropping too many tokens, the balancing penalty is automatically increased.
 
-The MoE layer replaces standard FFNs in transformers with multiple experts, selectively activating the top-k most relevant experts for each input token.
+**细粒度专家拆分 (Fine-Grained Expert Segmentation)**  
+DeepSeekMoE 提出了细粒度专家拆分的概念，以提升专家的专门化程度。具体而言，它将每个专家拆分成多个更小的单元，但总参数量和总体计算成本保持不变。如下所示：
 
+$$
+h_t^l = \sum_{i=1}^{mN} g_{i,t} \cdot \text{FFN}_i (u_t^l) + u_t^l,
+$$
 
-**Auxiliary Loss for Load Balancing.** To prevent routing collapse, where a few experts dominate, Skywork-MoE employs an auxiliary loss:
+其中，$mN$ 表示所有子专家（细粒度专家）的总数，$g_{i,t}$ 是针对第 $i$ 个专家在第 $t$ 个 token 上的 gating 权值。路由机制会从所有细粒度专家中为每个 token 选出前 $mK$ 个得分最高的专家。
 
-$$\mathcal{L}_{\text{aux}}=\sum_{j=1}^n (\frac{1}{n} - \frac{1}{T}\sum_{i=1}^T g_{ij})^2,$$
+设想我们一共有 $mN$ 个子专家，其中一部分是“可路由的”（总数为 $N_r = mN$），再加上 $N_s$ 个“共享专家”。在第 $l$ 层，对于第 $t$ 个 token $u_t^l$，计算公式如下：
 
-where $n$ is the number of experts, $T$ is the token batch size, and $g_{ij} is the probability of token $i$ being routed to expert $j$. The auxiliary loss ensures even token distribution across experts.
+$$
+h_t^l = u_t^l 
+        + \sum_{i=1}^{N_s} \text{FFN}_i^{(s)} (u_t^l) 
+        + \sum_{j=1}^{N_r} g_{j,t} \cdot \text{FFN}_j^{(r)} (u_t^l),
+$$
 
-**Gating Logit Normalization.** To improve expert discrimination, Skywork-MoE introduces gating logit normalization:
+其中，$g_{j,t}$ 是第 $j$ 个子专家在该 token 上的 gating 权值，通常从前 $K_r$ 个得分最高的子专家中选出。
 
-$$z=Wx+b, z'=\lambda \frac{z-\mu}{\sigma},$$
 
-$$g = \text{softmax}(z'),$$
+**两级负载均衡损失**  
+为了防止路由塌缩（routing collapse）以及在计算分配上出现瓶颈，DeepSeekMoE 同时设计了专家级别 (expert-level) 和设备级别 (device-level) 的负载均衡损失。
 
-where $\mu$ and $\sigma$ are the mean and standard deviation of $z$; $\lambda$ is a scaling factor controlling the sharpness of the output distribution. This normalization enhances the gating mechanism’s ability to differentiate experts, reducing entropy in the gate outputs.
+1. **专家级负载均衡损失 (Expert-Level Balance Loss)**  
+   这部分损失用来保证在专家之间分配的均衡性：
+   $$
+   \mathcal{L}_{\text{ExpBal}} 
+      = \alpha_1 \sum_{i=1}^{mN - K_s} f_i \cdot P_i,
+   $$
+   其中，$f_i$ 表示路由到专家 $i$ 的 token 占比，$P_i$ 表示专家 $i$ 的平均路由概率（gating probability）。$\alpha_1$ 是损失系数。
 
-**Adaptive Auxiliary Loss Coefficients.** Skywork-MoE employs a dynamic approach to adjust auxiliary loss coefficients $\alpha^{(l)}$ for each MoE layer $l$:
+2. **设备级负载均衡损失 (Device-Level Balance Loss)**  
+   这部分损失用来确保在不同 GPU 或设备之间的计算负载也是均衡的：
+   $$
+   \mathcal{L}_{\text{DevBal}} 
+      = \alpha_2 \sum_{i=1}^D f'_i \cdot P'_i,
+   $$
+   这里，$D$ 表示设备数，$f'_i$ 与 $P'_i$ 分别表示设备 $i$ 上所占的平均 token 比例和平均路由概率。$\alpha_2$ 则是另一层的损失系数。
 
-$$\alpha_{i+1}^{(l)} = \beta \alpha_i^{(l)} + (1- \beta)\xi d_i^{(l)},$$
+通过这种双重均衡损失设计，DeepSeekMoE 能在保证专家内部细粒度专长化的同时，尽量避免某些专家或某些设备被过度使用，进而减小路由不均带来的计算瓶颈。
 
-where $d_i^{(l)}$ is the token drop rate for layer $l$ at iteration $i$, $\xi$ is a sensitivity parameter, and $\beta$ is a smoothing factor. This adaptation ensures balanced load distribution without over-regularizing already balanced layers.
+### JetMoE：无 Token 丢弃的 MoE 与流水线并行
 
+大多数 MoE 都会在超容量时丢 token，而 **JetMoE** 则提出“dropless”策略，保证所有 token 都能被处理：
 
-**Pitfalls and Lessons.** On the one hand, Adapting $\alpha^{(l)}$ is helpful—some layers might be balanced already, while others need a stronger push to distribute tokens. So a one-size-fits-all auxiliary loss can be suboptimal. In the meantime, the hyper-parameter tuning in gating logit normalization could be tricky. if $\lambda$ is set too high, gating probabilities might become too “sharp,” forcing tokens into an extreme distribution. Too low and experts might not specialize enough.
+1. **Dropless MoE**：精心控制 gating，不让任何专家超过容量上限。  
+2. **流水线并行 (Pipeline Parallelism)**：把每一层的专家都放在同一个设备上，分层排队处理，以此简化通信和分配逻辑。
 
+JetMoE 仍然用 top-2 gating，负载均衡也离不开辅助损失和 z-loss 等手段。它借鉴 MegaBlocks 的做法，用块稀疏（block-sparse）的方式在 GPU 上实现“无丢弃”，不过实现起来也更复杂，需要随时管理各专家的接收量并进行动态调度。
 
-### DeepSeek-V3: Bias-Based Auxiliary-Loss-Free Strategy
+**经验教训**：不丢 token 很理想，但实现门槛更高。尤其在大规模场景里，如何实时监控并重分配 token 不是个简单活儿。不过对那些对后续 token 极其敏感的任务（如问答系统、代码生成），dropless 模式确实很有吸引力。
 
-Finally, **DeepSeek-V3** is the latest iteration, and it’s considered cutting-edge because it tries to remove large auxiliary losses and replace them with a more direct, bias-based balancing approach. If you want to talk about advanced load balancing, DeepSeek-V3 is a prime example.
+### Skywork-MoE：gating logit 归一化 & 自适应辅助损失
 
-**Model Architecture.** DeepSeek-V3 employs the DeepSeekMoE architecture for Feed-Forward Networks (FFNs). Compared with
-traditional MoE architectures like GShard, DeepSeekMoE introduces finer-grained experts and isolates some experts as shared ones. The FFN output for the $t$-th token, denoted as $h′_t$, is computed as follows:
+**Skywork-MoE** 是一个 1460 亿参数、16 专家的大模型，建立在已有的 Skywork-13B dense 模型之上做的 MoE 化。它有两大特色来缓解专家不均衡问题： 
 
-$$h_t^l = u_t^l + \sum_{i=1}^{N_s} \text{FFN}_i^{(s)} (u_t^l) + \sum_{j=1}^{N_r} g_{j,t} \cdot \text{FFN}_j^{(r)} (u_t^l),$$
+1. **gating logit 归一化**：在做 softmax 之前先做标准化，控制输出分布的“尖锐度”。  
+2. **自适应辅助损失系数**：如果某层丢 token 太多，就自动调大该层的均衡惩罚；反之则调小。
 
-where
+它还是会加一个类似的均衡损失来避免路由塌缩，并在 gating 过程中针对 logits 做归一化处理，让模型更好地区分专家，同时又不会让概率分布过度极端。
 
-$$ g_{i,t} = \frac{g'_{i,t}}{\sum_{j=1}^{N_r} g'_{j,t}},$$ 
+**痛点与收获**：不同层的负载问题可能不一样，一刀切的超参不一定好，所以 Skywork-MoE 那套自适应机制很有启发意义。但同样，如果归一化或辅助损失的力度没调好，依然可能造成路由极端或专家专长度不足。
 
-$$g'_{i,t}=s_{i,t}, \, \text{if} \, s_{i,t}\in \text{TopK}(\{s_{j,t}|1 \leq j \leq N_r\}, K_r), \, \text{else} \, 0$$
+---
 
-$$s_{i.t}=\sigma(u_t^\top e_i).$$
+## DeepSeek-V3：偏置加成与弱化辅助损失
 
-Here, similar to DeepSeek-MoE, $N_s$ and $N_r$ are the number s of shared and routed experts; $K_r$ is the number of activated routed experts; $g_{i,t}$ is the gating value; $s_{i,t}$ represents the token-to-expert affinity; and $e_i$ is the centroid vector of the $i$-th routed expert; and $\sigma$ is the activation function. 
+终于说到 **DeepSeek-V3**。它是目前的前沿之作，主打“砍掉大的辅助损失，用更加直接的偏置调节 (bias-based) 来控制负载”。想深入了解负载均衡最前沿，DeepSeek-V3 是个很好的例子。
 
+**模型结构**：DeepSeek-V3 延续了 DeepSeekMoE 在 FFN 结构上的思路，将专家拆分成更细粒度的子专家，并保留一些“共享专家”。对第 $t$ 个 token $u_t^l$ 在第 $l$ 层的输出可写作：
 
-**Auxiliary-Loss-Free Load Balancing Strategy.**  Traditional MoE models often experience routing collapse due to unbalanced expert loads, reducing computational efficiency. Conventional solutions utilize auxiliary losses to encourage balance, which can impair performance if overly emphasized. To address this, DeepSeek-V3 introduces an auxiliary-loss-free strategy, adding a bias term $b_i$ for each expert to adjust affinity scores:
+$$
+h_t^l = u_t^l 
+        + \sum_{i=1}^{N_s} \text{FFN}_i^{(s)} (u_t^l) 
+        + \sum_{j=1}^{N_r} g_{j,t} \cdot \text{FFN}_j^{(r)} (u_t^l),
+$$
 
-$$g'_{i,t}=s_{i,t}, \, \text{if} \, s_{i,t} + b_i\in \text{TopK}(\{s_{j,t} + b_i|1 \leq j \leq N_r\}, K_r), \, \text{else} \, 0.$$
+其中 $g_{j,t}$ 来自对 token 与专家的亲和度 $s_{i,t}$ 做 top-K 选择并归一化而得。
 
-The bias term $b_i$ is dynamically updated during training:
-$$b_i \leftarrow b_i - \gamma, \quad \text{if expert } i \text{ is overloaded},$$
+**无辅助损失的负载均衡策略**  
+传统 MoE 通常为了防止专家负载过度不均，都会引入一个或多个辅助损失，而这些损失可能会与语言建模本身的目标相冲突。DeepSeek-V3 则提出了一种 **偏置 (bias) 调整策略**：给每个专家定义一个偏置项 $b_i$，在路由打分时直接加到专家得分上：
 
-$$b_i \leftarrow b_i + \gamma, \quad \text{if expert } i \text{ is underloaded},$$
+$$
+g'_{i,t} = 
+\begin{cases}
+s_{i,t} + b_i, & \text{如果在TopK之内} \\
+0, & \text{否则}
+\end{cases}
+$$
 
-where $\gamma$ is the bias update speed. This strategy ensures balanced expert loads throughout training without the performance degradation associated with auxiliary losses.
+如果某个专家频繁超载，就降低它的 $b_i$，让它在后续分配中被选中的概率下降；如果某个专家很闲，就提高它的 $b_i$ 让它更有机会接收 token。通过这种简单、直接的调整来实现负载均衡，而不是依赖强力的全局辅助损失。
 
-**Complementary Sequence-Wise Auxiliary Loss.** To prevent extreme imbalance within individual sequences, a sequence-wise balance loss is also employed:
-$$\mathcal{L}_{\text{Bal}} = \alpha \sum_{i=1}^{N_r} f_i P_i,$$
-where:
-$$f_i = \frac{N_r}{K_r T}\sum_{t=1}^T \mathbb{I}(s_{i,t} \in \text{TopK}(\{s_{j,t} | i \leq j \leq N_r\}), K_r),$$
-$$s'_{i,t}=\frac{s_{i,t}}{\sum_{j=1}^{N_r} s_{j,t}}, P_i = \frac{1}{T}\sum_{t=1}^T s'_{i,t}.$$
-Here, $\alpha$ is a hyper-parameter with a small value, $\mathbb{I}$ is an  indicator function, and $T$ denotes the sequence length.
+**序列级别的辅助损失**  
+DeepSeek-V3 并没有 100% 摒弃辅助损失。为了避免在同一个序列里出现极度不均衡的情况，它保留了一个序列级别的平衡损失，不过其权重相对较小：
 
-**Dynamic Routing and Node-Limited Strategy.** DeepSeek-V3 also employs a node-limited routing mechanism to reduce communication costs during training. Each token is sent to at most $M$ nodes, determined by the highest $K_r/M$ affinity scores for experts distributed on each node. This approach maintains nearly full computation-communication overlap while improving scalability.
+$$
+\mathcal{L}_{\text{Bal}} = \alpha \sum_{i=1}^{N_r} f_i P_i,
+$$
 
-**Pitfalls and Lessons.** If $\gamma$ (the bias update speed) is too large, the gating might thrash around. If it’s too small, you might not adapt quickly to changes in token distribution. Nevertheless, this approach can maintain balanced loads with minimal interference to the main training objective. It's arguably a cleaner approach than a heavy-handed global auxiliaryterm. DeepSeek-V3 exemplifies a new wave of MoE thinking-stepping away from large auxiliary regularizations to more subtle, dynamic, and locally corrective balancing.
+这里 $f_i$ 表示在该序列里，专家 $i$ 被选中的 token 占比，$P_i$ 表示专家 $i$ 的平均 gating 概率，$\alpha$ 通常取一个比较小的值。
 
+**动态路由和节点上限**  
+DeepSeek-V3 还进一步在并行体系中做了优化，提出 **node-limited** 路由方式，每个 token 最多只被送到 $M$ 个节点，每个节点再选择若干专家处理其子集，减少通信开销。这对在大规模 GPU 集群上的并行效率有显著帮助。
 
+**风险与启示**：如果偏置更新速度 ($\gamma$) 过大，负载会在不同专家之间来回猛跳，不利于模型收敛；要是过小，又跟不上数据分布的变化。不过总体而言，这比在主损失上附加大量均衡惩罚要“温和”得多，也不会过多干扰语言建模本身的学习目标。
 
+---
 
+## 趋势与总结
 
+从 **GShard** 到 **DeepSeek-V3**，我们看到 **MoE 中的负载均衡** 已经从一个“小问题”变成了整个架构设计中至关重要的一环。GShard 引领了 top-2 gating 和容量约束；Switch Transformer 用 top-1 gating 打开了更大规模的可能性；GLaM 让我们见识了训练能耗可以大幅下降；DeepSpeed-MoE 则深入挖掘了训练和推理层面的负载平衡；ST-MoE 用 z-loss 改善了稳定性；Mixtral 看到了专家分配的时间局部性；等等……最后到一些更灵活的思路，如 **DeepSeek-V3** 依靠偏置更新替代沉重的辅助损失。
 
+**核心教训**：想要完美的负载均衡几乎是不可能的——做得过火，语言模型主任务会受损；不做又浪费资源。未来的研究可能还会借助更多 HPC 技巧，也会出现更自动化、更自适应的 gating 机制，帮助我们在训练和推理阶段都实现高效、均衡的专家分配。
 
+---
 
+## 经历的坑和总结的教训
 
+负载均衡在 MoE 里就是双刃剑：过度追求均衡会压制模型的表达能力；对均衡不管不顾又会浪费一半专家。下面是一些常见的坑和应对思路：
 
+- **路由塌缩 (Routing Collapse) 与过度专长化**  
+  如果几个专家接收了大部分 token，就等于浪费了其它专家。轻度的辅助损失或偏置修正有助于防止塌缩。
 
+- **容量因子的调节**  
+  设置太高，几乎不丢 token，但算力浪费会高；设置太低，token 大批被丢，严重影响训练效果。这里没有固定公式，必须结合数据分布反复实验。
 
+- **过度依赖辅助损失**  
+  有些 MoE 架构重度依赖均衡损失，最后的语言建模目标被削弱，导致专家学不到真正的专长。要拿捏好度。
 
+- **推理时的瓶颈**  
+  训练时的负载均衡不一定能适配推理场景。一旦在推理中某些专家被频繁调用，会让延迟变高，所以需要类似分层路由、动态分组等技巧。
 
+- **领域迁移的挑战**  
+  路由网络可能固化在某些训练数据模式上，如果应用场景的分布变了， gating 也可能变得不匹配，需要额外的微调或重新训练。
 
+---
 
-## Emerging Trends & Observations
+## 结语
 
-In tracing the path from GShard to DeepSeek-V3, a few overall trends have become clear:
+从 **GShard** 到 **DeepSeek-V3**，我们不难发现负载均衡已经成为 MoE 模型能否取得成功的关键因素之一。GShard 提出了 top-2 gating 和容量限制的雏形；Switch 用 top-1 gating 证明了简单路由也能支撑大规模；GLaM 强调能效；DeepSpeed-MoE 则兼顾了训练和推理；ST-MoE 用 z-loss 解决稳定性；Mixtral 强调路由的时间局部性；OpenMoE 暴露了末端 token 掉队等问题；JetMoE 尝试 dropless；DeepSeekMoE 做了细粒度拆分和共享专家；最后，DeepSeek-V3 又带来了更“轻量级”的偏置调节策略。
 
-- **Gating is Getting Craftier**  
-  We started with simple top-2 gating (GShard), moved to single-expert gating (Switch), and have since explored correlation-based, bias-based, and more elaborate routing. Researchers are continually seeking that sweet spot between complexity and efficiency.
-
-- **Rethinking Auxiliary Loss**  
-  Early on, methods like GShard and Switch heavily relied on auxiliary losses to prevent expert overload. Lately, some (like DeepSeek-V3) are minimizing or dropping it in favor of more direct, dynamic solutions to manage balancing.
-
-- **Capacity Constraints & Dropping**  
-  There’s a spectrum between “dropless” approaches like JetMoE and designs that rely heavily on capacity factors (Switch, GLaM). Neither extreme is a one-size-fits-all solution; each dataset or use case may tilt the balance differently.
-
-- **Training vs. Inference**  
-  Training-era load balancing doesn’t always solve inference-era bottlenecks. Systems like DeepSpeed-MoE highlight specialized strategies (token grouping, dynamic node parallelism) to keep inference from becoming a nightmare.
-
-- **Multi-Dimensional Parallelism**  
-  Pipeline parallel, tensor parallel, expert parallel: HPC is now the norm for MoE. We’re seeing more flexible ways to combine these parallelisms, adjusting them per layer to squeeze out every bit of performance.
-
-
-## Pitfalls & Lessons Learned
-
-Load balancing in MoE is a double-edged sword—go too far, and you hamper the model’s main objective; go too light, and half your experts might sit idle. Here are the key pitfalls and what we can learn:
-
-- **Routing Collapse & Over-Specialization**  
-  If a few experts take in most tokens, you’re wasting parameters. Good gating plus mild balancing losses (or bias corrections) can stave off collapse.
-
-- **Capacity Factor Tuning**  
-  Set it too high and you get minimal drops but waste compute. Set it too low and you drop tokens left and right. Tuning CF is an art form—especially with large or skewed datasets.
-
-- **Over-Reliance on Auxiliary Loss**  
-  Strong balancing losses can overshadow the language modeling objective. Balancing is critical, but using it too aggressively can stunt specialized learning.
-
-- **Inference-Time Bottlenecks**  
-  Balancing for training doesn’t automatically translate to balanced inference. If certain experts get hammered at inference, that kills latency. Strategies like hierarchical routing and dynamic token grouping (à la DeepSpeed-MoE) can help.
-
-- **Domain Adaptation Challenges**  
-  Gating often locks in certain patterns after pretraining. If the domain shifts (e.g., from news to code), that gating logic might not adapt well unless you carefully re-train or tune.
-
-
-## Conclusion
-
-The journey from **GShard** to **DeepSeek-V3** has shown that **load balancing in MoE** has grown from a side note into a central piece of the puzzle. GShard popularized the top-2 gating approach and capacity constraints; Switch Transformer simplified routing with top-1; GLaM zeroed in on energy efficiency; DeepSpeed-MoE demonstrated robust balancing for both training and inference; ST-MoE introduced z-loss for stability; Mixtral leveraged temporal locality; and so on—culminating in more dynamic, bias-based, or correlation-based approaches such as **DeepSeek-V3**.
-
-**Main Takeaway**: Perfect load balancing is a moving target. Push it too hard, and you hurt model performance. Ignore it, and your super-giant model ends up idling half its experts. We’ll likely see further integration with HPC strategies, more adaptive gating mechanisms, and new solutions for the ever-pesky inference bottleneck.
-
-As the field marches onward, we’ll likely see more synergy with HPC techniques, more adaptive gating networks, and new ways to handle inference-time constraints. It’s an exciting time for MoE researchers—and I’m definitely looking forward to the next wave of breakthroughs.
-
-Thanks for reading, and feel free to drop me a line if you have any thoughts, questions, or improvements to share. Until the next MoE adventure—happy gating!
-
+**主要启示**：负载均衡永远在动态平衡——过度干预会损害模型本身的学习目标，完全无视则会出现专家闲置或拥堵。往后我们大概率会看到更多 HPC 技巧与更灵活的 gating 机制，以及更多针对推理部署的优化。MoE 研究还在不断前进，我对未来的发展方向也非常期待。
