@@ -1,4 +1,4 @@
-Welcome to “Yihua Zhang’s Corner”!
+Welcome to “[Yihua Zhang](https://www.yihua-zhang.com)’s Corner”!
 
 This is my little digital garden—no cabbages here, just seeds of ideas and moments of curiosity taking root. I’m Yihua Zhang, an ordinary researcher constantly on the lookout for that next “eureka” moment in both research and daily life. Here, you’ll find me deep in thought, unraveling the mysteries of machine learning algorithms, or casually venting about the quirks of academic life. And no, this isn’t a diary—who keeps a diary these days anyway? 😄
 
