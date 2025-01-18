@@ -36,11 +36,14 @@ If you’re reading this to glean practical takeaways, great: I’ll try to main
 GShard’s gating approach typically selects the **top-2** experts for each token. Let’s denote:
 
 $$\text{GATE}(x)=\text{Top2}(W_{gate}\cdot x)$$
+
 where $x$ is the token embedding and $W_{gate}$ is the router's weight matrix. Only the top 2 experts get activated. However, to keep each expert from being overloaded, we need to introduce:
 
 1. **Expert capacity**, $C \approx \frac{2N}{E}$ if $N$ tokens and $E$ experts. If an expert is overloaded beyond capacity, some tokens are dropped (or overflowed to the next layer).
 2. **An auxiliary load-balancing loss**, often of the form
+
 $$ \mathcal{L}_{\text{aux}} \ \sum_{e=1}^E f_e P_e$$
+
     where $f_e$ is the fraction of tokens routed to expert $e$, and $P_e$ is the average gating probability for expert $e$. This loss nudges the system toward distributing tokens more evenly across experts.
 **3. Local groups** so that not every token competes with every other token globally.
 
@@ -49,11 +52,15 @@ $$ \mathcal{L}_{\text{aux}} \ \sum_{e=1}^E f_e P_e$$
 ### Switch Transformer: When “Less is More”
 
 Switch Transformer essentially said, “Hey, let’s only route each token to one expert.” This made the gating simpler (pick whichever expert has the highest gating logit) and drastically reduced the compute overhead. The gating function goes as:
+
 $$g_i(x) = \text{softmax}(W_{\text{router}} \cdot x)_i$$
+
 and we pick
+
 $$\text{expert_index}(x)={\text{argmax}}_i g_i(x)$$.
 
 The primary innovation of Switch Transformer is its single-expert routing, as fewer experts activated in general gives you simpler code, and further typically faster training speeds. In order to better balance the load, they keep an auxiliary load-balancing loss akin to GShar's approach. They also define a **capacity factor** to let experts handle more tokens than naive fraction. For example,
+
 $$C = \text{CF} \times \frac{\text{tokens per batch}}{\text{number of experts}}$$
 
 The **gains vs. trade-offs** of Switch Transformer is rather obvious: you have better speed because you only do one feed-forward path per token, but you might risk bigger token overflow (you only have one expert to handle them!). Some tokens are "dropped" or forcibly passed to a residual pathway.
@@ -65,11 +72,17 @@ The **gains vs. trade-offs** of Switch Transformer is rather obvious: you have b
 ### GLaM: Revisiting Top-2 with Efficiency in Mind
 
 **GLaM** (Generalist Language Model) reintroduced **top-2 gating** but with a new spin on **energy efficiency**—reporting that it uses roughly 1/3 of GPT-3’s training energy with better zero-shot performance. They used:
+
 $$y = \sum_{i=1}^2 g_i \cdot E_i(x),$$
+
 where $g_i$ are gating weights and $E_i(x)$ are the two selected experts. Similarly, GLaM introduces a carefully tuned auxiliary loss to encourage an even distribution of tokens across experts. This auxiliary loss penalizes imbalanced routing by optimizing the utilization of experts:
+
 $$\mathcal{L}_{\text{aux}}=\alpha \cdot \sum_{i=1}^E f_i \cdot p_i,$$
+
 where $f_i$ is the fraction of tokens routed to expert $i$, $p_i$ is the average gating probability for expert $i$, and $\alpha$ is a weighting factor. To prevent overloading experts, GLaM also introduces capacity constraints, where the maximum token capacity per expert is defined as:
+
 $$C = \frac{\text{tokens per batch}}{\text{number of experts}} \cdot \text{capacity factor}.$$
+
 Tokens exceeding this capacity will be dropped and passed through residual connections to the next layer. A capacity factor of $1.25$ is typically used to balance token overflow and computational efficiency.
 
 **Pitfalls and Lessons**: GLaM emphasized just how big the energy savings can be when you only activate a small fraction of the model parameters at a time. (They compared with GPT-3 and said, “Look, we’re using a fraction of the energy. Y’all should pay attention!”) Although GLaM discovered that you can indeed overshadow the cost of dense computations, you must watch out for potential imbalances in expert usage—particularly on real-world text distributions. The model’s carefully tuned gating and capacity constraints helped keep experts from overloading.
@@ -82,9 +95,13 @@ Tokens exceeding this capacity will be dropped and passed through residual conne
 **Core Idea.** At its heart, DeepSpeed-MoE extends the MoE framework with a **flexible multi-expert and multi-data parallelism design** to optimize load balancing, particularly focusing on token-level distribution across experts. The goal is clear: ensure that no expert is overloaded while keeping training efficient and scalable across distributed GPUs.
 
 Following Switch Transformer, DeepSpeed-MoE employs a top-1 gating mechanism. This simplifies routing and reduces computational overhead compared to top-2 or top-k gating. To prevent token imbalance, an **auxiliary load-balancing loss** is added. The loss nudges the distribution of tokens to be more uniform across experts:
+
 $$\mathcal{L}_{aux} = \alpha \sum_{i=1}^E |f_i - \frac{1}{E}|,$$
+
 where $𝑓_i$ is the fraction of tokens routed to expert $i$, $E$ is the total number of experts, and $\alpha$ is a tunable weight. This term discourages over-concentration of tokens on a few experts. DeepSpeed-MoE also adopts a **dynamic token redistribution strategy**: During training, DeepSpeed-MoE dynamically redistributes tokens to prevent any single expert from becoming a bottleneck. Tokens that exceed an expert's capacity are rerouted to other, less-busy experts rather than being dropped or passed to a residual pass way. To further mitigate the impact of uneven token distribution, DeepSpeed-MoE introduces the **Residual-MoE architecture**. Here, the output of the dense MLP is combined with the output from the selected expert, treating the expert output as a “residual correction”:
+
 $$y=\text{MLP}(x) + g \cdot E(x),$$
+
 where $g$ is the gating score and $E(x)$ is the expert output. This ensures that even underutilized experts contribute meaningfully to the model's overal output.
 
 **Load Balancing Across GPUs.** Leveraging the observation that deeper layers benefit more from large numbers of experts, DeepSpeed-MoE utilizes more experts in later layers. While this ensures efficient parameter usage and improved model quality, this can lead to varying number of experts across layers. In such a case, a uniform degree of parallelism is inefficient because:
@@ -104,7 +121,9 @@ Nevertheless, DeepSpeed-MoE demonstrated that token load balancing isn’t just 
 **ST-MoE (Stable and Transferable Mixture-of-Experts)** marks a significant leap forward in sparse expert models, offering solutions to some of the long-standing challenges in training stability and transferability. While previous models like Switch Transformer and GLaM laid the groundwork, ST-MoE refined these ideas, addressing pitfalls with a blend of architectural innovations and hyperparameter optimizations.
 
 One of ST-MoE's standout contributions is the **router z-loss**, designed to stabilize training without degrading quality. Sparse models often grapple with instability due to the exponential functions in routing, which amplify small numerical errors. The router z-loss mitigates this by adding a penalty for large logits in the routing network, effectively controlling their magnitude:
+
 $$\mathcal{L}_z = \frac{1}{B} \sum_{i=1}^B(\text{log}\sum_{j=1}^N \text{exp}(x_{ij}))^2$$
+
 Here, $B$ is the batch size, $N$ is the number of experts and $x_{ij}$ are the logits for routing. This loss not only reduces instability but also slightly improves model quality - a win-win for sparse model training.
 
 **Tuning the Capacity Factor.** ST-MoE also emphasizes the critical role of the capacity factor (CF) in balancing efficiency and performance. To further improve load balancing, ST-MoE incorporates an auxiliary loss similar to DeepSpeed-MoE, that ensures tokens are evenly distributed across experts. 
@@ -134,9 +153,13 @@ OpenMoE is another interesting spin on the standard top-k gating formula, with c
 * **Drop-Towards-the-End**: In long sequences, capacity constraints often get triggered late in the sequence, so those later tokens are more likely to be dropped. This obviously hurts performance on tasks that rely on end-of-sequence context.
 
 Like many other MoEs, OpenMoE adopts a top-k selection with $k=2$. Similar to GShard and Switch, a load-balance loss was adopted in the form of:
+
 $$\mathcal{L}_b = E \cdot \sum_{i=1}^E m_i \cdot P_i,$$
+
 where $m_i$ is the fraction of tokens routed to expert $i$ and $P_i$ is the average gating probability for expert $i$. To stabalize the training, they also introduce the router loss by penalizing large logits:
+
 $$ \mathcal{L}_z = \frac{1}{B} \sum_{j=1}^B (\text{log} \sum_{i=1}^E (f(x_j)_i)).$$
+
 
 To maintain a balanced workload, OpenMoE enforces capacity constraints on each expert. This can ensure the throughput when training and deploying the MoE model with expert parallelism, i.e., distributing different experts to different GPUs. However, OpenMoE for the first time identifies the **Drop-Towards-the-End** issue, that the later tokens would be dropped if the previous tokens have filled the expert. In decoder-only MoE architecture, due to the auto-regressive nature, the later tokens in a sequence may be dropped more. This is particularly problematic for
 sequential tasks like instruction-following, where later tokens may carry critical information.
@@ -148,20 +171,28 @@ sequential tasks like instruction-following, where later tokens may carry critic
 Before we get to the latest version (DeepSeek-V3), let’s discuss **DeepSeekMoE**. It’s recognized for splitting each expert into finer sub-experts and isolating some **“shared experts”** that are **always activated** (i.e., bypass gating). This approach aims to reduce parameter redundancy while still giving enough diversity for specialized sub-experts.
 
 **Fine-Grained Expert Segmentation.** DeepSeekMoE introduces the concept of fine-grained expert segmentation to enhance expert specialization. This is achieved by splitting each expert into smaller units while maintaining the total number of parameters and computational cost constant:
+
 $$h_t^l = \sum_{i=1}^{mN} g_{i,t} \cdot \text{FFN}_i (u_t^l) + u_t^l,$$
+
 
 where $mN$ denotes the total number of fine-grained experts and $g_{i,t}$ is the gating value for expert $i$. The routing mechanism selects the top-$mK$ experts for each token.
 
 Suppose you have $mN$ total sub-experts,  with $N_r=mN$ "routed" experts plus $N_s$ "shared" experts. For the $t$-th token $u_t^l$ at layer $l$:
+
 $$h_t^l = u_t^l + \sum_{i=1}^{N_s} \text{FFN}_i^{(s)} (u_t^l) + \sum_{j=1}^{N_r} g_{j,t} \cdot \text{FFN}_j^{(r)} (u_t^l),$$
+
 where $g_{j,t}$ is a gating value for sub-expert j, typically chosen among top-$K_r$.
 
 DeepSeekMoE emplys two levels of load-balance losses to address potential routing collapes and computational bottlenecks: 
 * **Expert-Level balance loss**: this loss encourages uniform token distribution across experts:
+
 $$\mathcal{L}_{\text{ExpBal}} = \alpha_1 \sum_{i=1}^{mN-K_s} f_i \cdot P_i,$$
+
 where $f_i$ is the fraction of tokens routed to expert $i$, and $P_i$ is the average routing probability for expert $i$.
 * **Device-Level balance loss**: it ensures balanced compuation across devices:
+
 $$\mathcal{L}_{\text{DevBal}} = \alpha_2 \sum_{i=1}^{D} f'_i \cdot P'_i,$$
+
 where $D$ is the number of devices, $f'_i$ and $P'_i$ represent the average token fractions and probabilities for device $i$, respectively.
 
 ### JetMoE: Dropless MoE & Pipeline Parallelism
@@ -249,19 +280,6 @@ Here, $\alpha$ is a hyper-parameter with a small value, $\mathbb{I}$ is an  indi
 **Dynamic Routing and Node-Limited Strategy.** DeepSeek-V3 also employs a node-limited routing mechanism to reduce communication costs during training. Each token is sent to at most $M$ nodes, determined by the highest $K_r/M$ affinity scores for experts distributed on each node. This approach maintains nearly full computation-communication overlap while improving scalability.
 
 **Pitfalls and Lessons.** If $\gamma$ (the bias update speed) is too large, the gating might thrash around. If it’s too small, you might not adapt quickly to changes in token distribution. Nevertheless, this approach can maintain balanced loads with minimal interference to the main training objective. It's arguably a cleaner approach than a heavy-handed global auxiliaryterm. DeepSeek-V3 exemplifies a new wave of MoE thinking-stepping away from large auxiliary regularizations to more subtle, dynamic, and locally corrective balancing.
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
