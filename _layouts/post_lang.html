@@ -31,10 +31,6 @@ layout: default
 
                     <!-- English Version -->
                     <div class="en bilingual-content">
-                        {% comment %}
-                          We will capture the English content from the snippet
-                          defined in the front matter: content_en
-                        {% endcomment %}
                         {% capture content_en %}{% include {{ page.content_en }} %}{% endcapture %}
                         {{ content_en | markdownify }}
                     </div>
@@ -98,6 +94,7 @@ layout: default
                         <h5>
                             <a class="catalog-toggle" href="#">CATALOG</a>
                         </h5>
+                        <!-- The TOC goes here -->
                         <ul class="catalog-body"></ul>
                     </div>
                 </div>
@@ -117,9 +114,6 @@ layout: default
     </article>
 
     {% include footer.html %}
-
-    <!-- Zero-width image hack for WeChat (optional) -->
-    <img src="/img/icon_wechat.png" width="0" height="0" />
 
     <!-- If your theme uses mathjax, you can include it here -->
     {% if page.mathjax %}
@@ -158,12 +152,12 @@ layout: default
     </script>
     {% endif %}
 
-    <!-- AnchorJS (optional, if you had it in post.html) -->
+    <!-- AnchorJS (optional) -->
     {% if site.anchorjs %}
     <script>
       function async(u, c) {
         var d = document, t = 'script',
-        o = d.createElement(t), s = d.getElementsByTagName(t)[0];
+            o = d.createElement(t), s = d.getElementsByTagName(t)[0];
         o.src = u;
         if (c) {
           o.addEventListener('load', function (e) { c(null, e); }, false);
@@ -171,18 +165,12 @@ layout: default
         s.parentNode.insertBefore(o, s);
       }
     </script>
+    <!-- anchor-js -->
     <script>
       async("//cdnjs.cloudflare.com/ajax/libs/anchor-js/1.1.1/anchor.min.js", function(){
-          anchors.options = {
-            visible: 'hover',
-            placement: 'right',
-          };
-          anchors
-            .add()
-            .remove('.intro-header h1')
-            .remove('.subheading')
-            .remove('.sidebar-container h5');
-      })
+          // On initial load, set up anchors
+          rebuildAnchors();
+      });
     </script>
     <style>
       @media all and (min-width: 800px) {
@@ -196,7 +184,7 @@ layout: default
     </style>
     {% endif %}
 
-    <!-- MathJax (if you prefer inline, as in your original) -->
+    <!-- MathJax inline config -->
     <script type="text/x-mathjax-config">
       MathJax.Hub.Config({
         menuSettings: {
@@ -210,15 +198,65 @@ layout: default
     </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS-MML_HTMLorMML" type="text/javascript"></script>
 
-    <!-- Language switcher JavaScript -->
+    <!-- Language & TOC Handling -->
     <script type="text/javascript">
+        // Grab references to the .zh and .en blocks
         var $zh     = document.querySelector(".zh");
         var $en     = document.querySelector(".en");
         var $select = document.querySelector("select");
 
+        // Rebuild heading anchors if you're using anchor.js
+        function rebuildAnchors() {
+          // If anchor.js is loaded (global `anchors` var):
+          if (typeof anchors !== 'undefined') {
+            anchors.removeAll();
+            anchors.options = {
+              visible: 'hover',
+              placement: 'right',
+            };
+            anchors
+              .add()
+              // remove anchor links from top headings we don't want
+              .remove('.intro-header h1')
+              .remove('.subheading')
+              .remove('.sidebar-container h5');
+          }
+        }
+
+        // Generate the Catalog (TOC) for whichever language is visible
+        function generateCatalog() {
+          var catBody = document.querySelector('.catalog-body');
+          if (!catBody) return;  // no catalog on this page
+          catBody.innerHTML = ""; // clear old TOC
+
+          // Determine which block is visible
+          var isZh = (window.location.hash === "#zh");
+          var visibleBlock = isZh ? $zh : $en;
+          if (!visibleBlock) return;
+
+          // Get headings in the visible block
+          var headings = visibleBlock.querySelectorAll("h1, h2, h3, h4, h5, h6");
+          headings.forEach(function(h) {
+            // Ensure each heading has an ID for <a href="#...">
+            if (!h.id) {
+              h.id = h.textContent
+                      .toLowerCase()
+                      .replace(/[^\w]+/g,"-"); // basic slug
+            }
+
+            // Example: <li class="toc-level-2"><a href="#my-title">My Title</a></li>
+            var level = h.tagName.substring(1); // "1","2","3"...
+            var li = document.createElement("li");
+            li.className = "toc-level-" + level;
+            li.innerHTML = '<a href="#' + h.id + '">' + h.textContent + '</a>';
+            catBody.appendChild(li);
+          });
+        }
+
+        // Toggling logic
         window.addEventListener('hashchange', _render);
 
-        function _render(){
+        function _render() {
             var _hash = window.location.hash;
             if(_hash === "#zh"){
                 $select.value = "zh";
@@ -230,9 +268,12 @@ layout: default
                 $zh.style.display = "none";
                 $en.style.display = "block";
             }
+            // After toggling, re-run anchors & rebuild the TOC
+            rebuildAnchors();
+            generateCatalog();
         }
 
-        function onLanChange(val){
+        function onLanChange(val) {
             if(val === "zh"){
                 window.location.hash = "#zh";
             } else {
@@ -240,7 +281,7 @@ layout: default
             }
         }
 
-        // Initialize
+        // Initialize on page load
         _render();
     </script>
 
