@@ -29,7 +29,7 @@ If you’re reading this to glean practical takeaways, great: I’ll try to main
 
 ## 2. Historical Progression: From GShard to Switch
 
-### 2.1 GShard: The Pioneer
+### 2.1 GShard<a href="#refer-gshard"><sup>0</sup></a>: The Pioneer
 
 **GShard** (introduced by Google) is widely cited as among the first large-scale, super-sparse MoE frameworks. It changed the conversation by showing that you could train ~600B parameter models if you carefully sharded the layers and balanced tokens among experts.
 
@@ -50,7 +50,7 @@ where $f_e$ is the fraction of tokens routed to expert $e$, and $P_e$ is the ave
 
 **Pitfall**: You guessed it—dropping tokens is not super glamorous. If tokens exceed capacity, they might get incomplete processing. Also, the overhead of top-2 gating and random dispatch can get heavy at scale. Also, the over-dependence on an auxiliary loss sometimes forced a “fake” distribution of tokens, hurting specialized learning. But still, GShard proved that MoE could be done and that it’s worth the trouble. The concept of capacity constraints was spot on and we still see that in almost every subsequent MoE method.
 
-### 2.2 Switch Transformer: When “Less is More”
+### 2.2 Switch Transformer<a href="#refer-switch"><sup>1</sup></a>: When “Less is More”
 
 Switch Transformer essentially said, “Hey, let’s only route each token to one expert.” This made the gating simpler (pick whichever expert has the highest gating logit) and drastically reduced the compute overhead. The gating function goes as:
 
@@ -70,7 +70,7 @@ The **gains vs. trade-offs** of Switch Transformer is rather obvious: you have b
 
 ## 3. Refinements and Variations: GLaM, DeepSpeed-MoE, ST-MoE, Mixtral
 
-### 3.1 GLaM: Revisiting Top-2 with Efficiency in Mind
+### 3.1 GLaM<a href="#refer-glam"><sup>2</sup></a>: Revisiting Top-2 with Efficiency in Mind
 
 **GLaM** (Generalist Language Model) reintroduced **top-2 gating** but with a new spin on **energy efficiency**—reporting that it uses roughly 1/3 of GPT-3’s training energy with better zero-shot performance. They used:
 
@@ -89,7 +89,7 @@ Tokens exceeding this capacity will be dropped and passed through residual conne
 **Pitfalls and Lessons**: GLaM emphasized just how big the energy savings can be when you only activate a small fraction of the model parameters at a time. (They compared with GPT-3 and said, “Look, we’re using a fraction of the energy. Y’all should pay attention!”) Although GLaM discovered that you can indeed overshadow the cost of dense computations, you must watch out for potential imbalances in expert usage—particularly on real-world text distributions. The model’s carefully tuned gating and capacity constraints helped keep experts from overloading.
 
 
-### 3.2 DeepSpeed-MoE: Focusing on Inference
+### 3.2 DeepSpeed-MoE<a href="#refer-deepspeed"><sup>3</sup></a>: Focusing on Inference
 
 **DeepSpeed-MoE**, by Microsoft, is a prime example of how load balancing has matured to handle both the challenges of **token distribution** during training and efficient **expert utilization** during inference. Building on the pitfalls of earlier MoE systems, DeepSpeed-MoE introduces several innovations to address token load imbalance.
 
@@ -117,7 +117,7 @@ The DeepSpeed-MoE system solves this problem by **dynamically adjusting the para
 
 Nevertheless, DeepSpeed-MoE demonstrated that token load balancing isn’t just a theoretical optimization—it’s a practical necessity for training large-scale MoE systems. By combining routing innovations with system-level optimizations, it set a new standard for efficiency and scalability in MoE training. Even if you have an amazing training pipeline, you still need to handle inference well—especially if you want real-time or interactive applications.
 
-### 3.3 ST-MoE: Capacity Factor Tuning & Router Z-Loss
+### 3.3 ST-MoE<a href="#refer-st"><sup>4</sup></a>: Capacity Factor Tuning & Router Z-Loss
 
 **ST-MoE (Stable and Transferable Mixture-of-Experts)** marks a significant leap forward in sparse expert models, offering solutions to some of the long-standing challenges in training stability and transferability. While previous models like Switch Transformer and GLaM laid the groundwork, ST-MoE refined these ideas, addressing pitfalls with a blend of architectural innovations and hyperparameter optimizations.
 
@@ -132,7 +132,7 @@ Here, $B$ is the batch size, $N$ is the number of experts and $x_{ij}$ are the l
 **Pitfalls and Lessons**: ST-MoE achieves an improved Stability vs. Quality Trade-offs: Earlier approaches like GLaM and DeepSpeed-MoE made progress on load balancing but often required compromises in model quality or scalability. ST-MoE's router z-loss shows that it's possible to achieve stability without such trade-offs. However, ST-MoE is not without limitations. The complexity of tuning hyper-parameters like CF and z-loss weight demands careful experimentation. In summary, ST-MoE represents a new chapter in the evolution of MoE architectures, combining robust design principles with innovative solutions to long-standing challenges. 
 
 
-### 3.4 Mixtral 8x7B: Temporal Locality & Specialized Sparse Kernels
+### 3.4 Mixtral 8x7B<a href="#refer-mixtral"><sup>5</sup></a>: Temporal Locality & Specialized Sparse Kernels
 
 **Mixtral 8x7B** stands out as an innovative Sparse Mixture-of-Experts (SMoE) language model, built to address some of the long-standing challenges in load balancing for MoE architectures. Let’s dive into its unique approach to the per-expert token load-balancing problem and uncover the lessons it provides.
 
@@ -147,7 +147,7 @@ At its core, Mixtral employs a **Top-2 gating** mechanism for routing tokens: ea
 
 ## 4. Next-Generation Approaches: OpenMoE, DeepSeekMoE, JetMoE, & More
 
-### 4.1 OpenMoE: Context-Independent Specialization & Drop-Towards-the-End
+### 4.1 OpenMoE<a href="#refer-open"><sup>6</sup></a>: Context-Independent Specialization & Drop-Towards-the-End
 
 OpenMoE is another interesting spin on the standard top-k gating formula, with capacity constraints and an auxiliary balancing loss. But it’s famous for identifying certain quirky behaviors that arise in MoE systems over large training runs, namely **Context-Independent Specialization** and **Drop-Towards-the-End**. 
 * **Context-Independent Specialization**: Tokens might bet routed more by token ID or surface-level patterns, rather than deeper semantic attributes, especailly early on in pretraining.
@@ -167,7 +167,7 @@ sequential tasks like instruction-following, where later tokens may carry critic
 
 **Pitfalls and Lessons:** OpenMoE taught us to watch out for distributional quirks, especially if you are focusing on tasks that rely on full sequence coverage or want strong domain adaptation. If the gating function picks up superficial patterns (like token IDs), it might not adapt well to new domains. Because capacity constraints are a per-batch mechanism, tokens at the tail end of a batch can get starved.
 
-### 4.2 DeepSeekMoE: Fine-Grained Experts & Shared Experts
+### 4.2 DeepSeekMoE<a href="#refer-deepseek"><sup>7</sup></a>: Fine-Grained Experts & Shared Experts
 
 Before we get to the latest version (DeepSeek-V3), let’s discuss **DeepSeekMoE**. It’s recognized for splitting each expert into finer sub-experts and isolating some **“shared experts”** that are **always activated** (i.e., bypass gating). This approach aims to reduce parameter redundancy while still giving enough diversity for specialized sub-experts.
 
@@ -196,18 +196,18 @@ $$\mathcal{L}_{\text{DevBal}} = \alpha_2 \sum_{i=1}^{D} f'_i \cdot P'_i,$$
 
 where $D$ is the number of devices, $f'_i$ and $P'_i$ represent the average token fractions and probabilities for device $i$, respectively.
 
-### 4.3 JetMoE: Dropless MoE & Pipeline Parallelism
+### 4.3 JetMoE<a href="#refer-jetmoe"><sup>8</sup></a>: Dropless MoE & Pipeline Parallelism
 
 Where most MoE approaches consider dropping tokens when capacity is exceeded, JetMoE tries a “dropless” approach. The design ensures that no tokens are ever flat-out discarded:
 1. **Dropless MoE**: The gating mechanism is carefully managed to not exceed each expert's maximum capacity.
 2. **Pipeline Parallelism**: instead of scattering experts across many devices, JetMoE keeps all experts of a layer on the same device, forming a pipeline for different layers
 
-JetMoE adopts the top-2 routing and mechanism and has all the load balancing features previously defined, such as frequency-based auxiliary load-balancing loss and the router z-Loss. Unlike previous methods using a fixed capacity factor, JetMoE inherits from MegaBlocks, which replaces the traditional token-dropping approach with block-sparse matrix operations. MegaBlocks implements custom block-sparse GPU kernels to handle the dynamic and load-imbalanced nature of MoE computation efficiently. By constructing a block-sparse matrix topology dynamically based on expert assignments, the framework ensures all tokens are processed without being dropped, unlike traditional methods that use a fixed capacity factor.
+JetMoE adopts the top-2 routing and mechanism and has all the load balancing features previously defined, such as frequency-based auxiliary load-balancing loss and the router z-Loss. Unlike previous methods using a fixed capacity factor, JetMoE inherits from MegaBlocks, which replaces the traditional token-dropping approach with block-sparse matrix operations. MegaBlocks<a href="#refer-megablock"><sup>11</sup></a> implements custom block-sparse GPU kernels to handle the dynamic and load-imbalanced nature of MoE computation efficiently. By constructing a block-sparse matrix topology dynamically based on expert assignments, the framework ensures all tokens are processed without being dropped, unlike traditional methods that use a fixed capacity factor.
 
 **Pitfalls and Lessons**: Implementing dropless can get complicated. You might see overhead or suboptimal gating. If you do dropless well, you have consistent token coverage. This is attractive for tasks where dropping tokens is disastrous (like QA or code generation). But you must handle the complexities of capacity-limited gating in real time.
 
 
-### 4.4 Skywork-MoE: Gating Logit Normalization & Adaptive Auxiliary
+### 4.4 Skywork-MoE<a href="#refer-skymoe"><sup>9</sup></a>: Gating Logit Normalization & Adaptive Auxiliary
 
 **Skywork-MoE** is a high-performance Mixture-of-Experts (MoE) model with 146 billion parameters and 16 experts. The model leverages the architecture of Skywork-13B, a dense language model, using its pretrained dense checkpoints for initialization. Skywork-MoE incorporates advanced techniques like gating logit normalization and adaptive auxiliary loss coefficients to improve expert diversification and layer-specific load balancing. It introduced two neat ideas to address unbalanced experts:  
 1. **Gating Logit Normalization**: They standardized gating logits before softmax, controling the "sharpness".
@@ -240,7 +240,7 @@ where $d_i^{(l)}$ is the token drop rate for layer $l$ at iteration $i$, $\xi$ i
 **Pitfalls and Lessons.** On the one hand, Adapting $\alpha^{(l)}$ is helpful—some layers might be balanced already, while others need a stronger push to distribute tokens. So a one-size-fits-all auxiliary loss can be suboptimal. In the meantime, the hyper-parameter tuning in gating logit normalization could be tricky. if $\lambda$ is set too high, gating probabilities might become too “sharp,” forcing tokens into an extreme distribution. Too low and experts might not specialize enough.
 
 
-### 4.5 DeepSeek-V3: Bias-Based Auxiliary-Loss-Free Strategy
+### 4.5 DeepSeek-V3<a href="#refer-deepseekv3"><sup>10</sup></a>: Bias-Based Auxiliary-Loss-Free Strategy
 
 Finally, **DeepSeek-V3** is the latest iteration, and it’s considered cutting-edge because it tries to remove large auxiliary losses and replace them with a more direct, bias-based balancing approach. If you want to talk about advanced load balancing, DeepSeek-V3 is a prime example.
 
@@ -314,14 +314,14 @@ In tracing the path from GShard to DeepSeek-V3, a few overall trends have become
 
 |    Approach   	| Routing                                   	| Capacity Factor                                               	| Core Idea                                                                                	| Pitfalls                                                                                            	|
 |:-------------:	|-------------------------------------------	|---------------------------------------------------------------	|------------------------------------------------------------------------------------------	|-----------------------------------------------------------------------------------------------------	|
-| GShard        	| Top-2 gating, local groups                	| Introduced concept of capacity constraints to reduce overflow 	| Early large-scale MoE (~600B params), top-2 gating, random dispatch                      	| Over-dependence on auxiliary loss, token dropping can degrade performance                           	|
-| Switch        	| Top-1 gating (argmax)                     	| Yes (crucial hyperparameter)                                  	| Single-expert routing, simpler code, less overhead than top-2 gating                     	| Larger overflow risk with top-1, requires careful tuning of capacity factor                         	|
-| GLaM          	| Top-2 gating with energy-efficiency focus 	| Yes (capacity factor = 1.25 typical)                          	| Emphasized reduced energy use (~1/3 GPT-3’s training cost), strong zero-shot performance 	| Potential imbalances on real-world text distributions                                               	|
-| DeepSpeed-MoE 	| Top-1 gating, dynamic re-routing          	| Yes (dynamic redistribution instead of dropping)              	| Multi-expert & multi-data parallelism, HPC-optimized for both training & inference       	| Complex configuration, skewed text can still break load-balance if not carefully tuned              	|
-| ST-MoE        	| Top-1 gating w/ router z-loss             	| Yes                                                           	| Addresses training instability via z-loss, refined capacity factor tuning                	| Complex hyperparameter tuning; if z-loss is too high or low, it can destabilize or under-regularize 	|
-| Mixtral       	| Top-2 gating                              	| Yes (with dynamic redistribution)                             	| Observed temporal locality in expert usage, specialized sparse kernels (Megablocks)      	| Over-concentration in certain experts if data distribution is skewed                                	|
-| JetMoE        	| Top-2 gating                              	| Flexible “dropless” approach                                  	| Dropless pipeline parallelism, no token dropping, block-sparse kernel optimization       	| Implementation complexity, overhead from block-sparse matrix ops                                    	|
-| DeepSeek-V3   	| Top-K gating w/ bias-based balancing      	| Minimizes or eliminates large auxiliary losses                	| Fine-grained experts + shared experts, node-limited routing, dynamic gating-bias updates 	| Tuning bias update speed can be tricky; risk of “gating thrash” if hyperparams not well-chosen      	|
+| GShard<a href="#refer-gshard"><sup>0</sup></a>        	| Top-2 gating, local groups                	| Introduced concept of capacity constraints to reduce overflow 	| Early large-scale MoE (~600B params), top-2 gating, random dispatch                      	| Over-dependence on auxiliary loss, token dropping can degrade performance                           	|
+| Switch<a href="#refer-switch"><sup>1</sup></a>        	| Top-1 gating (argmax)                     	| Yes (crucial hyperparameter)                                  	| Single-expert routing, simpler code, less overhead than top-2 gating                     	| Larger overflow risk with top-1, requires careful tuning of capacity factor                         	|
+| GLaM<a href="#refer-glam"><sup>2</sup></a>          	| Top-2 gating with energy-efficiency focus 	| Yes (capacity factor = 1.25 typical)                          	| Emphasized reduced energy use (~1/3 GPT-3’s training cost), strong zero-shot performance 	| Potential imbalances on real-world text distributions                                               	|
+| DeepSpeed-MoE<a href="#refer-deepspeed"><sup>3</sup></a> 	| Top-1 gating, dynamic re-routing          	| Yes (dynamic redistribution instead of dropping)              	| Multi-expert & multi-data parallelism, HPC-optimized for both training & inference       	| Complex configuration, skewed text can still break load-balance if not carefully tuned              	|
+| ST-MoE<a href="#refer-st"><sup>4</sup></a>        	| Top-1 gating w/ router z-loss             	| Yes                                                           	| Addresses training instability via z-loss, refined capacity factor tuning                	| Complex hyperparameter tuning; if z-loss is too high or low, it can destabilize or under-regularize 	|
+| Mixtral<a href="#refer-mixtral"><sup>5</sup></a>       	| Top-2 gating                              	| Yes (with dynamic redistribution)                             	| Observed temporal locality in expert usage, specialized sparse kernels (Megablocks)      	| Over-concentration in certain experts if data distribution is skewed                                	|
+| JetMoE<a href="#refer-jetmoe"><sup>8</sup></a>        	| Top-2 gating                              	| Flexible “dropless” approach                                  	| Dropless pipeline parallelism, no token dropping, block-sparse kernel optimization       	| Implementation complexity, overhead from block-sparse matrix ops                                    	|
+| DeepSeek-V3<a href="#refer-deepseekv3"><sup>10</sup></a>   	| Top-K gating w/ bias-based balancing      	| Minimizes or eliminates large auxiliary losses                	| Fine-grained experts + shared experts, node-limited routing, dynamic gating-bias updates 	| Tuning bias update speed can be tricky; risk of “gating thrash” if hyperparams not well-chosen      	|
 
 ## 6. Pitfalls & Lessons Learned
 
@@ -352,4 +352,32 @@ The journey from **GShard** to **DeepSeek-V3** has shown that **load balancing i
 As the field marches onward, we’ll likely see more synergy with HPC techniques, more adaptive gating networks, and new ways to handle inference-time constraints. It’s an exciting time for MoE researchers—and I’m definitely looking forward to the next wave of breakthroughs.
 
 Thanks for reading, and feel free to drop me a line if you have any thoughts, questions, or improvements to share. Until the next MoE adventure—happy gating!
+
+## Reference
+
+<div id="refer-gshard"></div> [0] Lepikhin, et al. **GShard: Scaling Giant Models with Conditional Computation and Automatic Sharding.** *arXiv preprint arXiv:2006.16668*, 2020.
+
+<div id="refer-switch"></div> [1] Fedus, et al. **Switch Transformers: Scaling to Trillion Parameter Models with Simple and Eﬃcient Sparsity.** *arXiv preprint arXiv:2101.03961*, 2021. 
+
+<div id="refer-glam"></div> [2] Du, et al. **GLaM: Efficient Scaling of Language Models with Mixture-of-Experts.** *arXiv preprint arXiv:2112.06905*, 2021. 
+
+<div id="refer-deepspeed"></div> [3] Rajbhandari, et al. **DeepSpeed-MoE: Advancing Mixture-of-Experts Inference
+and Training to Power Next-Generation AI Scale.** *arXiv preprint arXiv:2201.05596*, 2022.
+
+<div id="refer-st"></div> [4] Zoph, et al. **ST-MOE: Designing Stable and Transferable
+Sparse Expert Models.** *arXiv preprint arXiv:2202.08906*, 2022. 
+
+<div id="refer-mixtral"></div> [5] Jiang, et al. **Mixtral of Experts.** *arXiv preprint arXiv:2401.04088*, 2024. 
+<div id="refer-open"></div> [6] Xue, et al. **OpenMoE: An Early Effort on Open Mixture-of-Experts Language Models.** *arXiv preprint arXiv:2402.01739*, 2024. 
+
+<div id="refer-deepseek"></div> [7] Dai, et al. **DeepSeekMoE: Towards Ultimate Expert Specialization in Mixture-of-Experts Language Models.** *arXiv preprint arXiv:2401.06066*, 2024. 
+
+<div id="refer-jetmoe"></div> [8] Shen, et al. **JetMoE: Reaching Llama2 Performance with 0.1M Dollars.** *arXiv preprint arXiv:2404.0741*, 2024. 
+
+<div id="refer-skymoe"></div> [9] Wei, et al. **Skywork-MoE: A Deep Dive into Training Techniques for
+Mixture-of-Experts Language Models.** *arXiv preprint arXiv:2406.06563*, 2024. 
+
+<div id="refer-deepseekv3"></div> [10] DeepSeek-AI. **DeepSeek-V3 Technical Report.** 
+
+<div id="refer-megablock"></div> [11] Gale, et al. **MegaBlocks: Efficient Sparse Training with Mixture-of-Experts.** *arXiv preprint arXiv:2211.15841*, 2021. 
 
