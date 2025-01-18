@@ -120,15 +120,10 @@ layout: default
         </div><!-- end container -->
     </article>
 
-    {% include footer_post_lang.html %}
-
-    <!-- Optional MathJax Include -->
-    {% if page.mathjax %}
-      {% include mathjax_support.html %}
-    {% endif %}
-
-    {% if site.netease_comment %}
+    <!-- {% include footer_post_lang.html %} -->
+    
     <!-- Netease JS code -->
+    <!-- {% if site.netease_comment %}
     <script src="https://img1.cache.netease.com/f2e/tie/yun/sdk/loader.js"></script>
     <script>
       var cloudTieConfig = {
@@ -140,10 +135,10 @@ layout: default
       var yunManualLoad = true;
       Tie.loader("aHR0cHM6Ly9hcGkuZ2VudGllLjE2My5jb20vcGMvbGl2ZXNjcmlwdC5odG1s", true);
     </script>
-    {% endif %}
+    {% endif %} -->
 
-    {% if site.disqus_username %}
     <!-- Disqus Common JS Code -->
+    <!-- {% if site.disqus_username %}
     <script type="text/javascript">
         var disqus_shortname = "{{ site.disqus_username }}";
         var disqus_identifier = "{{ page.id }}";
@@ -157,7 +152,7 @@ layout: default
               .appendChild(dsq);
         })();
     </script>
-    {% endif %}
+    {% endif %} -->
 
     <!-- AnchorJS (if used) -->
     {% if site.anchorjs %}
