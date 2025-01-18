@@ -9,15 +9,15 @@ layout: default
 <body ontouchstart="">
     {% include nav.html %}
 
-    <!-- Post Header (displays big background image + title/subtitle) -->
+    <!-- Post Header -->
     {% include intro-header.html type='post' %}
 
-    <!-- Main Article Block -->
+    <!-- Main Article -->
     <article>
         <div class="container">
             <div class="row">
 
-                <!-- Post Container (the main column for post content) -->
+                <!-- Post Container (center column) -->
                 <div class="
                     col-lg-8 col-lg-offset-2
                     col-md-10 col-md-offset-1
@@ -31,19 +31,25 @@ layout: default
 
                     <!-- English Version -->
                     <div class="en bilingual-content">
+                        {% comment %}
+                          Pull in the snippet from _includes/posts/..._en.md
+                        {% endcomment %}
                         {% capture content_en %}{% include {{ page.content_en }} %}{% endcapture %}
                         {{ content_en | markdownify }}
                     </div>
 
                     <!-- Chinese Version -->
                     <div class="zh bilingual-content">
+                        {% comment %}
+                          Pull in the snippet from _includes/posts/..._zh.md
+                        {% endcomment %}
                         {% capture content_zh %}{% include {{ page.content_zh }} %}{% endcapture %}
                         {{ content_zh | markdownify }}
                     </div>
 
                     <hr style="visibility: hidden;">
 
-                    <!-- Pager for previous/next post -->
+                    <!-- Previous / Next Post Links -->
                     <ul class="pager">
                         {% if page.previous.url %}
                         <li class="previous">
@@ -69,18 +75,19 @@ layout: default
 
                     <hr style="visibility: hidden;">
 
-                    <!-- Disqus Comment Section (if enabled in site config) -->
+                    <!-- Disqus Comments (if enabled) -->
                     {% if site.disqus_username %}
                     <div class="comment">
                         <div id="disqus_thread" class="disqus-thread"></div>
                     </div>
                     {% endif %}
 
-                    <!-- Netease Comment Section (if enabled) -->
+                    <!-- Netease Comment (if enabled) -->
                     {% if site.netease_comment %}
                     <div id="cloud-tie-wrapper" class="cloud-tie-wrapper"></div>
                     {% endif %}
-                </div>  <!-- end .post-container -->
+
+                </div><!-- end .post-container -->
 
                 <!-- Catalog Sidebar -->
                 {% if page.catalog %}
@@ -94,13 +101,13 @@ layout: default
                         <h5>
                             <a class="catalog-toggle" href="#">CATALOG</a>
                         </h5>
-                        <!-- The TOC goes here -->
+                        <!-- We'll generate the TOC here via JS -->
                         <ul class="catalog-body"></ul>
                     </div>
                 </div>
                 {% endif %}
 
-                <!-- Another Sidebar Container (Featured Tags, Friends, etc.) -->
+                <!-- Another Sidebar Container (tags, friends, etc.) -->
                 <div class="
                     col-lg-8 col-lg-offset-2
                     col-md-10 col-md-offset-1
@@ -109,13 +116,13 @@ layout: default
                     {% include friends.html %}
                 </div>
 
-            </div><!-- end .row -->
-        </div><!-- end .container -->
+            </div><!-- end row -->
+        </div><!-- end container -->
     </article>
 
     {% include footer.html %}
 
-    <!-- If your theme uses mathjax, you can include it here -->
+    <!-- Optional MathJax Include -->
     {% if page.mathjax %}
       {% include mathjax_support.html %}
     {% endif %}
@@ -127,7 +134,7 @@ layout: default
       var cloudTieConfig = {
         url: document.location.href,
         sourceId: "",
-        productKey: "de25fc98a6fe48b3bc8a7ae765da99a0", 
+        productKey: "de25fc98a6fe48b3bc8a7ae765da99a0",
         target: "cloud-tie-wrapper"
       };
       var yunManualLoad = true;
@@ -136,14 +143,14 @@ layout: default
     {% endif %}
 
     {% if site.disqus_username %}
-    <!-- Disqus common JS code -->
+    <!-- Disqus Common JS Code -->
     <script type="text/javascript">
         var disqus_shortname = "{{ site.disqus_username }}";
         var disqus_identifier = "{{ page.id }}";
         var disqus_url = "{{ site.url }}{{ page.url }}";
-
         (function() {
-            var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+            var dsq = document.createElement('script'); 
+            dsq.type = 'text/javascript'; dsq.async = true;
             dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
             (document.getElementsByTagName('head')[0]
               || document.getElementsByTagName('body')[0])
@@ -152,7 +159,7 @@ layout: default
     </script>
     {% endif %}
 
-    <!-- AnchorJS (optional) -->
+    <!-- AnchorJS (if used) -->
     {% if site.anchorjs %}
     <script>
       function async(u, c) {
@@ -165,10 +172,10 @@ layout: default
         s.parentNode.insertBefore(o, s);
       }
     </script>
-    <!-- anchor-js -->
     <script>
+      /* Load anchor.js asynchronously */
       async("//cdnjs.cloudflare.com/ajax/libs/anchor-js/1.1.1/anchor.min.js", function(){
-          // On initial load, set up anchors
+          // Once loaded, set up headings
           rebuildAnchors();
       });
     </script>
@@ -184,105 +191,102 @@ layout: default
     </style>
     {% endif %}
 
-    <!-- MathJax inline config -->
+    <!-- MathJax Config (Inline) -->
     <script type="text/x-mathjax-config">
       MathJax.Hub.Config({
-        menuSettings: {
-          renderer: "CommonHTML"
-        },
+        menuSettings: { renderer: "CommonHTML" },
         tex2jax: {
           inlineMath: [['$','$'], ['\\(','\\)']],
           processEscapes: true
         }
       });
     </script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS-MML_HTMLorMML" type="text/javascript"></script>
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS-MML_HTMLorMML"
+      type="text/javascript"></script>
 
-    <!-- Language & TOC Handling -->
+    <!-- Bilingual Toggle + TOC Generation JS -->
     <script type="text/javascript">
-        // Grab references to the .zh and .en blocks
-        var $zh     = document.querySelector(".zh");
-        var $en     = document.querySelector(".en");
-        var $select = document.querySelector("select");
+      // references to both blocks
+      var $zh     = document.querySelector(".zh");
+      var $en     = document.querySelector(".en");
+      var $select = document.querySelector(".sel-lang");
 
-        // Rebuild heading anchors if you're using anchor.js
-        function rebuildAnchors() {
-          // If anchor.js is loaded (global `anchors` var):
-          if (typeof anchors !== 'undefined') {
-            anchors.removeAll();
-            anchors.options = {
-              visible: 'hover',
-              placement: 'right',
-            };
-            anchors
-              .add()
-              // remove anchor links from top headings we don't want
-              .remove('.intro-header h1')
-              .remove('.subheading')
-              .remove('.sidebar-container h5');
+      // For anchor.js (re-apply anchors after toggling)
+      function rebuildAnchors() {
+        if (typeof anchors !== 'undefined') {
+          anchors.removeAll();
+          anchors.options = {
+            visible: 'hover',
+            placement: 'right',
+          };
+          anchors
+            .add()  
+            .remove('.intro-header h1')
+            .remove('.subheading')
+            .remove('.sidebar-container h5');
+        }
+      }
+
+      // Build the TOC in <ul class="catalog-body"> for whichever block is visible
+      function generateCatalog() {
+        var catBody = document.querySelector('.catalog-body');
+        if (!catBody) return; // no TOC on this page
+        catBody.innerHTML = ""; // clear old items
+
+        // which block is visible right now?
+        var isZh = (window.location.hash === "#zh");
+        var visibleBlock = isZh ? $zh : $en;
+        if (!visibleBlock) return;
+
+        // find headings *inside* the visible block
+        var headings = visibleBlock.querySelectorAll('h1, h2, h3, h4, h5, h6');
+        headings.forEach(function(h) {
+          // ensure each heading has an ID
+          if (!h.id) {
+            h.id = h.textContent.trim()
+                       .toLowerCase()
+                       .replace(/[^\w]+/g, "-"); // basic slug
           }
+          // build <li><a href="#..."></a></li>
+          var level = h.tagName.substr(1); // '1','2','3'...
+          var li = document.createElement('li');
+          li.className = 'toc-level-' + level;
+          li.innerHTML = '<a href="#' + h.id + '">' + h.textContent + '</a>';
+          catBody.appendChild(li);
+        });
+      }
+
+      // Toggle the language blocks
+      window.addEventListener('hashchange', _render);
+
+      function _render(){
+        var _hash = window.location.hash;
+        if (_hash === "#zh") {
+          $select.value = "zh";
+          $en.style.display = "none";
+          $zh.style.display = "block";
+        } else {
+          // default or #en
+          $select.value = "en";
+          $zh.style.display = "none";
+          $en.style.display = "block";
         }
+        // Re-run anchor & TOC logic after toggling
+        rebuildAnchors();
+        generateCatalog();
+      }
 
-        // Generate the Catalog (TOC) for whichever language is visible
-        function generateCatalog() {
-          var catBody = document.querySelector('.catalog-body');
-          if (!catBody) return;  // no catalog on this page
-          catBody.innerHTML = ""; // clear old TOC
-
-          // Determine which block is visible
-          var isZh = (window.location.hash === "#zh");
-          var visibleBlock = isZh ? $zh : $en;
-          if (!visibleBlock) return;
-
-          // Get headings in the visible block
-          var headings = visibleBlock.querySelectorAll("h1, h2, h3, h4, h5, h6");
-          headings.forEach(function(h) {
-            // Ensure each heading has an ID for <a href="#...">
-            if (!h.id) {
-              h.id = h.textContent
-                      .toLowerCase()
-                      .replace(/[^\w]+/g,"-"); // basic slug
-            }
-
-            // Example: <li class="toc-level-2"><a href="#my-title">My Title</a></li>
-            var level = h.tagName.substring(1); // "1","2","3"...
-            var li = document.createElement("li");
-            li.className = "toc-level-" + level;
-            li.innerHTML = '<a href="#' + h.id + '">' + h.textContent + '</a>';
-            catBody.appendChild(li);
-          });
+      function onLanChange(val){
+        if(val === "zh"){
+          window.location.hash = "#zh";
+        } else {
+          window.location.hash = "#en";
         }
+      }
 
-        // Toggling logic
-        window.addEventListener('hashchange', _render);
-
-        function _render() {
-            var _hash = window.location.hash;
-            if(_hash === "#zh"){
-                $select.value = "zh";
-                $en.style.display = "none";
-                $zh.style.display = "block";
-            } else {
-                // fallback or #en
-                $select.value = "en";
-                $zh.style.display = "none";
-                $en.style.display = "block";
-            }
-            // After toggling, re-run anchors & rebuild the TOC
-            rebuildAnchors();
-            generateCatalog();
-        }
-
-        function onLanChange(val) {
-            if(val === "zh"){
-                window.location.hash = "#zh";
-            } else {
-                window.location.hash = "#en";
-            }
-        }
-
-        // Initialize on page load
-        _render();
+      // Initial page load
+      _render();
     </script>
 
 </body>
