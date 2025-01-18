@@ -2,13 +2,34 @@
 <script type="text/javascript">
   window.MathJax = {
     tex: {
-      tags: 'ams',  // 对应原来的 equationNumbers.autoNumber: "AMS"
-      inlineMath: [['$', '$']],  // 对应原来的 tex2jax.inlineMath
-      displayMath: [['$$', '$$']],  // 对应原来的 tex2jax.displayMath
-      processEscapes: true  // 对应原来的 tex2jax.processEscapes
+      tags: 'ams',
+      inlineMath: [['$', '$']],
+      displayMath: [['$$', '$$']],
+      processEscapes: true
     },
     svg: {
-      scale: 0.9  // 对应原来的 SVG.scale: 90，这里调整为 0.9 因为 MathJax 3 中 scale 取值为 0 - 1 之间
+      scale: 0.9
+    },
+    loader: {
+      load: ['output/svg', 'input/tex', '[tex]/ams']
+    },
+    options: {
+      renderActions: {
+        addMenu: [0, '', '']
+      }
+    },
+    startup: {
+      pageReady: () => {
+        return MathJax.startup.defaultPageReady().then(() => {
+          // 这里可以尝试设置字体
+          MathJax.typesetPromise().then(() => {
+            const mathElements = document.querySelectorAll('.MathJax');
+            mathElements.forEach((element) => {
+              element.style.fontFamily = 'STIX Two Math, serif'; // 指定字体
+            });
+          });
+        });
+      }
     }
   };
 </script>
