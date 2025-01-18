@@ -19,7 +19,7 @@ Now, transpose this concept to foundation models, such as large language models 
 This is where machine unlearning plays a pivotal role. Think of machine unlearning as a "patch" for foundation models. It surgically removes specific knowledge or behaviors from a pretrained model while preserving its overall capabilities. This enables efficient debugging of models without requiring retraining from scratch, saving both time and computational resources. The necessity of machine unlearning becomes evident when considering these real-world scenarios:
 
 ### 1. Harmful Content Generation
-Large language models can produce harmful outputs when irresponsibly prompted. For example, generating advice on "how to grow a virus" could have catastrophic consequences if left unchecked. It is also reported that the Tesla Cybertruck bomber in Las Vegas once resorted to ChatGPT on how to build homemade bombs <a href="#refer-anchor-0"><sup>0</sup>. Similarly, text-to-image diffusion models might inadvertently generate inappropriate content, such as nudity, despite implemented safeguards.
+Large language models can produce harmful outputs when irresponsibly prompted. For example, generating advice on "how to grow a virus" could have catastrophic consequences if left unchecked. It is also reported that the Tesla Cybertruck bomber in Las Vegas once resorted to ChatGPT on how to build homemade bombs <a href="#refer-anchor-0"><sup>0</sup></a>. Similarly, text-to-image diffusion models might inadvertently generate inappropriate content, such as nudity, despite implemented safeguards.
 
 <div class="row mt-3">
     <div class="col-sm mt-3 mt-md-0">
@@ -151,7 +151,7 @@ Similarly, for LLM unlearning, jailbreak attacks have also demonstrated effectiv
     </div>
 </div>
 <div class="caption">
-  The GCG attack (row "Enhanced GCG") successfully breaks the unlearned model and reduces the unlearning effectiveness (statistics in WMDP-Bio column) significantly compared to benign input (row "Default decoding")[<sup>3</sup>](#refer-anchor-3).
+  The GCG attack (row "Enhanced GCG") successfully breaks the unlearned model and reduces the unlearning effectiveness (statistics in WMDP-Bio column) significantly compared to benign input (row "Default decoding")<a href="#refer-anchor-3"><sup>3</sup></a>.
 </div>
 
 
