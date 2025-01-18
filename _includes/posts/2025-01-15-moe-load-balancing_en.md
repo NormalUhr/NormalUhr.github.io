@@ -44,7 +44,8 @@ where $x$ is the token embedding and $W_{gate}$ is the router's weight matrix. O
 
 $$ \mathcal{L}_{\text{aux}} \ \sum_{e=1}^E f_e P_e$$
 
-    where $f_e$ is the fraction of tokens routed to expert $e$, and $P_e$ is the average gating probability for expert $e$. This loss nudges the system toward distributing tokens more evenly across experts.
+where $f_e$ is the fraction of tokens routed to expert $e$, and $P_e$ is the average gating probability for expert $e$. This loss nudges the system toward distributing tokens more evenly across experts.
+
 **3. Local groups** so that not every token competes with every other token globally.
 
 **Pitfall**: You guessed it—dropping tokens is not super glamorous. If tokens exceed capacity, they might get incomplete processing. Also, the overhead of top-2 gating and random dispatch can get heavy at scale. Also, the over-dependence on an auxiliary loss sometimes forced a “fake” distribution of tokens, hurting specialized learning. But still, GShard proved that MoE could be done and that it’s worth the trouble. The concept of capacity constraints was spot on and we still see that in almost every subsequent MoE method.
