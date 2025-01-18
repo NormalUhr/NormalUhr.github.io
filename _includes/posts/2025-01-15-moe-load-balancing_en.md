@@ -265,6 +265,7 @@ Here, similar to DeepSeek-MoE, $N_s$ and $N_r$ are the number s of shared and ro
 $$g'_{i,t}=s_{i,t}, \, \text{if} \, s_{i,t} + b_i\in \text{TopK}(\{s_{j,t} + b_i|1 \leq j \leq N_r\}, K_r), \, \text{else} \, 0.$$
 
 The bias term $b_i$ is dynamically updated during training:
+
 $$b_i \leftarrow b_i - \gamma, \quad \text{if expert } i \text{ is overloaded},$$
 
 $$b_i \leftarrow b_i + \gamma, \quad \text{if expert } i \text{ is underloaded},$$
@@ -272,10 +273,16 @@ $$b_i \leftarrow b_i + \gamma, \quad \text{if expert } i \text{ is underloaded},
 where $\gamma$ is the bias update speed. This strategy ensures balanced expert loads throughout training without the performance degradation associated with auxiliary losses.
 
 **Complementary Sequence-Wise Auxiliary Loss.** To prevent extreme imbalance within individual sequences, a sequence-wise balance loss is also employed:
+
 $$\mathcal{L}_{\text{Bal}} = \alpha \sum_{i=1}^{N_r} f_i P_i,$$
+
 where:
+
 $$f_i = \frac{N_r}{K_r T}\sum_{t=1}^T \mathbb{I}(s_{i,t} \in \text{TopK}(\{s_{j,t} | i \leq j \leq N_r\}), K_r),$$
+
+
 $$s'_{i,t}=\frac{s_{i,t}}{\sum_{j=1}^{N_r} s_{j,t}}, P_i = \frac{1}{T}\sum_{t=1}^T s'_{i,t}.$$
+
 Here, $\alpha$ is a hyper-parameter with a small value, $\mathbb{I}$ is an  indicator function, and $T$ denotes the sequence length.
 
 **Dynamic Routing and Node-Limited Strategy.** DeepSeek-V3 also employs a node-limited routing mechanism to reduce communication costs during training. Each token is sent to at most $M$ nodes, determined by the highest $K_r/M$ affinity scores for experts distributed on each node. This approach maintains nearly full computation-communication overlap while improving scalability.
@@ -303,6 +310,18 @@ In tracing the path from GShard to DeepSeek-V3, a few overall trends have become
 - **Multi-Dimensional Parallelism**  
   Pipeline parallel, tensor parallel, expert parallel: HPC is now the norm for MoE. We’re seeing more flexible ways to combine these parallelisms, adjusting them per layer to squeeze out every bit of performance.
 
+### Quick Comparison Table of Major MoE Approaches
+
+|    Approach   	| Routing                                   	| Capacity Factor                                               	| Core Idea                                                                                	| Pitfalls                                                                                            	|
+|:-------------:	|-------------------------------------------	|---------------------------------------------------------------	|------------------------------------------------------------------------------------------	|-----------------------------------------------------------------------------------------------------	|
+| GShard        	| Top-2 gating, local groups                	| Introduced concept of capacity constraints to reduce overflow 	| Early large-scale MoE (~600B params), top-2 gating, random dispatch                      	| Over-dependence on auxiliary loss, token dropping can degrade performance                           	|
+| Switch        	| Top-1 gating (argmax)                     	| Yes (crucial hyperparameter)                                  	| Single-expert routing, simpler code, less overhead than top-2 gating                     	| Larger overflow risk with top-1, requires careful tuning of capacity factor                         	|
+| GLaM          	| Top-2 gating with energy-efficiency focus 	| Yes (capacity factor = 1.25 typical)                          	| Emphasized reduced energy use (~1/3 GPT-3’s training cost), strong zero-shot performance 	| Potential imbalances on real-world text distributions                                               	|
+| DeepSpeed-MoE 	| Top-1 gating, dynamic re-routing          	| Yes (dynamic redistribution instead of dropping)              	| Multi-expert & multi-data parallelism, HPC-optimized for both training & inference       	| Complex configuration, skewed text can still break load-balance if not carefully tuned              	|
+| ST-MoE        	| Top-1 gating w/ router z-loss             	| Yes                                                           	| Addresses training instability via z-loss, refined capacity factor tuning                	| Complex hyperparameter tuning; if z-loss is too high or low, it can destabilize or under-regularize 	|
+| Mixtral       	| Top-2 gating                              	| Yes (with dynamic redistribution)                             	| Observed temporal locality in expert usage, specialized sparse kernels (Megablocks)      	| Over-concentration in certain experts if data distribution is skewed                                	|
+| JetMoE        	| Top-2 gating                              	| Flexible “dropless” approach                                  	| Dropless pipeline parallelism, no token dropping, block-sparse kernel optimization       	| Implementation complexity, overhead from block-sparse matrix ops                                    	|
+| DeepSeek-V3   	| Top-K gating w/ bias-based balancing      	| Minimizes or eliminates large auxiliary losses                	| Fine-grained experts + shared experts, node-limited routing, dynamic gating-bias updates 	| Tuning bias update speed can be tricky; risk of “gating thrash” if hyperparams not well-chosen      	|
 
 ## Pitfalls & Lessons Learned
 
