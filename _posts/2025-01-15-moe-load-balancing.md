@@ -11,6 +11,6 @@ tags:
    - Efficient AI
 
 # Indicate the actual snippet files that contain the content
-content_en: "posts/2024-12-15-moe-load-balancing_en.md"
-content_zh: "posts/2024-12-15-moe-load-balancing_zh.md"
+content_en: "posts/2025-01-15-moe-load-balancing_en.md"
+content_zh: "posts/2025-01-15-moe-load-balancing_zh.md"
 ---
