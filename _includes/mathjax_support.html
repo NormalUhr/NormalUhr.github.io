@@ -1,20 +1,16 @@
-<script type="text/x-mathjax-config">
-  MathJax.Hub.Config({
-    TeX: {
-      equationNumbers: {
-        autoNumber: "AMS"
-      }
+<!-- MathJax -->
+<script type="text/javascript">
+  window.MathJax = {
+    tex: {
+      tags: 'ams',  // 对应原来的 equationNumbers.autoNumber: "AMS"
+      inlineMath: [['$', '$']],  // 对应原来的 tex2jax.inlineMath
+      displayMath: [['$$', '$$']],  // 对应原来的 tex2jax.displayMath
+      processEscapes: true  // 对应原来的 tex2jax.processEscapes
     },
-    SVG: {
-      scale: 90
-    },
-    tex2jax: {
-      inlineMath: [ ['$','$'] ],
-      displayMath: [ ['$$','$$'] ],
-      processEscapes: true,
+    svg: {
+      scale: 0.9  // 对应原来的 SVG.scale: 90，这里调整为 0.9 因为 MathJax 3 中 scale 取值为 0 - 1 之间
     }
-  });
+  };
 </script>
-<script type="text/javascript"
-        src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-AMS-MML_SVG">
-</script>
+<script defer type="text/javascript" id="MathJax-script" src="https://cdn.jsdelivr.net/npm/mathjax@3.2.0/es5/tex-mml-chtml.js"></script>
+<script defer src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
