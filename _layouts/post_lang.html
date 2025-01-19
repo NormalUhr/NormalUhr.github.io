@@ -17,8 +17,8 @@
 
                     <!-- Language Selector -->
                     <select class="sel-lang" onchange="onLanChange(this.value)">
-                        <option value="en" selected>English</option>
-                        <option value="zh">中文</option>
+                        <option value="en" selected> English </option>
+                        <option value="zh"> 中文 </option>
                     </select>
 
                     <!-- English block -->
@@ -83,7 +83,39 @@
 
     {% include footer.html %}
 
-    <!-- If you have MathJax or other scripts, insert them here... -->
+    <!-- AnchorJS (if used) -->
+    {% if site.anchorjs %}
+    <script>
+      function async(u, c) {
+        var d = document, t = 'script',
+            o = d.createElement(t), s = d.getElementsByTagName(t)[0];
+        o.src = u;
+        if (c) {
+          o.addEventListener('load', function (e) { c(null, e); }, false);
+        }
+        s.parentNode.insertBefore(o, s);
+      }
+    </script>
+    <script>
+      /* Load anchor.js asynchronously */
+      async("//cdnjs.cloudflare.com/ajax/libs/anchor-js/1.1.1/anchor.min.js", function(){
+          // Once loaded, set up headings
+          rebuildAnchors();
+      });
+    </script>
+    <style>
+      @media all and (min-width: 800px) {
+        .anchorjs-link {
+          position: absolute;
+          left: -0.75em;
+          font-size: 1.1em;
+          margin-top : -0.1em;
+        }
+      }
+    </style>
+    {% endif %}
+
+    <!-- MathJax scripts -->
     <script type="text/x-mathjax-config">
       MathJax.Hub.Config({
         menuSettings: { renderer: "CommonHTML" },
@@ -96,7 +128,7 @@
     <script
       src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS-MML_HTMLorMML"
       type="text/javascript"></script>
-      
+
     <script>
     document.addEventListener("DOMContentLoaded", function() {
       var sel = document.querySelector(".sel-lang");
