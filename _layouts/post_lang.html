@@ -5,53 +5,42 @@
 <body ontouchstart="">
     {% include nav.html %}
 
-    <!-- Post Header -->
+    <!-- Banner or Post Header -->
     {% include intro-header.html type='post' %}
 
-    <!-- Main Article -->
     <article>
         <div class="container">
             <div class="row">
 
-                <!-- Post Container (center column) -->
-                <div class="
-                    col-lg-8 col-lg-offset-2
-                    col-md-10 col-md-offset-1
-                    post-container">
+                <!-- Main column -->
+                <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1 post-container">
 
                     <!-- Language Selector -->
                     <select class="sel-lang" onchange="onLanChange(this.value)">
-                        <option value="en" selected> English </option>
-                        <option value="zh"> 中文 </option>
+                        <option value="en" selected>English</option>
+                        <option value="zh">中文</option>
                     </select>
 
-                    <!-- English Version -->
-                    <div class="en bilingual-content">
-                        {% comment %}
-                          Pull in the snippet from _includes/posts/..._en.md
-                        {% endcomment %}
+                    <!-- English block -->
+                    <div class="en bilingual-block">
                         {% capture content_en %}{% include {{ page.content_en }} %}{% endcapture %}
                         {{ content_en | markdownify }}
                     </div>
 
-                    <!-- Chinese Version -->
-                    <div class="zh bilingual-content">
-                        {% comment %}
-                          Pull in the snippet from _includes/posts/..._zh.md
-                        {% endcomment %}
+                    <!-- Chinese block -->
+                    <div class="zh bilingual-block">
                         {% capture content_zh %}{% include {{ page.content_zh }} %}{% endcapture %}
                         {{ content_zh | markdownify }}
                     </div>
 
-                    <hr style="visibility: hidden;">
+                    <hr style="visibility: hidden;" />
 
-                    <!-- Previous / Next Post Links -->
+                    <!-- Pager -->
                     <ul class="pager">
                         {% if page.previous.url %}
                         <li class="previous">
-                            <a href="{{ page.previous.url | prepend: site.baseurl | replace: '//', '/' }}"
-                               data-toggle="tooltip" data-placement="top"
-                               title="{{ page.previous.title }}">
+                            <a href="{{ page.previous.url | prepend: site.baseurl | replace: '//', '/' }}" 
+                               data-toggle="tooltip" title="{{ page.previous.title }}">
                                 Previous<br>
                                 <span>{{ page.previous.title }}</span>
                             </a>
@@ -60,97 +49,41 @@
                         {% if page.next.url %}
                         <li class="next">
                             <a href="{{ page.next.url | prepend: site.baseurl | replace: '//', '/' }}"
-                               data-toggle="tooltip" data-placement="top"
-                               title="{{ page.next.title }}">
+                               data-toggle="tooltip" title="{{ page.next.title }}">
                                 Next<br>
                                 <span>{{ page.next.title }}</span>
                             </a>
                         </li>
                         {% endif %}
                     </ul>
-
-                    <hr style="visibility: hidden;">
-
-                    <!-- Disqus Comments (if enabled) -->
-                    {% if site.disqus_username %}
-                    <div class="comment">
-                        <div id="disqus_thread" class="disqus-thread"></div>
-                    </div>
-                    {% endif %}
-
-                    <!-- Netease Comment (if enabled) -->
-                    {% if site.netease_comment %}
-                    <div id="cloud-tie-wrapper" class="cloud-tie-wrapper"></div>
-                    {% endif %}
-
-                </div><!-- end .post-container -->
+                </div>
 
                 <!-- Catalog Sidebar -->
                 {% if page.catalog %}
-                <div class="
-                    col-lg-2
-                    visible-lg-block
-                    sidebar-container
-                    catalog-container">
+                <div class="col-lg-2 visible-lg-block sidebar-container catalog-container">
                     <div class="side-catalog">
                         <hr class="hidden-sm hidden-xs">
                         <h5>
                             <a class="catalog-toggle" href="#">CATALOG</a>
                         </h5>
-                        <!-- We'll generate the TOC here via JS -->
                         <ul class="catalog-body"></ul>
                     </div>
                 </div>
                 {% endif %}
 
-                <!-- Another Sidebar Container (tags, friends, etc.) -->
-                <div class="
-                    col-lg-8 col-lg-offset-2
-                    col-md-10 col-md-offset-1
-                    sidebar-container">
+                <!-- Another sidebar (friends, tags, etc.) -->
+                <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1 sidebar-container">
                     {% include featured-tags.html bottom=true %}
                     {% include friends.html %}
                 </div>
 
-            </div><!-- end row -->
-        </div><!-- end container -->
+            </div><!-- .row -->
+        </div><!-- .container -->
     </article>
 
     {% include footer.html %}
 
-    <!-- AnchorJS (if used) -->
-    {% if site.anchorjs %}
-    <script>
-      function async(u, c) {
-        var d = document, t = 'script',
-            o = d.createElement(t), s = d.getElementsByTagName(t)[0];
-        o.src = u;
-        if (c) {
-          o.addEventListener('load', function (e) { c(null, e); }, false);
-        }
-        s.parentNode.insertBefore(o, s);
-      }
-    </script>
-    <script>
-      /* Load anchor.js asynchronously */
-      async("//cdnjs.cloudflare.com/ajax/libs/anchor-js/1.1.1/anchor.min.js", function(){
-          // Once loaded, set up headings
-          rebuildAnchors();
-      });
-    </script>
-    <style>
-      @media all and (min-width: 800px) {
-        .anchorjs-link {
-          position: absolute;
-          left: -0.75em;
-          font-size: 1.1em;
-          margin-top : -0.1em;
-        }
-      }
-    </style>
-    {% endif %}
-
-    <!-- MathJax Config (Inline) -->
+    <!-- If you have MathJax or other scripts, insert them here... -->
     <script type="text/x-mathjax-config">
       MathJax.Hub.Config({
         menuSettings: { renderer: "CommonHTML" },
@@ -163,92 +96,69 @@
     <script
       src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS-MML_HTMLorMML"
       type="text/javascript"></script>
+      
+    <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      var sel = document.querySelector(".sel-lang");
+      var en  = document.querySelector(".en");
+      var zh  = document.querySelector(".zh");
 
-    <!-- Bilingual Toggle + TOC Generation JS -->
-    <script type="text/javascript">
-      // references to both blocks
-      var $zh     = document.querySelector(".zh");
-      var $en     = document.querySelector(".en");
-      var $select = document.querySelector(".sel-lang");
-
-      // For anchor.js (re-apply anchors after toggling)
-      function rebuildAnchors() {
-        if (typeof anchors !== 'undefined') {
-          anchors.removeAll();
-          anchors.options = {
-            visible: 'hover',
-            placement: 'right'
-          };
-          anchors
-            .add()
-            .remove('.intro-header h1')
-            .remove('.subheading')
-            .remove('.sidebar-container h5');
+      // Toggle languages based on the URL hash (#en or #zh)
+      function toggleLang() {
+        if (window.location.hash === "#zh") {
+          sel.value = "zh";
+          en.style.display = "none";
+          zh.style.display = "block";
+        } else {
+          sel.value = "en";
+          en.style.display = "block";
+          zh.style.display = "none";
         }
+        buildTOC();
       }
 
-      // Build the TOC in <ul class="catalog-body"> for whichever block is visible
-      function generateCatalog() {
-        var catBody = document.querySelector('.catalog-body');
-        if (!catBody) return; // no TOC on this page
+      // Build the Catalog (TOC) for whichever block is visible
+      function buildTOC() {
+        var catBody = document.querySelector(".catalog-body");
+        if (!catBody) return; // no catalog on this page
+
         catBody.innerHTML = ""; // clear old items
+        var currentBlock = (sel.value === "zh") ? zh : en;
 
-        // which block is visible right now?
-        var isZh = (window.location.hash === "#zh");
-        var visibleBlock = isZh ? $zh : $en;
-        if (!visibleBlock) return;
-
-        // find headings *inside* the visible block
-        var headings = visibleBlock.querySelectorAll('h1, h2, h3, h4, h5, h6');
+        // Gather headings from the visible block only
+        var headings = currentBlock.querySelectorAll("h1, h2, h3, h4, h5, h6");
         headings.forEach(function(h) {
-          // ensure each heading has an ID
+          // Ensure each heading has an ID
           if (!h.id) {
-            h.id = h.textContent
-                     .trim()
-                     .toLowerCase()
-                     .replace(/[^\w]+/g, "-"); // basic slug
+            h.id = h.innerText.trim().toLowerCase().replace(/\s+/g, "-");
           }
-          // build <li><a href="#some-id">Heading</a></li>
-          var level = h.tagName.substr(1); // '1','2','3'...
-          var li = document.createElement('li');
-          li.className = 'toc-level-' + level;
-          li.innerHTML = '<a href="#' + h.id + '">' + h.textContent + '</a>';
+          // Create <li> + <a href="#...">
+          var level = h.tagName.replace("H","");
+          var li = document.createElement("li");
+          li.className = "toc-level-" + level;
+          var a = document.createElement("a");
+          a.href = "#" + h.id;
+          a.textContent = h.innerText.trim();
+          li.appendChild(a);
           catBody.appendChild(li);
         });
       }
 
-      // Toggle the language blocks
-      window.addEventListener('hashchange', _render);
-
-      function _render(){
-        var _hash = window.location.hash;
-        // Show either .en or .zh
-        if (_hash === "#zh") {
-          $select.value = "zh";
-          $en.style.display = "none";
-          $zh.style.display = "block";
-        } else {
-          // default or #en
-          $select.value = "en";
-          $zh.style.display = "none";
-          $en.style.display = "block";
-        }
-        // Re-run anchor & TOC logic after toggling
-        rebuildAnchors();
-        generateCatalog();
-      }
-
-      // Called when user selects from <select>
-      function onLanChange(val){
-        if(val === "zh"){
+      // Called when user changes the <select>
+      window.onLanChange = function(value) {
+        if (value === "zh") {
           window.location.hash = "#zh";
         } else {
           window.location.hash = "#en";
         }
       }
 
-      // Initial page load
-      _render();
+      // Listen for hash changes
+      window.addEventListener("hashchange", toggleLang);
+
+      // Initial run
+      toggleLang();
+    });
     </script>
 
 </body>
