@@ -134,17 +134,32 @@
       var sel = document.querySelector(".sel-lang");
       var en  = document.querySelector(".en");
       var zh  = document.querySelector(".zh");
+      var currentLang = "en";  // default language
 
       // Toggle languages based on the URL hash (#en or #zh)
       function toggleLang() {
-        if (window.location.hash === "#zh") {
+        var hash = window.location.hash;
+        if (hash === "#zh") {
           sel.value = "zh";
           en.style.display = "none";
           zh.style.display = "block";
-        } else {
+          currentLang = "zh";
+        } else if (hash === "#en") {
           sel.value = "en";
           en.style.display = "block";
           zh.style.display = "none";
+          currentLang = "en";
+        } else {
+          // If the hash isn't for language switching, maintain current language visibility.
+          if (currentLang === "zh") {
+            sel.value = "zh";
+            en.style.display = "none";
+            zh.style.display = "block";
+          } else {
+            sel.value = "en";
+            en.style.display = "block";
+            zh.style.display = "none";
+          }
         }
         buildTOC();
       }
@@ -155,7 +170,7 @@
         if (!catBody) return; // no catalog on this page
 
         catBody.innerHTML = ""; // clear old items
-        var currentBlock = (sel.value === "zh") ? zh : en;
+        var currentBlock = (currentLang === "zh") ? zh : en;
 
         // Gather headings from the visible block only
         var headings = currentBlock.querySelectorAll("h1, h2, h3, h4, h5, h6");
@@ -178,7 +193,7 @@
 
       // Called when user changes the <select>
       window.onLanChange = function(value) {
-        if (value === "zh") {
+        if(value === "zh"){
           window.location.hash = "#zh";
         } else {
           window.location.hash = "#en";
