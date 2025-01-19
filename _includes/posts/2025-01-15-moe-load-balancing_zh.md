@@ -32,7 +32,7 @@
 
 ## 2. 历史脉络：从 GShard 到 Switch
 
-### 2.1 GShard<a href="#refer-gshard"><sup>0</sup></a>：先锋之作
+### 2.1 GShard<a href="#refer-ch-gshard"><sup>0</sup></a>：先锋之作
 
 **GShard**（谷歌提出）通常被视为最早实现大规模超稀疏 MoE 的框架之一。它让人们真正意识到，只要把层和 token 智能拆分并均衡地分配给各个专家，训练几百亿甚至上千亿参数的模型是可以做到的。
 
@@ -54,7 +54,7 @@ $$
 
 **痛点**：没错，token 被丢弃肯定不是什么好事——如果超容量了，就只好忍痛割爱。而且 top-2 gating 在规模很大时会带来不小的通信和计算开销，再加上依赖辅助损失有时会让路由分布变得“人为”偏均匀，反而牺牲了一定的性能。不过，GShard 为后续所有的 MoE 研究铺好了路：它证明了稀疏专家是有价值的，还为后来的方案指明了“容量因子”这些关键概念的重要性。
 
-### 2.2 Switch Transformer<a href="#refer-switch"><sup>1</sup></a>：当“少就是多”
+### 2.2 Switch Transformer<a href="#refer-ch-switch"><sup>1</sup></a>：当“少就是多”
 
 Switch Transformer 的思路很直接：“我们干脆只给每个 token 选一个专家得了。” 这样做一来简化了 gating 的逻辑（直接挑最高 logit 的专家），二来也极大降低了计算和通信负担。具体做法是：
 
@@ -82,7 +82,7 @@ $$
 
 ## 3. 进一步改进与变体：GLaM、DeepSpeed-MoE、ST-MoE、Mixtral
 
-### 3.1 GLaM<a href="#refer-glam"><sup>2</sup></a>：带着效率回归 Top-2
+### 3.1 GLaM<a href="#refer-ch-glam"><sup>2</sup></a>：带着效率回归 Top-2
 
 **GLaM**（Generalist Language Model）在 Switch Transformer 之后又把 **top-2 gating** 搬了回来，但增加了对 **能耗效率** 的关注，并声称他们只用了大约 GPT-3 训练能耗的三分之一，却在 zero-shot 任务上表现更好。核心公式大概是：  
 
@@ -106,7 +106,7 @@ $$
 
 **坑与经验**：GLaM 让大家看到，真正只激活一小部分参数，就能在算力和能耗上吊打类似 GPT-3 的 dense 模型——这是一次在大规模模型的“能效”上非常耀眼的案例。但仍然需要提醒的是，如果真实数据分布不平衡，专家可能还是会出现负载不均，而 GLaM 也花了不少心思去调节 gating、capacity 等超参。
 
-### 3.2 DeepSpeed-MoE<a href="#refer-deepspeed"><sup>3</sup></a>：主打推理效率
+### 3.2 DeepSpeed-MoE<a href="#refer-ch-deepspeed"><sup>3</sup></a>：主打推理效率
 
 **DeepSpeed-MoE**（由微软提出）算是将负载均衡做到了一个更成熟的层次，既解决了训练时如何把 token 分配给专家的问题，也兼顾了推理阶段如何让专家有效利用的挑战。它把之前很多 MoE 的坑都总结了，并提出一系列优化方案来应对。
 
@@ -122,7 +122,7 @@ $$
 
 **痛点与教训**：DeepSpeed-MoE 整体的负载均衡做得相当不错，但要调对 capacity factor、辅助损失权重、并行度这些仍然是一门学问，而且真实世界的文本分布通常并不均匀，如果不针对性地调参，也可能在某些场景里栽跟头。不过它一再强调，无论训练多么牛，推理时也要有一套负载均衡策略，否则延迟可能非常糟糕。
 
-### 3.3 ST-MoE<a href="#refer-st"><sup>4</sup></a>：聚焦容量因子与路由器 Z-Loss
+### 3.3 ST-MoE<a href="#refer-ch-st"><sup>4</sup></a>：聚焦容量因子与路由器 Z-Loss
 
 **ST-MoE (Stable and Transferable Mixture-of-Experts)** 在稀疏专家模型中迈出了稳定性和可迁移性的一大步。像 Switch Transformer 和 GLaM 其实都打下了基础，但 ST-MoE 进一步在一些老大难问题上做了提升，包括路由稳定性与超参调优等。
 
@@ -136,7 +136,7 @@ $$
 
 **容量因子调优**：ST-MoE 还强调了 capacity factor 的重要性，用辅助损失来让 token 尽量平均分布。相比之前的方法，它在训练稳定性和模型质量上找到了更平衡的点。当然，这些改进背后依然离不开超参的精细调试。换句话说，ST-MoE 告诉我们，通过合理的设计，你既能得到相对稳定的训练过程，也能保住最终的性能。
 
-### 3.4 Mixtral 8x7B<a href="#refer-mixtral"><sup>5</sup></a>：时间局部性与专门的稀疏 Kernel
+### 3.4 Mixtral 8x7B<a href="#refer-ch-mixtral"><sup>5</sup></a>：时间局部性与专门的稀疏 Kernel
 
 **Mixtral 8x7B** 是一个比较有意思的稀疏 MoE（SMoE）语言模型，针对负载均衡有一些独到见解。它还是用 **Top-2 gating**，每层 8 个专家，token 每次只用到其中两个专家，从而大大削减了激活的参数量（13B 级别，而不是像 Llama 2 70B 那样全部激活）。
 
@@ -150,7 +150,7 @@ $$
 
 ## 4. 新一代方案：OpenMoE、DeepSeekMoE、JetMoE、DeepSeek-V3 等等
 
-### 4.1 OpenMoE<a href="#refer-open"><sup>6</sup></a>：上下文无关的“专长化”与末端 Token 的“掉队”问题
+### 4.1 OpenMoE<a href="#refer-ch-open"><sup>6</sup></a>：上下文无关的“专长化”与末端 Token 的“掉队”问题
 
 OpenMoE 依旧遵循常见的 top-k gating + capacity constraints + 辅助负载损失这一整套，但它提出了两个在大规模训练中比较显著的现象：
 
@@ -161,7 +161,7 @@ OpenMoE 也是用 top-2 gating，用一个和 GShard、Switch 类似的负载均
 
 **结论**：OpenMoE 提醒我们，如果你的任务特别依赖完整序列（例如指令跟随、对话系统），那就要小心这个末端 token 掉队的问题，而且要注意 gating 可能会学到一些“表面化”模式。
 
-### 4.2 DeepSeekMoE<a href="#refer-deepseek"><sup>7</sup></a>：细粒度专家与共享专家
+### 4.2 DeepSeekMoE<a href="#refer-ch-deepseek"><sup>7</sup></a>：细粒度专家与共享专家
 
 在正式介绍最新版本 DeepSeek-V3 之前，我们先来看看 **DeepSeekMoE**。该方法的最大特点之一，是将每个专家切分为更细粒度的子专家（sub-experts），并引入一部分“共享专家”（shared experts）。这些共享专家在推理过程中总是被激活，不需要经过 gating 判断。这样做的目标是减少参数冗余，同时又保留足够的多样性，让子专家可以针对不同模式或特征进行专门化学习。
 
@@ -207,18 +207,18 @@ $$
 
 通过这种双重均衡损失设计，DeepSeekMoE 能在保证专家内部细粒度专长化的同时，尽量避免某些专家或某些设备被过度使用，进而减小路由不均带来的计算瓶颈。
 
-### 4.3 JetMoE<a href="#refer-jetmoe"><sup>8</sup></a>：无 Token 丢弃的 MoE 与流水线并行
+### 4.3 JetMoE<a href="#refer-ch-jetmoe"><sup>8</sup></a>：无 Token 丢弃的 MoE 与流水线并行
 
 大多数 MoE 都会在超容量时丢 token，而 **JetMoE** 则提出“dropless”策略，保证所有 token 都能被处理：
 
 1. **Dropless MoE**：精心控制 gating，不让任何专家超过容量上限。  
 2. **流水线并行 (Pipeline Parallelism)**：把每一层的专家都放在同一个设备上，分层排队处理，以此简化通信和分配逻辑。
 
-JetMoE 仍然用 top-2 gating，负载均衡也离不开辅助损失和 z-loss 等手段。它借鉴 MegaBlocks<a href="#refer-megablock"><sup>11</sup></a> 的做法，用块稀疏（block-sparse）的方式在 GPU 上实现“无丢弃”，不过实现起来也更复杂，需要随时管理各专家的接收量并进行动态调度。
+JetMoE 仍然用 top-2 gating，负载均衡也离不开辅助损失和 z-loss 等手段。它借鉴 MegaBlocks<a href="#refer-ch-megablock"><sup>11</sup></a> 的做法，用块稀疏（block-sparse）的方式在 GPU 上实现“无丢弃”，不过实现起来也更复杂，需要随时管理各专家的接收量并进行动态调度。
 
 **经验教训**：不丢 token 很理想，但实现门槛更高。尤其在大规模场景里，如何实时监控并重分配 token 不是个简单活儿。不过对那些对后续 token 极其敏感的任务（如问答系统、代码生成），dropless 模式确实很有吸引力。
 
-### 4.4 Skywork-MoE<a href="#refer-skymoe"><sup>9</sup></a>：gating logit 归一化 & 自适应辅助损失
+### 4.4 Skywork-MoE<a href="#refer-ch-skymoe"><sup>9</sup></a>：gating logit 归一化 & 自适应辅助损失
 
 **Skywork-MoE** 是一个 1460 亿参数、16 专家的大模型，建立在已有的 Skywork-13B dense 模型之上做的 MoE 化。它有两大特色来缓解专家不均衡问题： 
 
@@ -231,7 +231,7 @@ JetMoE 仍然用 top-2 gating，负载均衡也离不开辅助损失和 z-loss �
 
 ---
 
-### 4.5 DeepSeek-V3<a href="#refer-deepseekv3"><sup>10</sup></a>：偏置加成与弱化辅助损失
+### 4.5 DeepSeek-V3<a href="#refer-ch-deepseekv3"><sup>10</sup></a>：偏置加成与弱化辅助损失
 
 终于说到 **DeepSeek-V3**。它是目前的前沿之作，主打“砍掉大的辅助损失，用更加直接的偏置调节 (bias-based) 来控制负载”。想深入了解负载均衡最前沿，DeepSeek-V3 是个很好的例子。
 
@@ -325,28 +325,28 @@ DeepSeek-V3 还进一步在并行体系中做了优化，提出 **node-limited**
 
 ## Reference
 
-<div id="refer-gshard"></div> [0] Lepikhin, et al. **GShard: Scaling Giant Models with Conditional Computation and Automatic Sharding.** *arXiv preprint arXiv:2006.16668*, 2020.
+<div id="refer-ch-gshard"></div> [0] Lepikhin, et al. **GShard: Scaling Giant Models with Conditional Computation and Automatic Sharding.** *arXiv preprint arXiv:2006.16668*, 2020.
 
-<div id="refer-switch"></div> [1] Fedus, et al. **Switch Transformers: Scaling to Trillion Parameter Models with Simple and Eﬃcient Sparsity.** *arXiv preprint arXiv:2101.03961*, 2021. 
+<div id="refer-ch-switch"></div> [1] Fedus, et al. **Switch Transformers: Scaling to Trillion Parameter Models with Simple and Eﬃcient Sparsity.** *arXiv preprint arXiv:2101.03961*, 2021. 
 
-<div id="refer-glam"></div> [2] Du, et al. **GLaM: Efficient Scaling of Language Models with Mixture-of-Experts.** *arXiv preprint arXiv:2112.06905*, 2021. 
+<div id="refer-ch-glam"></div> [2] Du, et al. **GLaM: Efficient Scaling of Language Models with Mixture-of-Experts.** *arXiv preprint arXiv:2112.06905*, 2021. 
 
-<div id="refer-deepspeed"></div> [3] Rajbhandari, et al. **DeepSpeed-MoE: Advancing Mixture-of-Experts Inference
+<div id="refer-ch-deepspeed"></div> [3] Rajbhandari, et al. **DeepSpeed-MoE: Advancing Mixture-of-Experts Inference
 and Training to Power Next-Generation AI Scale.** *arXiv preprint arXiv:2201.05596*, 2022.
 
-<div id="refer-st"></div> [4] Zoph, et al. **ST-MOE: Designing Stable and Transferable
+<div id="refer-ch-st"></div> [4] Zoph, et al. **ST-MOE: Designing Stable and Transferable
 Sparse Expert Models.** *arXiv preprint arXiv:2202.08906*, 2022. 
 
-<div id="refer-mixtral"></div> [5] Jiang, et al. **Mixtral of Experts.** *arXiv preprint arXiv:2401.04088*, 2024. 
-<div id="refer-open"></div> [6] Xue, et al. **OpenMoE: An Early Effort on Open Mixture-of-Experts Language Models.** *arXiv preprint arXiv:2402.01739*, 2024. 
+<div id="refer-ch-mixtral"></div> [5] Jiang, et al. **Mixtral of Experts.** *arXiv preprint arXiv:2401.04088*, 2024. 
+<div id="refer-ch-open"></div> [6] Xue, et al. **OpenMoE: An Early Effort on Open Mixture-of-Experts Language Models.** *arXiv preprint arXiv:2402.01739*, 2024. 
 
-<div id="refer-deepseek"></div> [7] Dai, et al. **DeepSeekMoE: Towards Ultimate Expert Specialization in Mixture-of-Experts Language Models.** *arXiv preprint arXiv:2401.06066*, 2024. 
+<div id="refer-ch-deepseek"></div> [7] Dai, et al. **DeepSeekMoE: Towards Ultimate Expert Specialization in Mixture-of-Experts Language Models.** *arXiv preprint arXiv:2401.06066*, 2024. 
 
-<div id="refer-jetmoe"></div> [8] Shen, et al. **JetMoE: Reaching Llama2 Performance with 0.1M Dollars.** *arXiv preprint arXiv:2404.0741*, 2024. 
+<div id="refer-ch-jetmoe"></div> [8] Shen, et al. **JetMoE: Reaching Llama2 Performance with 0.1M Dollars.** *arXiv preprint arXiv:2404.0741*, 2024. 
 
-<div id="refer-skymoe"></div> [9] Wei, et al. **Skywork-MoE: A Deep Dive into Training Techniques for
+<div id="refer-ch-skymoe"></div> [9] Wei, et al. **Skywork-MoE: A Deep Dive into Training Techniques for
 Mixture-of-Experts Language Models.** *arXiv preprint arXiv:2406.06563*, 2024. 
 
-<div id="refer-deepseekv3"></div> [10] DeepSeek-AI. **DeepSeek-V3 Technical Report.** 
+<div id="refer-ch-deepseekv3"></div> [10] DeepSeek-AI. **DeepSeek-V3 Technical Report.** 
 
-<div id="refer-megablock"></div> [11] Gale, et al. **MegaBlocks: Efficient Sparse Training with Mixture-of-Experts.** *arXiv preprint arXiv:2211.15841*, 2021. 
+<div id="refer-ch-megablock"></div> [11] Gale, et al. **MegaBlocks: Efficient Sparse Training with Mixture-of-Experts.** *arXiv preprint arXiv:2211.15841*, 2021. 
