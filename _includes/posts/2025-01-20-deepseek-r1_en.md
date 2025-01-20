@@ -1,6 +1,6 @@
 # From Zero to Reasoning Hero: How DeepSeek-R1 Leverages Reinforcement Learning to Master Complex Reasoning
 
-*It is well said that 2024 was the year of the agent, but 2025 is shaping up to be the year of reinforcement learning. And DeepSeek-R1 just proves that. It also underscores how an "open" AI company makes much more contributions than OpenAI to the open-source community* 
+*It is well said that 2024 was the year of the agent, but 2025 is shaping up to be the year of reinforcement learning. And DeepSeek-R1 just proves that. It also underscores how an "open" AI company makes much more contributions than OpenAI to the open-source community.* 
 
 ## 1. Introduction
 
