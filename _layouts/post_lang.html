@@ -115,31 +115,21 @@
     </style>
     {% endif %}
 
-    <script>
-    window.MathJax = {
-      // 一些通用配置
-      options: {
-        // 在菜单中默认设置渲染器为 CHTML（类似于 v2.x 配置中的 "menuSettings: { renderer: 'CommonHTML' }"）
-        menuOptions: {
-          settings: {
-            renderer: "CHTML"
-          }
+    <!-- MathJax scripts -->
+    <script type="text/x-mathjax-config">
+      MathJax.Hub.Config({
+        menuSettings: { renderer: "CommonHTML" },
+        tex2jax: {
+          inlineMath: [['$','$'], ['\\(','\\)']],
+          processEscapes: true
         }
-      },
-      // 配置 TeX 相关选项，比如行内公式符号、转义等
-      tex: {
-        inlineMath: [["$", "$"], ["\\(", "\\)"]],
-        processEscapes: true
-      }
-    };
+      });
     </script>
-
-    <!-- 然后加载 MathJax 3.2.2 的脚本（通过 jsDelivr/CDN 亦可） -->
     <script
-      src="https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-chtml.js"
-      id="MathJax-script"
-      async
-    ></script>
+      src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS-MML_HTMLorMML"
+      type="text/javascript"></script>
+
+    <script>
     document.addEventListener("DOMContentLoaded", function() {
       var sel = document.querySelector(".sel-lang");
       var en  = document.querySelector(".en");
