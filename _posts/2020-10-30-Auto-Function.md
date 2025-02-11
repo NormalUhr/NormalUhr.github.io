@@ -8,7 +8,6 @@ header-img: "img/in-post/2020-10-30-Auto-Function/bg.jpg"
 catalog: true
 tags:
    - C++
-   - Modern C++
 ---
 # 谈谈在函数中使用`auto`
 

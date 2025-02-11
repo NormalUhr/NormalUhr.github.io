@@ -8,7 +8,6 @@ header-img: "img/in-post/2020-02-12-Niuke-Notes/bg.jpg"
 catalog: true
 tags:
    - C++
-   - Modern C++
 ---
 今天我想谈谈`override`和`final`，这一对在C++11中不太引人注意的特性，相比于C++11其他特性而言也更简单。这两个特性都能让我们的程序在继承类和覆写虚函数时更安全，更清晰。
 

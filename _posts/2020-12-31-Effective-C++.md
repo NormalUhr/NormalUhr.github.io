@@ -8,7 +8,6 @@ header-img: "img/in-post/2020-12-31-Effective-C++/bg.JPG"
 catalog: true
 tags:
    - C++	
-   - Effective C++
 
 # Indicate the actual snippet files that contain the content
 content_en: "posts/2020-12-31-effective-c++_en.md"

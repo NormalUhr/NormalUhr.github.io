@@ -7,7 +7,6 @@ author:     "Felix Zhang"
 header-img: "img/in-post/2019-12-10-LeetCode-Records/bg.jpg"
 catalog: true
 tags:
-   - LeetCode
 ---
 
 # LeetCode 刷题记录
