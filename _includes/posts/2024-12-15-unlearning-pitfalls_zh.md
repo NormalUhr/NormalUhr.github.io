@@ -29,15 +29,6 @@
     GPT 3.5 对“如何培育病毒”的有害回复示例。
 </div>
 
-<div class="row mt-3">
-    <div class="col-sm mt-3 mt-md-0">
-        {% include figure.html path="img/in-post/2024-12-15-unlearning-pitfalls/nudity.png" class="img-fluid rounded z-depth-1" %}
-    </div>
-</div>
-<div class="caption">
-    文本到图像生成可能包含与“裸露”相关的内容。
-</div>
-
 
 ### 2. 隐私和版权违规
 大模型通常使用来自互联网的大规模抓取数据进行训练，其中可能包含受版权保护的材料。例如，《纽约时报》就因其作品被违规用于训练数据集而起诉多家主要AI开发商。机器反学习为此类伦理和法律风险提供了缓解机制，能够将受版权保护数据的影响从模型中剔除。
