@@ -99,6 +99,10 @@ service-worker: true
 # Friends
 friends: [
     {
+        title: "OPTML Group",
+        href: "https://www.optml-group.io"
+    },
+    {
         title: "Sijia Liu",
         href: "https://lsjxjtu.github.io"
     },
