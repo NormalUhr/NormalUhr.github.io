@@ -244,7 +244,7 @@ Just like Lao Wang’s multi-stage workshop—where partial shipments of parts g
 
 ---
 
-# How the Source Code Implements “Two-Pronged” Parallelism: Key Logic of DualPipe
+## How the Source Code Implements “Two-Pronged” Parallelism: Key Logic of DualPipe
 
 In the previous section, we used a manufacturing analogy to illustrate how **DualPipe** enables forward and backward passes to truly run “at the same time” in the same pipeline, thereby maximizing GPU utilization. Here, we’ll explore how DualPipe’s **core source code** implements these ideas. Specifically, we’ll look at how it handles batch splitting, manages communication, and cleverly interweaves forward-backward tasks to achieve deep overlap and minimal pipeline bubbles.
 
@@ -252,7 +252,7 @@ In the previous section, we used a manufacturing analogy to illustrate how **Dua
 
 ---
 
-## 1. Basic Class Structure and Initialization
+### 1. Basic Class Structure and Initialization
 
     class DualPipe(nn.Module):
         def __init__(
@@ -279,7 +279,7 @@ These flags and mappings resemble the labels Lao Wang might attach to each machi
 
 ---
 
-## 2. State Management and Reset
+### 2. State Management and Reset
 
 Below is the `_reset_states` method:
 
@@ -310,11 +310,11 @@ Below is the `_reset_states` method:
 
 ---
 
-## 3. Forward and Backward Computation: Achieving Overlap on the Same Device
+### 3. Forward and Backward Computation: Achieving Overlap on the Same Device
 
 In large-model training, “forward computation” and “backward computation” essentially involve **running a forward or backward pass on a tensor** and then passing gradients to the previous layer. In the mechanical analogy, forward is “machining the part,” while backward is “checking for defects and adjusting production parameters.” DualPipe wraps these processes in a few methods:
 
-### 3.1 `_forward_compute_chunk(self, phase)`
+#### 3.1 `_forward_compute_chunk(self, phase)`
 
     def _forward_compute_chunk(self, phase: int) -> None:
         phase ^= self.is_in_second_half  # dynamically correct the phase
@@ -329,7 +329,7 @@ In large-model training, “forward computation” and “backward computation�
 - The resulting `outputs` will be stored in `self.output_chunks[phase]`.
 - If this is the last stage (`is_last_stage`) and a `criterion` is defined, the “loss” is placed in `self.loss_chunks`. Think of it as the final workshop outputting a “defect score” for inspection.
 
-### 3.2 `_backward_compute_chunk(self, phase, enable_zb: bool = False)`
+#### 3.2 `_backward_compute_chunk(self, phase, enable_zb: bool = False)`
 
     def _backward_compute_chunk(self, phase: int, enable_zb: bool = False) -> None:
         if self.forward_only:
@@ -358,7 +358,7 @@ In large-model training, “forward computation” and “backward computation�
 - `enable_zb` activates the Zero-Bubble (e.g., ZB1P) approach, where some parameter-grad computations are deferred by putting them into `WeightGradStore` and flushing them at the right moment. This aligns with our earlier explanation of **decoupling “input gradient calc” and “parameter gradient calc.”**
 - Once backward finishes, the “gradients” for the upstream stage are placed into `self.input_grad_chunks[phase]`, akin to Lao Wang returning some defect report to the previous machine.
 
-### 3.3 `_forward_backward_compute_chunk(self, phase0, phase1)`
+#### 3.3 `_forward_backward_compute_chunk(self, phase0, phase1)`
 
     def _forward_backward_compute_chunk(self, phase0: int, phase1: int) -> None:
         if self.forward_only:
@@ -384,7 +384,7 @@ The true core of DualPipe: if `overlaped_forward_backward` is `True`, the same G
 
 ---
 
-## 4. Communication Management: Hiding “Transport Time” Behind Computation
+### 4. Communication Management: Hiding “Transport Time” Behind Computation
 
 In large-scale model pipeline parallelism, every stage’s GPU frequently needs to communicate with upstream/downstream GPUs (like transporting half-finished parts from casting to forging). DualPipe uses several functions to break down and schedule communication so that computation and communication overlap extensively:
 
@@ -399,224 +399,14 @@ In large-scale model pipeline parallelism, every stage’s GPU frequently needs 
 
 ---
 
-## Distributed Parallel Training Overview
-
-This section introduces some common parallel strategies in the following order:
-1. **No Parallelism**: Everything runs on a single machine with a single GPU  
-2. **Model Parallelism**: Splitting the network by layers or segments  
-3. **Data Parallelism**: Cloning the same model onto multiple GPUs, each handling different data shards  
-4. **Pipeline Parallelism**: Assigning sequential layers to different GPUs in a pipeline  
-5. Key pipeline concepts such as “bubbles,” “zero-copy,” “zero-bubble,” etc.
-
----
-
-### Other Concepts: Pipeline Bubble, Zero-Copy, Zero-Bubble
-
-- **Pipeline Bubble**  
-  Refers to the idle time in the pipeline’s beginning or ending phases, where not all machines are working and resources go unused. For example, at the start, only the first set of machines is busy (casting), while the others are idle because they have no input yet.
-
-- **Zero Copy**  
-  Often means minimizing unnecessary tensor copies between GPUs—e.g., using efficient communication APIs or unified memory to share inputs/outputs, substantially lowering memory overhead.
-
-- **Zero Bubble**  
-  Achieved through meticulous scheduling so the pipeline can run nearly seamlessly during startup and later phases, or so that forward and backward passes completely overlap—minimizing idle time caused by waiting.
-
----
-
-## Why Further Optimization?—From Traditional Parallelism to DualPipe
-
-As described, **model parallelism** and **pipeline parallelism** let us split an ultra-large model across multiple GPUs. However, traditional pipeline parallel approaches still have the following pain points:
-
-1. …
-
-(omitted here for brevity)
-
----
-
-## High-Level Idea Behind DualPipe: Workshop Analogy and Key Improvements
-
-Let’s first understand **the problems DualPipe solves** through the lens of our mechanical analogy, then map them to **large-model training**.
-
-### In the Analogy
-
-1. **Manual Scheduling Trouble**  
-   - You want machine group #1 to handle backward for gear A while machine group #2 handles forward for gear B, and maybe group #3 does backward for gear C at the same time. Without an automated system, it’s easy to get lost in the timing details.  
-   - Asynchronous sending/receiving on the conveyor belt must also be carefully orchestrated: if the timing is off, some machine might be waiting for parts, or half-finished goods might pile up on the conveyor.
-
-2. **DualPipe’s Improvements**  
-   - Offers an “intelligent scheduling” system: each machine group just receives parts at the right time, does its work, and passes them on; backward inspection is woven in as well, without requiring endless if-else logic for the timeline.  
-   - If a workshop’s machine group can “multithread” (akin to GPU streams), the same machine group can mix forward and backward tasks for different gears, making full use of time slicing.
-
-3. **Fewer Bubbles**  
-   - When casting (forward) is almost done, forging can promptly do backward inspections. Or if the “adjustments” machine is busy, the casting machine can keep processing new parts.
-
-### In Large-Model Training
-
-1. **Overlapped Forward-Backward**  
-   - Allow some micro-batches to run forward while others run backward, so GPUs aren’t idle.  
-
-2. **Zero Bubble**  
-   - In an ideal scenario, carefully arranging micro-batch order plus asynchronous send/receive operations yields minimal total time for all forward-backward computation. Idle periods approach zero.  
-
-3. **Automated Communication Management**  
-   - The user just specifies the number of micro-batches and the forward-backward layer partitions. DualPipe automatically arranges when to send forward activations, when to receive backward gradients, and so on.  
-
-4. **Delayed Gradient Updates**  
-   - Components like `WeightGradStore` can hold gradients after backward finishes, then apply or communicate them at an opportune time, reducing repeated reads/writes.
-
-This concept of “bidirectional parallelism” isn’t entirely new, but its implementation can be tricky. Many prior efforts (like Zero Bubble / ZB1P) attempt to minimize wait times between forward and backward but often run into issues such as “when backward requires heavy communication, forward must pause” or “backward hasn’t finished yet, and forward is stuck on partial dependencies.”
-
-The most “explosive” feature of DualPipe is that it overlaps not only forward and backward computation but also their communications. In large-model distributed training, communication can be as expensive as computation, if not more. DualPipe’s scheduling and phase design ensure that forward outputs and backward gradients can flow simultaneously while also being computed, much like two teams of trucks that “go their own way” without blocking each other. This dramatically cuts the so-called “bubbles.”
-
-Traditional pipeline approaches often have GPUs waiting on communication or the communication waiting on compute. When idle time is high—and even higher at larger cluster scales—it drags down overall speed. DualPipe’s multi-layer overlap keeps the GPU nearly always “computing or communicating,” with minimal real “waiting.” Experiments show that as model size and the number of GPUs increase, DualPipe can yield substantial speedups in training.
-
----
-
-## DualPipe Source Code Analysis
-
-This section dives into **DualPipe**’s implementation details in code form. The main reference (simplified excerpt) divides into several highlights:
-
-1. [Core Class and Primary Member Variables](#核心类与主要成员变量)  
-2. [Forward and Backward Execution for Micro-Batches](#前向和后向的微批次执行)  
-3. [Front-Back Overlap and Zero Bubble](#前后向交叠与-zero-bubble)  
-4. [Communication & Wait Mechanisms: append_irecv, append_isend, _commit_and_wait_comm](#通信与等待机制append_irecvappend_isend_commit_and_wait_comm)  
-5. [WeightGradStore: Delayed Gradient Update Design](#weightgradstore延迟梯度更新设计)
-
-> **Tip**: If you’d like the complete reference, see the appendix or the relevant open-source repo (e.g., DeepSeek-V3).
-
----
-
-### Core Class and Primary Member Variables
-
-    class DualPipe(nn.Module):
-        def __init__(
-            self,
-            modules: Tuple[nn.Module, nn.Module],
-            batch_dim: int = 0,
-            process_group: Optional[dist.ProcessGroup] = None,
-            rank_mapping: Optional[List[int]] = None,
-        ) -> None:
-            super().__init__()
-
-            # modules: (model_part_0, model_part_1), i.e. two segments of the model
-            # batch_dim: which dimension to split micro-batches on
-            # process_group: the PyTorch distributed process group
-            # rank_mapping: custom rank->pipeline index mapping
-            ...
-            
-            self.overlaped_forward_backward = (
-                type(modules[0]) == type(modules[1]) 
-                and hasattr(type(modules[0]), "overlaped_forward_backward")
-            )
-            self.batch_dim = batch_dim
-            self.group = process_group or dist.distributed_c10d._get_default_group()
-            
-            # some rank-related mappings
-            ...
-            
-            self.is_first_rank = (self.rank == 0)
-            self.is_last_rank = (self.rank == self.num_ranks - 1)
-            self.is_in_second_half = (self.rank >= self.num_ranks // 2)
-            self.is_middle_rank = (...)
-
-- During initialization, you provide the “front half” and “back half” of the model. Internally, it decides the tasks for `rank == 0` (the pipeline’s leftmost) or `rank == self.num_ranks - 1` (the pipeline’s rightmost).
-- `overlaped_forward_backward` indicates whether the same GPU can handle forward and backward simultaneously for different micro-batches—key to reducing bubbles.
-- `is_first_rank` / `is_last_rank` map to the workshop’s “casting machine” vs. “final finishing machine,” while the middle ranks do the in-between steps.
-
-### Forward and Backward Execution for Micro-Batches
-
-Key functions `_forward_compute_chunk` and `_backward_compute_chunk` each handle one micro-batch’s forward or backward:
-
-    def _forward_compute_chunk(self, phase: int) -> None:
-        # fetch the micro-batch data for forward in this phase
-        chunk_id = self.current_f_chunk_id[phase]
-        self.current_f_chunk_id[phase] += 1
-        inputs = self.input_chunks[phase][chunk_id]
-        ...
-        outputs = self.module[phase](*inputs)
-        if is_last_stage and self.criterion is not None:
-            loss = self.criterion(*outputs, *labels)
-            self.loss_chunks.append(loss)
-        ...
-
-    def _backward_compute_chunk(self, phase: int, enable_zb: bool = False) -> None:
-        # either do (1) direct backward on loss if last_stage
-        #        or (2) backward on outputs/gradients
-        ...
-        if is_last_stage:
-            loss = self.loss_chunks[chunk_id]
-            loss.backward()
-            loss.detach_()
-        else:
-            outputs = self.output_chunks[phase][chunk_id]
-            output_grads = self.output_grad_chunks[phase][chunk_id]
-            run_backward(outputs, output_grads)
-        ...
-
-- Before doing the actual compute, DualPipe may call `_recv_forward` / `_recv_backward` for asynchronous communication with upstream/downstream. After finishing, it calls `_send_forward` / `_send_backward` to pass results or gradients on.
-- The `phase` parameter differentiates the front vs. back portion of the model, plus an XOR with `is_in_second_half` handles direction in the pipeline.
-
-### Front-Back Overlap and Zero Bubble
-
-The critical method for real front-back overlap is `_forward_backward_compute_chunk`:
-
-    def _forward_backward_compute_chunk(self, phase0: int, phase1: int) -> None:
-        if self.forward_only:
-            self._forward_compute_chunk(phase0)
-            return
-        
-        if not self.overlaped_forward_backward:
-            # if overlap not supported, do them separately
-            self._forward_compute_chunk(phase0)
-            self._backward_compute_chunk(phase1)
-            return
-
-        # gather forward inputs & backward content
-        ...
-        outputs0, loss0 = type(module0).overlaped_forward_backward(
-            module0, inputs0, criterion0, labels0,
-            module1, loss1, outputs1, output_grads1,
-        )
-        ...
-
-If `overlaped_forward_backward = True`, that `overlaped_forward_backward` function can handle a micro-batch’s forward plus another micro-batch’s backward on the same GPU—this is the key to bubble reduction. Once the pipeline “warms up,” certain GPUs may simultaneously run:
-
-- Backward for micro-batch A  
-- Forward for micro-batch B  
-
-rather than simply waiting. **Zero Bubble** is the idea that, under ideal conditions, you can use this overlap to keep the pipeline busy with virtually no idle moments.
-
-### Communication & Wait Mechanisms: `append_irecv`, `append_isend`, `_commit_and_wait_comm`
-
-In DualPipe, communication is organized as follows:
-
-- Functions like `_recv_forward` or `_recv_backward` add asynchronous receive calls to a `comm_ops` list: `comm.append_irecv(...)`.
-- Likewise, `_send_forward` or `_send_backward` add asynchronous sends: `comm.append_isend(...)`.
-- At certain points, `_commit_and_wait_comm()` is called to execute all queued ops at once and wait for completion. This avoids having to call `dist.isend`/`dist.irecv`/`.wait()` at every step. The structure is simpler and also helps optimize certain communications. A simplified snippet:
-
-        def _recv_forward(self, phase: int) -> None:
-            # irecv from prev rank if phase=0, or next rank if phase=1
-            tensors = comm.append_irecv(self.comm_ops, self.prev_rank, self.group)
-            self.input_chunks[phase].append(tensors)
-
-        def _commit_and_wait_comm(self) -> None:
-            if not self.comm_ops:
-                return
-            reqs = dist.batch_isend_irecv(self.comm_ops)
-            for req in reqs:
-                req.wait()
-            self.comm_ops = []
-            self._free_tensors()
-
----
-
-### WeightGradStore: Delayed Gradient Update Design
+### 5. WeightGradStore: Delayed Gradient Update Design
 
 During backward passes, the same weights may accumulate gradients multiple times. `WeightGradStore` uses a static queue to hold these updates, then executes them collectively at the right time. Benefits:
 
 - **Fewer syncs and memory writes**: Instead of updating parameters on every micro-batch, you can batch them up for a single update when appropriate.
 - **Pipeline integration**: Avoid interrupting pipeline concurrency, plus sync at times that overlap with other tasks.
 
+```python3=
     class WeightGradStore:
         enabled: bool = False
         cache: List[Callable] = []
@@ -636,12 +426,13 @@ During backward passes, the same weights may accumulate gradients multiple times
             funcs = cls.funcs_queue.get()
             for func in funcs:
                 func()
+```
 
 > Note: The `phase ^= self.is_in_second_half` trick is a neat way of “flipping” the phase based on whether the pipeline rank is in the second half, allowing the same function to handle left-to-right and right-to-left data transfers.
 
 ---
 
-## 5. Overall Scheduling: The `step(...)` Method’s 8 Stages
+### 6. Overall Scheduling: The `step(...)` Method’s 8 Stages
 
 The core logic resides in `step(...)`. This function is like Lao Wang’s central command that orchestrates all machines. To achieve DualPipe’s two-way pipeline, it proceeds through these phases (in a simplified view, see code comments for details):
 
@@ -672,14 +463,6 @@ The core logic resides in `step(...)`. This function is like Lao Wang’s centra
 In the workshop analogy, it’s a “scheduling timetable” with multiple time slots: first let the left-side machines do some initial runs, then after a certain point, the right side also feeds in raw materials; both sides keep passing along half-finished parts and defect reports until everything is done, with a final unify-and-finish step.
 
 > The multiple steps may seem complex, but that’s because a two-way pipeline requires careful management of micro-batches at different phases to keep bubbles minimal.
-
-### 6. Key Helpers: WeightGradStore and Tensor Partitioning
-
-- **`WeightGradStore`**  
-  Temporarily stores parameter-gradient computation callbacks. When Zero-Bubble (ZB) is on, you can compute “input gradients” first, then flush “weight gradients” in bulk later. Analogous to Lao Wang letting certain tasks focus on large-scale shape corrections first, postponing finer parameter tweaks until a later stage—avoiding repeated tool adjustments.
-
-- **scatter / gather**  
-  Used to split a large batch into multiple micro-batches and reassemble outputs afterward. Instead of feeding 10,000 parts into one machine at once (which would “blow up GPU memory”), you break them into micro-batches for pipeline concurrency.
 
 ---
 

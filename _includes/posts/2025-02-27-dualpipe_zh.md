@@ -248,7 +248,6 @@ GPU 有多个 SM（Streaming Multiprocessors）。当我们做大规模 all-to-a
 正因为此，DualPipe 在模型规模“爆炸式”增长、并行度加大时，依然能保持较高的吞吐率。因为即使通信时长在增大，只要管理好分配给通信的 GPU SM 资源比例，就可以将大部分通信操作隐藏到并发的计算中。这与流水线工厂在接单量暴增时，只要车间产线设置得好，运输环节和工艺环节两条线“各司其职、相互交错”，就能稳定地“吃下”更多订单并保证整体效率。
 
 
-
 ## 源码如何实现“双管齐下”：DualPipe 关键逻辑解析
 
 在上一个章节里，我们用机械加工的类比方式，说明了 DualPipe 如何让前向 (Forward) 和后向 (Backward) 真正地在同一个流水线上“同时上阵”，以最大化地利用 GPU 资源。下面，我们来看看 DualPipe 的核心源码如何将这一思路落到实处，并通过拆分批次、管理通信、以及巧妙调用“前向-后向”协同来实现高度的重叠和极小化的流水线气泡。
@@ -314,6 +313,7 @@ def _reset_states(self) -> None:
 * 一系列计数器：用来跟踪当前处理到第几个前向批次、第几个后向批次，或者是已经发送/接收了多少次数据等。
 
 ### 3. 前向与后向计算：如何在同一设备上实现交叠
+
 在大模型训练里，“前向计算”与“后向计算”的核心逻辑大多是**对张量执行一次前传或后传**，然后将梯度往上一层传递。对于机械类比而言，前向就像“对零件进行加工”，后向就像“对零件的质量缺陷进行追溯并调整生产参数”。DualPipe 里分别封装了下面这些方法来完成这个过程：
 
 **3.1 `_forward_compute_chunk(self, phase)`**
@@ -400,244 +400,9 @@ def _forward_backward_compute_chunk(self, phase0: int, phase1: int) -> None:
 先通过 `dist.batch_isend_irecv(self.comm_ops)` 一次性把所有的非阻塞通信发出去，然后 `wait()`。这意味着通信和计算可以在不同时间片并行，只有当我们真的需要数据时才会等待。这就把运输时间“隐藏”在机床空闲或机床可以“分配给传输”的那部分时间里了。
 
 
+### 5. WeightGradStore：延迟梯度更新设计
 
-
-
-
-
-
-
-
-### 
-
----
-
-## 分布式并行训练的整体思路
-
-本章将介绍几种常见的并行策略，按照以下顺序：
-1. **无并行**：什么都不拆，直接单机单卡跑  
-2. **模型并行**：把网络结构按层或部分拆开  
-3. **数据并行**：相同模型复制到多卡并行处理不同数据  
-4. **流水线并行**：按模型层顺序在多卡上流水化处理  
-5. 流水线相关的关键概念，如“气泡”、“零复制”、“零气泡”等  
-
----
-
-### 其它概念：流水线气泡、零复制、零气泡
-
-- **流水线气泡（Pipeline Bubble）**  
-  指在流水线初始或收尾阶段，不是所有机床组都在工作，造成资源浪费。例如初始时，只有机床组1忙着铸造，其他机床组还没拿到半成品可锻造或车铣磨，闲置了几个时刻。  
-- **零复制（Zero Copy）**  
-  在深度学习中常指减少张量在 GPU 间的多余拷贝，比如通过高效的通信 API 或统一内存来共享输入输出，大幅降低显存操作开销。  
-- **零气泡（Zero Bubble）**  
-  指通过巧妙的调度，使流水线在初始和后续阶段都能够近乎无缝衔接，或让前传和后传完全交叠，尽最大可能减少因等待导致的空转时间。
-
----
-
-## 为什么要进一步优化？——从传统并行到 DualPipe
-
-如上所示，**模型并行**和**流水线并行**确实能把一个超大的模型分割到多卡里。但我们发现，传统的流水线并行方案仍有以下痛点：
-
-1. 
-
----
-
-## DualPipe 高层思路：对照“机床组”说明改进要点
-
-让我们先从**比喻场景**的角度理解 DualPipe 解决了什么问题，然后再在**大模型训练**层面做对应说明。
-
-### 在比喻中
-
-1. **手工调度的困扰**  
-   - 想要让机床组1在加工齿轮 A 的后向时，机床组2 同时对齿轮 B 做前向，机床组3 可能在处理齿轮 C 的后向……这种复杂时序很容易出错。  
-   - 对传送带进行异步发送、接收也要谨慎安排：一旦出现时序不对，可能造成后续机床组在等料，或半成品堵在传送带。
-
-2. **DualPipe 的改进**  
-   - 提供了一套“智能调度”系统：每个机床组只需在合适时刻收料、加工、发料；后向质检也并行穿插其中，而不必手动写一大堆 if-else 来安排时序。  
-   - 如果工厂的机床组可以“多线程”工作（类比 GPU 流），那就能让同一个机床组对不同齿轮的前向、后向混合调度，充分利用时间切片。
-
-3. **减少气泡**  
-   - 当铸造（前向）接近完成时，就立刻让锻造去做后向质检，或者当钳工（后向检查）正忙时，铸造还可以继续处理新的零件。
-
-### 在大模型训练中的对应
-
-1. **Overlapped Forward-Backward**  
-   - 同时让某些微批次进行前传，另一些微批次做后传，避免 GPU 空转。  
-2. **Zero Bubble**  
-   - 在理想场景下，可通过对微批次顺序的巧妙安排与接收/发送的异步操作，让流水线在最短时间内完成全部前后向计算，气泡期趋近于 0。  
-3. **自动通信管理**  
-   - 用户只需告诉系统要处理多少个微批次，以及前后向的层级划分，DualPipe 就能自动编排何时发送前向激活、何时接收后向梯度等。  
-4. **梯度延迟更新**  
-   - 像 WeightGradStore 这样的模块，可以在后向完成后暂存梯度，等到最优的时刻再一起应用或做通信，从而减少重复读写。
-
-
-那么，这种「双向并行」在思路上并不是从零开始，但在实现层面上一直有很大的复杂度。许多此前的方法，如 Zero Bubble（ZB1P）等，都想方设法让流水线中前向和后向之间的等待时间最少，但大多会遇到「当后向需要大量通信时，前向必须挂起等待」或「后向反传还没结束，前向又卡在部分依赖」的矛盾。
-
-DualPipe 最「炸裂」的地方在于：它不仅仅是将前向和后向的计算部分重叠，还努力让通信也尽量重叠。在分布式训练中，通信与计算一样重要，甚至在大模型中通信代价可能更大。DualPipe 通过巧妙的调度、隔离和阶段设计，使得前向结果与后向梯度在各自流动时能同时被计算或传输。就像两队卡车「你送你的，我送我的，互不耽误」，从而显著缩短了所谓的「bubble」。
-
-传统流水线方法经常会出现 GPU 等待通信完成的现象，或者通信过程等待计算完成。当这个空闲时间占比高，集群规模越大，越会拖慢整体速度。而有了 DualPipe 的多重重叠，GPU 几乎可以保持在「要么计算，要么通信」的状态，很少出现真正「闲置等待」的时刻。实验表明，随着模型规模和 GPU 集群规模的扩大，DualPipe 能得到可观的训练速度提升。
-
----
-
-## DualPipe 源码分析
-
-本节我们将正式进入 **DualPipe** 在代码层面的实现。核心源码参考（简化节选）如下，主要分为以下几个重点：
-
-1. [核心类与主要成员变量](#核心类与主要成员变量)  
-2. [前向和后向的微批次执行](#前向和后向的微批次执行)  
-3. [前后向交叠与 Zero Bubble](#前后向交叠与-zero-bubble)  
-4. [通信与等待机制：append_irecv、append_isend、_commit_and_wait_comm](#通信与等待机制append_irecvappend_isend_commit_and_wait_comm)  
-5. [WeightGradStore：延迟梯度更新设计](#weightgradstore延迟梯度更新设计)
-
-> **提示**：如果读者想要获取完整的参考代码，可见文末附录，或参阅相关开源仓库（例如 DeepSeek-V3）。
-
----
-
-### 核心类与主要成员变量
-
-```python=
-class DualPipe(nn.Module):
-    def __init__(
-        self,
-        modules: Tuple[nn.Module, nn.Module],
-        batch_dim: int = 0,
-        process_group: Optional[dist.ProcessGroup] = None,
-        rank_mapping: Optional[List[int]] = None,
-    ) -> None:
-        super().__init__()
-
-        # modules: (model_part_0, model_part_1)，两段模型
-        # batch_dim: 数据/微批次在哪个维度拆分
-        # process_group: pytorch 的分布式进程组
-        # rank_mapping: 自定义的 rank->pipeline index 映射
-        ...
-        
-        # 是否支持 overlapped_forward_backward
-        self.overlaped_forward_backward = (
-            type(modules[0]) == type(modules[1]) 
-            and hasattr(type(modules[0]), "overlaped_forward_backward")
-        )
-        self.batch_dim = batch_dim
-        self.group = process_group or dist.distributed_c10d._get_default_group()
-        
-        # 一些 rank 的相关映射
-        ...
-        
-        self.is_first_rank = (self.rank == 0)
-        self.is_last_rank = (self.rank == self.num_ranks - 1)
-        self.is_in_second_half = (self.rank >= self.num_ranks // 2)
-        self.is_middle_rank = (...)
-
-```
-
-* 该类初始化时，需要你把前半部分模型和后半部分模型分别打包进来。它内部会根据 rank 是 0（最前端）还是最后一个，决定自己要处理哪一部分工作。
-
-* `overlaped_forward_backward` 标志表明是否可以在同一台卡上，针对不同 microbatch 同时做前向和后向，这对减少气泡至关重要。
-* `is_first_rank`、`is_last_rank` 可以简单理解为铸造机床和最终钳工机床；处于中间的机床要承担中间工序。
-
-### 前向和后向的微批次执行
-
-代码中有 `_forward_compute_chunk` 和 `_backward_compute_chunk` 两个核心函数，分别执行一个微批次的前向或后向：
-
-```Python=
-def _forward_compute_chunk(self, phase: int) -> None:
-    # 取到当前 phase 下等待前向的 microbatch 数据
-    chunk_id = self.current_f_chunk_id[phase]
-    self.current_f_chunk_id[phase] += 1
-    inputs = self.input_chunks[phase][chunk_id]
-    ...
-    outputs = self.module[phase](*inputs)
-    if is_last_stage and self.criterion is not None:
-        loss = self.criterion(*outputs, *labels)
-        self.loss_chunks.append(loss)
-    ...
-```
-
-```Python=
-def _backward_compute_chunk(self, phase: int, enable_zb: bool = False) -> None:
-    # 后向需要 either (1) 直接对 loss 做 backward if last_stage
-    #               or (2) 对 outputs/gradients 做 backward
-    ...
-    if is_last_stage:
-        loss = self.loss_chunks[chunk_id]
-        loss.backward()
-        loss.detach_()
-    else:
-        outputs = self.output_chunks[phase][chunk_id]
-        output_grads = self.output_grad_chunks[phase][chunk_id]
-        run_backward(outputs, output_grads)
-    ...
-
-```
-
-* 在真正做计算前，DualPipe 还会先调用 `_recv_forward`（或 `_recv_backward`）去异步接收来自上/下游的激活或梯度。计算结束后，再视情况调用 `_send_forward` 或 `_send_backward` 将结果或梯度发给下/上游。
-* 这些函数通过 phase 参数区分前半模型还是后半模型，再加上 `is_in_second_half` 的 xor 操作，对应不同流水线段的方向。
-
-### 前后向交叠与 Zero Bubble
-
-真正实现前后向交叠的核心函数是 `_forward_backward_compute_chunk`：
-
-```Python=
-def _forward_backward_compute_chunk(self, phase0: int, phase1: int) -> None:
-    if self.forward_only:
-        self._forward_compute_chunk(phase0)
-        return
-    
-    if not self.overlaped_forward_backward:
-        # 不支持交叠，就分开执行
-        self._forward_compute_chunk(phase0)
-        self._backward_compute_chunk(phase1)
-        return
-
-    # 同时准备好 forward 的输入和 backward 需要的中间内容
-    ...
-    outputs0, loss0 = type(module0).overlaped_forward_backward(
-        module0, inputs0, criterion0, labels0,
-        module1, loss1, outputs1, output_grads1,
-    )
-    ...
-
-```
-
-如果 overlaped_forward_backward = True，那么 overlaped_forward_backward 函数就会在同一张卡上处理一个微批次的前向、另一个微批次的后向——这是减少气泡的关键。当流水线达到稳定时，有些 GPU 上会并行执行：
-
-* microbatch A 的后向传播
-* microbatch B 的前向传播
-
-而不会出现单纯等待。Zero Bubble 就是指在理想条件下利用这种交叠，实现流水线持续无缝忙碌。
-
-
-### 通信与等待机制：`append_irecv`、`append_isend`、`_commit_and_wait_comm`
-
-在 DualPipe 源码里，为了让通信更加清晰且可批量处理，设计了这样的流程：
-
-* 通过 `_recv_forward` 或 `_recv_backward` 向 `comm_ops` 列表中添加异步接收操作： `comm.append_irecv(...)``。
-* 通过 `_send_forward` 或 `_send_backward` 向 `comm_ops` 列表中添加异步发送操作： `comm.append_isend(...)``。
-* 在适当时机调用 `_commit_and_wait_comm()`，一次性执行并等待所有 `ops` 完成。
-这避免了在每一步都显式地写 `dist.isend` / `dist.irecv` / `.wait()`，让代码结构更加整洁，也容易做进一步优化（比如合并某些通信）。相关简化示例：
-
-```Python=
-
-def _recv_forward(self, phase: int) -> None:
-    # irecv from prev rank if phase=0, or next rank if phase=1
-    tensors = comm.append_irecv(self.comm_ops, self.prev_rank, self.group)
-    self.input_chunks[phase].append(tensors)
-
-def _commit_and_wait_comm(self) -> None:
-    if not self.comm_ops:
-        return
-    reqs = dist.batch_isend_irecv(self.comm_ops)
-    for req in reqs:
-        req.wait()
-    self.comm_ops = []
-    self._free_tensors()
-
-```
-
-
-### WeightGradStore：延迟梯度更新设计
-
-在后向传播时，我们可能会多次对同样的权重做梯度累加。WeightGradStore 通过一个静态队列缓存了这些更新操作，只有在需要时 `pop()`` 统一执行，有两大好处：
+在后向传播时，我们可能会多次对同样的权重做梯度累加。`WeightGradStore` 通过一个静态队列缓存了这些更新操作，只有在需要时 `pop()` 统一执行，有两大好处：
 
 * 减少频繁同步或写内存：不必每个微批都做一次参数更新，可以攒到一个合适的时间点统一处理。
 * 搭配流水线：避免打断流水线的并发计算，也方便在某些阶段利用通信空闲时再同步。
@@ -667,7 +432,7 @@ class WeightGradStore:
 
 > 注意：源码里 `phase ^= self.is_in_second_half` 是一个巧妙的小技巧，根据当前 PP Rank 是否在后半段来“翻转”phase，让同一个函数既能适用于从左到右又能适用于从右到左的传输。
 
-### 5. 整体调度：`step(...)` 方法中的 8 大步骤
+### 6. 整体调度：`step(...)` 方法中的 8 大步骤
 
 最核心的应用逻辑在 `step(...)` 里。这函数就像老王给所有机床派发指令的“总调度”——为了实现 DualPipe 的双向流水线，需要做以下阶段性动作（简化理解，可结合源码的注释）：
 
@@ -692,13 +457,8 @@ DualPipe 通过 `_forward_backward_chunk(0,1)` / `_forward_backward_chunk(1,0)` 
 
 > 之所以有这样多的步骤，并且显得相对复杂，是因为要在双向流水线中实现最小化的气泡，就需要对不同阶段、不同批次的前后向关系做精细的管理和对齐。
 
-### 6. 关键辅助：WeightGradStore 与张量切分
-**`WeightGradStore`**
-这个类的作用是临时存储参数梯度的计算回调，在启用 ZB（Zero-Bubble）时，可以先只计算“输入梯度”，再在合适时机一次性刷新“权重梯度”。就像车间里老王让某些工艺先关注零件的宏观形变，再把微调参数等放到稍后的工序一起处理，避免重复开机调试。
-**scatter / gather**
-用于把大批次切分成多个微批次（micro-batches），并在最后阶段将多个输出拼回来。如果你想一口气把 10,000 个零件送进同一台机床，这台机床可能一下子就“爆显存”了；但如果先把它们分成多个小批次轮流处理，再把结果合并，就能充分利用流水线的并发优势。
 
-### 总结
+### 代码总结
 从 `step(...)` 的调度流程到 `_forward_backward_compute_chunk(...)` 的“前后向合体”，我们可以看到 DualPipe 利用了大量细粒度的分段和双向注入策略，在代码层面极大地隐藏了通信成本，也允许同一个 GPU 在合适的时机一边做前向，一边做后向。
 
 > 对比机械车间：这就好比在同一个时间段里，机床 A 同时处理新批次原材料（前向），机床 B 则处理上一批次的质检反馈（后向），而运输车（通信）则频繁穿梭，但大多时候都在机床主轴空档期“悄悄”进行，从而减少了任何一台机床的空转时间。
