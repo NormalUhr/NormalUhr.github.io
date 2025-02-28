@@ -1,4 +1,4 @@
-# DualPipe Explained in Simple Terms: A Comprehensive Guide to DualPipe That Anyone Can Understand—Even Without a Distributed Training Background
+# DualPipe Explained: A Comprehensive Guide to DualPipe That Anyone Can Understand—Even Without a Distributed Training Background
 
 Last week, DeepSeek announced an "OpenSourceWeek" on social media, releasing a series of open-source software libraries for five consecutive days. Over the first few days, they introduced **FlashMLA** (an efficient Hopper GPU MLA decoding kernel), **DeepEP** (an expert parallel communication library for MoE), and **DeepGEMM** (a GEMM library with FP8 support). On the fourth day, they open-sourced three major components in one go: **DualPipe**, **EPLB**, and **profile-data**. Among these, DualPipe—due to its core idea of "bidirectional pipeline parallelism"—sparked widespread discussion.
 
