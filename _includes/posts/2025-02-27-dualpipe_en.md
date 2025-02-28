@@ -2,17 +2,17 @@
 
 Last week, DeepSeek announced an "OpenSourceWeek" on social media, releasing a series of open-source software libraries for five consecutive days. Over the first few days, they introduced **FlashMLA** (an efficient Hopper GPU MLA decoding kernel), **DeepEP** (an expert parallel communication library for MoE), and **DeepGEMM** (a GEMM library with FP8 support). On the fourth day, they open-sourced three major components in one go: **DualPipe**, **EPLB**, and **profile-data**. Among these, DualPipe—due to its core idea of "bidirectional pipeline parallelism"—sparked widespread discussion.
 
-This blog post will focus on the core concept of DualPipe: **how to fully overlap forward and backward passes in large-model training**, thereby greatly reducing the "bubble time" in pipeline execution. To help you grasp these ideas, we’ll start with a straightforward analogy—**"process optimization in a machine workshop"**—introducing each concept first through the lens of mechanical processing, and then mapping it back to parallel training in deep learning. By the end of this article, you’ll have a clear mental picture of how these ideas work. We’ll also delve into DualPipe’s source-code-level details, exploring how it further reduces pipeline bubbles, overlaps forward and backward passes, minimizes communication pressure, and integrates into more complex hybrid parallelism scenarios.
+This blog post will focus on the core concept of DualPipe: **how to fully overlap forward and backward passes in large-model training**, thereby greatly reducing the "bubble time" in pipeline execution. To help you grasp these ideas, we’ll start with a straightforward analogy—**"process optimization in a machine workshop"**—introducing each concept first through the lens of mechanical processing, and then mapping it back to parallel training in deep learning. By the end of this article, you’ll have a clear picture of how these ideas work. We’ll also delve into DualPipe’s source-code-level details, exploring how it further reduces pipeline bubbles, overlaps forward and backward passes, minimizes communication pressure, and integrates into more complex hybrid parallelism scenarios.
 
 ---
 
-## Introduction
+## 1. Introduction
 
 With today’s buzz around large language models (LLMs) such as GPT-3, PaLM, and LLama, distributed training has become an essential technique for pushing beyond the limits of a single GPU and successfully training ultra-large models. Terms like **data parallel**, **model parallel**, and **pipeline parallel** come up often, yet it can be challenging—especially for beginners—to see how they differ and connect. And when you encounter advanced features like **DualPipe** in DeepSeek-V3, it might feel even more daunting.
 
 On the other hand, in industrial settings, **optimizing a production process** often involves countless trials, while in AI, **training a large language model** similarly requires numerous parameter adjustments. These two activities may seem unrelated, but they share a remarkable resemblance. Let’s walk through a story from Tony’s machine workshop to see how a production line with multiple machine tools can help us understand the four major types of parallelism in large-model training.
 
-### The Single-GPU Era: The Small Handicraft Workshop
+### 1.1 The Single-GPU Era: The Small Handicraft Workshop
 
 In Suzhou Industrial Park, Tony owns a mid-sized mechanical company that focuses on optimizing manufacturing processes such as casting temperature, quenching time, cutting angles, etc. When a new order arrives, Tony first designs a set of initial manufacturing parameters (the "process manual"), proceeds with machining, then inspects the final part and back-propagates the adjustments: if the part has void defects, he tweaks the casting temperature upward, and so on.
 
@@ -22,19 +22,19 @@ When Tony started his business, he took on relatively simple orders, like machin
 
 > This corresponds to **single-GPU training**. All model layers (all "process steps") run on the same GPU (the same machine). Both the forward pass (machining) and the backward pass (adjusting parameters) happen on a single device. It’s simple and reliable, but once the tasks become more complex, a single device becomes the bottleneck.
 
-### Model Parallelism: The Art of Splitting the Process Manual
+### 1.2 Model Parallelism: The Art of Splitting the Process Manual
 
 One day, Tony received a much bigger order for optimizing the process of manufacturing an engine crankshaft. He quickly realized that a single machine could not handle all the needed steps. So he split the processes (casting, heat treatment, precision machining) across three specialized machines, each equipped with its own operation instructions. He also had to keep track of how adjusting casting parameters might affect subsequent processes. It introduced a new problem—machine idle time. While the first machine was busy casting, the other machines might be waiting. Plus, moving items from one machine to the next took additional time. If not planned carefully, these machine transitions could cause extra idle periods.
 
 > In large language models, this is **model parallelism**. When a model is too large for a single GPU’s memory, you split it across multiple GPUs (e.g., different layers or different modules for each GPU). In this analogy, the casting is like an input layer, heat treatment is the intermediate layer, and precision machining is the output layer. As you train, each GPU is responsible for a segment of the model and must communicate intermediate outputs to others. This inevitably leads to idle time across GPUs and frequent cross-device data transfer. The problems Tony faces resemble the scheduling and communication challenges among GPUs.
 
-### Data Parallelism: A Plan to Clone the Workshop
+### 1.3 Data Parallelism: A Plan to Clone the Workshop
 
 To further speed up the process-parameter optimization, Tony—now with more funding—built three identical workshops next door. Each workshop has the same entire pipeline, just working on different batches of turbine discs (data shards). By the end of the day, the four workshop managers come together to compare notes and unify the process standards. An order of 10,000 raw parts that used to take a month now only needs about two weeks. Tony wonders, "Why did quadrupling my workshop capacity only double the speed?" After talking to the managers, he found that each batch of raw materials might encounter unique problems, causing some workshops to finish later. When they’re done, they have to wait for the slowest one before summarizing the day’s results.
 
 > This is **data parallelism**. Each workshop (GPU) holds a full copy of the process manual (model parameters) but processes a different portion of the data (different mini-batches). Once each workshop computes its local gradient (inspecting the part and figuring out parameter adjustments), they must gather and average these gradients (through **All-Reduce**) to form a unified set of parameters. The bottleneck is that the slowest workshop (straggler GPU) holds everyone up, and the communication overhead (All-Reduce bandwidth) increases dramatically with more parallel workshops.
 
-### Tensor Parallelism: Collaborating on an Oversized Single Component
+### 1.4 Tensor Parallelism: Collaborating on an Oversized Single Component
 
 One day, Tony leveled up and received a **massive** project to optimize processes for airplane components—for instance, an aircraft wing. Even just the wing itself is so big that multiple identical machines must work together on the same sub-step. In other words, though this sub-step belongs to one particular process stage, it still exceeds the capacity of a single machine. So Tony had multiple identical machines collaborate on one single huge part.
 
@@ -44,7 +44,7 @@ At this point, Tony realized that **scheduling** had become the key to higher ef
 
 > This is how tensor parallelism really works. When even a single process (a single layer in the model) exceeds a single GPU’s capacity, you split the large tensor into smaller chunks that a GPU group can handle. For example, polishing an airplane wing might require four machines working on different wing areas, then stitching them back together. That level of collaboration introduces communication overhead (merging partial outputs), synchronization overhead (one slow machine can hold up the rest), and additional "feedback loops" for gradient synchronization. Collectively, these can introduce new idle times—**"collaboration bubbles."**
 
-### Pipeline Parallelism: Making Different Machines Work Simultaneously
+### 1.5 Pipeline Parallelism: Making Different Machines Work Simultaneously
 
 To deal with the collaboration challenges among different processes, Tony devised an ingenious pipeline system. If the original processing route was **Casting → Forging → Heat Treatment → Polishing**, the moment the casting machine finished its first batch, that batch was immediately moved on to the forging machine; casting then started work on the second batch. By the time the first batch left forging for heat treatment, the second batch arrived at forging, and the third batch could head to casting—like **dominoes**.
 
@@ -115,7 +115,7 @@ In short, Tony’s evolving pipeline schemes—from the original 1F1B to ZB1P an
 
 ---
 
-### When the Pipeline Still Has “Blind Spots”: Limitations of ZB1P
+### 1.6 When the Pipeline Still Has “Blind Spots”: Limitations of ZB1P
 
 Although ZB1P’s decoupling approach significantly shortens idle periods, Tony’s workshop still experiences some lingering gaps. Imagine a pipeline of **Casting → Forging → Heat Treatment → Polishing**: once the casting machine finishes its "fixture design update," it hands that info off to forging, but a deeper stage’s "manufacturing design update" might still have to wait on all preceding updates to be done. Because parts flow through multiple tightly coupled stages, even small delays in one stage can ripple through and create new bubbles.
 
@@ -139,9 +139,9 @@ Seeking an even better approach, Tony aimed to further **break down** the depend
 
 ---
 
-## DualPipe: A Two-Pronged Pipeline Strategy
+## 2. DualPipe: A Two-Pronged Pipeline Strategy
 
-### Bidirectional Scheduling: Pushing “Front and Back” onto the Production Line Together
+### 2.1 Bidirectional Scheduling: Pushing “Front and Back” onto the Production Line Together
 
 In **traditional (single-direction)** pipelines such as 1F1B or ZB1P, a machine either performs forward processing or waits for a feedback signal to do backward adjustments. These two modes are usually **mutually exclusive**. In **DualPipe**, however, Tony equips each machine with a **"timesharing mode"** and a **flexible front-back transport system** that allows the same machine to handle **both** forward and backward tasks simultaneously. The machine can receive new raw materials from the "front" while also getting a feedback report from the "back."
 
@@ -184,13 +184,13 @@ In short, **DualPipe** trades off a bit more memory usage for a significantly hi
     An overview of the DualPipe pipeline parallalism.
 </div>
 
-### “Compute-Communication” Overlap Inside the GPU: Doing Calculations While Data Moves
+### 2.2 “Compute-Communication” Overlap Inside the GPU: Doing Calculations While Data Moves
 
 Another key to DualPipe’s efficiency is **“chunk-based” or “segmented” transport**. In large-scale distributed scenarios, both **computation** and **communication** can be major time sinks. If they happen strictly one after another (compute → comm → compute → comm), we’ll inevitably face idle GPU cycles during communication, and idle network bandwidth during compute. 
 
 DualPipe splits data transfers into smaller chunks—**“micro-batch streaming”**—and interleaves them with partial compute tasks, so GPUs can start computing as soon as a portion of the data arrives, rather than waiting for the entire dataset to transfer. Here’s why chunk-based shipping is vital:
 
-#### Why “Chunked Transport” Improves Efficiency
+#### 2.2.1 Why “Chunked Transport” Improves Efficiency
 
 Imagine Tony’s **casting** machine has 1,000 parts to send to the **forging** machine. If we do a **one-shot** transfer, forging can’t start until all 1,000 are delivered. During that time, forging is idle. After delivery, forging might quickly finish some tasks, only to wait again. This can lead to “you wait for me, I wait for you.” 
 
@@ -207,7 +207,7 @@ In GPUs, this is akin to splitting large tensor transfers or **all-to-all** comm
     An overview of the communication design in DualPipe.
 </div>
 
-#### How “Compute-Communication” Overlap Works on GPUs
+#### 2.2.2 How “Compute-Communication” Overlap Works on GPUs
 
 1. **Resource Partitioning**  
    Modern GPUs have multiple SMs (Streaming Multiprocessors). We can allocate some to handle communication (sending/receiving packets) while others handle compute kernels. If communication is chunked into smaller messages, the compute SMs can stay busy while the communication SMs handle the data transfer.
@@ -244,7 +244,7 @@ Just like Tony’s multi-stage workshop—where partial shipments of parts go ba
 
 ---
 
-## How the Source Code Implements “Two-Pronged” Parallelism: Key Logic of DualPipe
+## 3. How the Source Code Implements “Two-Pronged” Parallelism: Key Logic of DualPipe
 
 In the previous section, we used a manufacturing analogy to illustrate how **DualPipe** enables forward and backward passes to truly run “at the same time” in the same pipeline, thereby maximizing GPU utilization. Here, we’ll explore how DualPipe’s **core source code** implements these ideas. Specifically, we’ll look at how it handles batch splitting, manages communication, and cleverly interweaves forward-backward tasks to achieve deep overlap and minimal pipeline bubbles.
 
@@ -252,7 +252,7 @@ In the previous section, we used a manufacturing analogy to illustrate how **Dua
 
 ---
 
-### 1. Basic Class Structure and Initialization
+### 3.1 Basic Class Structure and Initialization
 
     class DualPipe(nn.Module):
         def __init__(
@@ -279,7 +279,7 @@ These flags and mappings resemble the labels Tony might attach to each machine i
 
 ---
 
-### 2. State Management and Reset
+### 3.2 State Management and Reset
 
 Below is the `_reset_states` method:
 
@@ -310,11 +310,11 @@ Below is the `_reset_states` method:
 
 ---
 
-### 3. Forward and Backward Computation: Achieving Overlap on the Same Device
+### 3.3 Forward and Backward Computation: Achieving Overlap on the Same Device
 
 In large-model training, “forward computation” and “backward computation” essentially involve **running a forward or backward pass on a tensor** and then passing gradients to the previous layer. In the mechanical analogy, forward is “machining the part,” while backward is “checking for defects and adjusting production parameters.” DualPipe wraps these processes in a few methods:
 
-#### 3.1 `_forward_compute_chunk(self, phase)`
+#### 3.3.1 `_forward_compute_chunk(self, phase)`
 
     def _forward_compute_chunk(self, phase: int) -> None:
         phase ^= self.is_in_second_half  # dynamically correct the phase
@@ -329,7 +329,7 @@ In large-model training, “forward computation” and “backward computation�
 - The resulting `outputs` will be stored in `self.output_chunks[phase]`.
 - If this is the last stage (`is_last_stage`) and a `criterion` is defined, the “loss” is placed in `self.loss_chunks`. Think of it as the final workshop outputting a “defect score” for inspection.
 
-#### 3.2 `_backward_compute_chunk(self, phase, enable_zb: bool = False)`
+#### 3.3.2 `_backward_compute_chunk(self, phase, enable_zb: bool = False)`
 
     def _backward_compute_chunk(self, phase: int, enable_zb: bool = False) -> None:
         if self.forward_only:
@@ -358,7 +358,7 @@ In large-model training, “forward computation” and “backward computation�
 - `enable_zb` activates the Zero-Bubble (e.g., ZB1P) approach, where some parameter-grad computations are deferred by putting them into `WeightGradStore` and flushing them at the right moment. This aligns with our earlier explanation of **decoupling “input gradient calc” and “parameter gradient calc.”**
 - Once backward finishes, the “gradients” for the upstream stage are placed into `self.input_grad_chunks[phase]`, akin to Tony returning some defect report to the previous machine.
 
-#### 3.3 `_forward_backward_compute_chunk(self, phase0, phase1)`
+#### 3.3.3 `_forward_backward_compute_chunk(self, phase0, phase1)`
 
     def _forward_backward_compute_chunk(self, phase0: int, phase1: int) -> None:
         if self.forward_only:
@@ -384,7 +384,7 @@ The true core of DualPipe: if `overlaped_forward_backward` is `True`, the same G
 
 ---
 
-### 4. Communication Management: Hiding “Transport Time” Behind Computation
+### 3.4 Communication Management: Hiding “Transport Time” Behind Computation
 
 In large-scale model pipeline parallelism, every stage’s GPU frequently needs to communicate with upstream/downstream GPUs (like transporting half-finished parts from casting to forging). DualPipe uses several functions to break down and schedule communication so that computation and communication overlap extensively:
 
@@ -399,7 +399,7 @@ In large-scale model pipeline parallelism, every stage’s GPU frequently needs 
 
 ---
 
-### 5. WeightGradStore: Delayed Gradient Update Design
+### 3.5. WeightGradStore: Delayed Gradient Update Design
 
 During backward passes, the same weights may accumulate gradients multiple times. `WeightGradStore` uses a static queue to hold these updates, then executes them collectively at the right time. Benefits:
 
@@ -432,7 +432,7 @@ During backward passes, the same weights may accumulate gradients multiple times
 
 ---
 
-### 6. Overall Scheduling: The `step(...)` Method’s 8 Stages
+### 3.6 Overall Scheduling: The `step(...)` Method’s 8 Stages
 
 The core logic resides in `step(...)`. This function is like Tony’s central command that orchestrates all machines. To achieve DualPipe’s two-way pipeline, it proceeds through these phases (in a simplified view, see code comments for details):
 
@@ -466,7 +466,7 @@ In the workshop analogy, it’s a “scheduling timetable” with multiple time 
 
 ---
 
-### Summary
+### 3.7 Summary
 
 From the `step(...)` orchestration to `_forward_backward_compute_chunk(...)`’s “fusion of forward and backward,” you can see how DualPipe leverages **fine-grained partitioning** and **two-way injection**. On the code side, it **greatly hides communication overhead** and enables a single GPU to run forward while running backward at just the right times.
 
@@ -483,7 +483,7 @@ Such a “two-pronged” solution significantly speeds up large-model training (
 
 ---
 
-## Conclusion and Outlook
+## 4. Conclusion and Outlook
 
 From a machine workshop analogy to large-language-model parallel training, we have covered **no parallelism**, **model parallelism**, **data parallelism**, and **pipeline parallelism**. In pipeline parallelism, the hardest part is minimizing “pipeline bubbles,” cutting communication wait times, and overlapping forward-backward execution. **DualPipe** is a high-level solution that cleverly arranges micro-batches and forward-backward timing to reach a “zero-bubble” ideal (or near-ideal), greatly boosting pipeline training speed and utilization.
 
