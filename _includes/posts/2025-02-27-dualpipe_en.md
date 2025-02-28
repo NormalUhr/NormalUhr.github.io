@@ -88,9 +88,9 @@ Here, each batch’s feedback is split into two phases: fixture design adjustmen
 > 1. **Input gradient computation**: Passing gradients from the current layer back to the previous layer.
 > 2. **Parameter gradient computation**: Computing the parameter gradient for the current layer so it can be updated.
 >
-> For a linear layer \( \mathbf{y} = \mathbf{W}\mathbf{x} \) with loss \( L \), once we receive \( \frac{\partial L}{\partial \mathbf{y}} \) from the subsequent layer, we need to compute:
-> - \( \frac{\partial L}{\partial \mathbf{x}} \): to pass the gradient backward to the preceding layer;
-> - \( \frac{\partial L}{\partial \mathbf{W}} \): for the layer’s own parameter update.
+> For a linear layer $ \mathbf{y} = \mathbf{W}\mathbf{x} $ with loss $ L $, once we receive $ \frac{\partial L}{\partial \mathbf{y}} $ from the subsequent layer, we need to compute:
+> - $ \frac{\partial L}{\partial \mathbf{x}} $: to pass the gradient backward to the preceding layer;
+> - $ \frac{\partial L}{\partial \mathbf{W}} $: for the layer’s own parameter update.
 >
 > Interestingly, these two computations do not depend on each other in a strict order. Even if a layer has only finished computing (1) but not (2), the gradient can still propagate to the previous layer. Leveraging this fact, ZB1P decouples (1) and (2) so that **input gradient** (1) can be performed as early as possible while **parameter gradient** (2) is postponed, thus greatly increasing pipeline scheduling flexibility and efficiency.
 
@@ -98,16 +98,16 @@ By now, you understand the two baseline pipeline schemes in the DeepSeek-V3 repo
 
 | Method | Bubble                             | Activation       |
 | ------ | ---------------------------------- | ---------------- |
-| 1F1B   | \((PP - 1)(F + B)\)                | \(1 \times PP\)  |
-| ZB1P   | \((PP - 1)(F + B - 2W)\)            | \(1 \times PP\)  |
-<!-- | DualPipe | \(( \frac{PP}{2} - 1) (F\&B + B - 3W)\)| \(2 \times PP + 1\)| -->
+| 1F1B   | $(PP - 1)(F + B)$                | $1 \times PP$  |
+| ZB1P   | $(PP - 1)(F + B - 2W)$            | $1 \times PP$  |
+<!-- | DualPipe | $( \frac{PP}{2} - 1) (F\&B + B - 3W)$| $2 \times PP + 1$| -->
 
 **Key Parameters**:
 
-- \(PP\): Pipeline depth, i.e., the number of process stages involved in parallel.
-- \(F\): Time needed for a forward pass (e.g., each workshop’s initial machining).
-- \(B\): Time needed for a backward pass (e.g., each workshop’s feedback adjustments).
-- \(W\): The window size for activation data accumulation—i.e., the upper limit of stored intermediate activations for backprop.
+- $PP$: Pipeline depth, i.e., the number of process stages involved in parallel.
+- $F$: Time needed for a forward pass (e.g., each workshop’s initial machining).
+- $B$: Time needed for a backward pass (e.g., each workshop’s feedback adjustments).
+- $W$: The window size for activation data accumulation—i.e., the upper limit of stored intermediate activations for backprop.
 
 From this table, you can see that **ZB1P** reduces bubbles substantially compared to **1F1B**, at the same level of activation memory usage. By decoupling the backward computations, ZB1P achieves more overlap between forward and backward, thus cutting down idle time. More advanced scheduling strategies (like **DualPipe**) push this idea further, aiming to maximize resource utilization and parallel performance in large-model training.
 
@@ -153,25 +153,25 @@ Below is a table comparing **1F1B**, **ZB1P**, and **DualPipe** in terms of pipe
 
 | Method   | Bubble                                                   | Activation           |
 | -------- | -------------------------------------------------------- | -------------------- |
-| 1F1B     | \((PP - 1) (F + B)\)                                     | \(1 \times PP\)      |
-| ZB1P     | \((PP - 1) (F + B - 2W)\)                                | \(1 \times PP\)      |
-| DualPipe | \(\left(\frac{PP}{2} - 1\right) (F\&B + B - 3W)\)        | \(2 \times PP + 1\)  |
+| 1F1B     | $(PP - 1) (F + B)$                                     | $1 \times PP$      |
+| ZB1P     | $(PP - 1) (F + B - 2W)$                                | $1 \times PP$      |
+| DualPipe | $\left(\frac{PP}{2} - 1\right) (F\&B + B - 3W)$        | $2 \times PP + 1$  |
 
 Where:
-- \(PP\) is pipeline depth (number of pipeline stages),
-- \(F\) and \(B\) are forward and backward times,
-- \(W\) is the activation window size.
+- $PP$ is pipeline depth (number of pipeline stages),
+- $F$ and $B$ are forward and backward times,
+- $W$ is the activation window size.
 
 By comparing the three:
 
 - **1F1B**  
-  The simplest one-way pipeline. Bubble time is \((PP - 1)(F + B)\). Each stage must wait in a mostly serial fashion. The activation storage is \(1 \times PP\).
+  The simplest one-way pipeline. Bubble time is $(PP - 1)(F + B)$. Each stage must wait in a mostly serial fashion. The activation storage is $1 \times PP$.
 
 - **ZB1P**  
-  By decoupling the backward steps (splitting input gradient and parameter gradient), bubble time shrinks to \((PP - 1)(F + B - 2W)\). Activation usage remains \(1 \times PP\).
+  By decoupling the backward steps (splitting input gradient and parameter gradient), bubble time shrinks to $(PP - 1)(F + B - 2W)$. Activation usage remains $1 \times PP$.
 
 - **DualPipe**  
-  Uses a **bidirectional** pipeline plus overlapping compute and communication to drastically reduce idle times. The bubble time drops further to \(\left(\frac{PP}{2} - 1\right) (F\&B + B - 3W)\). However, it demands **increased activation storage**, up to \(2 \times PP + 1\), because each GPU holds extra activation data to support simultaneous forward and backward.
+  Uses a **bidirectional** pipeline plus overlapping compute and communication to drastically reduce idle times. The bubble time drops further to $\left(\frac{PP}{2} - 1\right) (F\&B + B - 3W)$. However, it demands **increased activation storage**, up to $2 \times PP + 1$, because each GPU holds extra activation data to support simultaneous forward and backward.
 
 In short, **DualPipe** trades off a bit more memory usage for a significantly higher overlap between forward and backward, thus achieving greater throughput in large-scale distributed training—just as Tony’s workshop gains higher utilization by letting machines work in **both directions** simultaneously.
 
