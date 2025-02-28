@@ -10,43 +10,43 @@ This blog post will focus on the core concept of DualPipe: **how to fully overla
 
 With today’s buzz around large language models (LLMs) such as GPT-3, PaLM, and LLama, distributed training has become an essential technique for pushing beyond the limits of a single GPU and successfully training ultra-large models. Terms like **data parallel**, **model parallel**, and **pipeline parallel** come up often, yet it can be challenging—especially for beginners—to see how they differ and connect. And when you encounter advanced features like **DualPipe** in DeepSeek-V3, it might feel even more daunting.
 
-On the other hand, in industrial settings, **optimizing a production process** often involves countless trials, while in AI, **training a large language model** similarly requires numerous parameter adjustments. These two activities may seem unrelated, but they share a remarkable resemblance. Let’s walk through a story from Lao Wang’s machine workshop to see how a production line with multiple machine tools can help us understand the four major types of parallelism in large-model training.
+On the other hand, in industrial settings, **optimizing a production process** often involves countless trials, while in AI, **training a large language model** similarly requires numerous parameter adjustments. These two activities may seem unrelated, but they share a remarkable resemblance. Let’s walk through a story from Tony’s machine workshop to see how a production line with multiple machine tools can help us understand the four major types of parallelism in large-model training.
 
 ### The Single-GPU Era: The Small Handicraft Workshop
 
-In Suzhou Industrial Park, Lao Wang owns a mid-sized mechanical company that focuses on optimizing manufacturing processes such as casting temperature, quenching time, cutting angles, etc. When a new order arrives, Lao Wang first designs a set of initial manufacturing parameters (the "process manual"), proceeds with machining, then inspects the final part and back-propagates the adjustments: if the part has void defects, he tweaks the casting temperature upward, and so on.
+In Suzhou Industrial Park, Tony owns a mid-sized mechanical company that focuses on optimizing manufacturing processes such as casting temperature, quenching time, cutting angles, etc. When a new order arrives, Tony first designs a set of initial manufacturing parameters (the "process manual"), proceeds with machining, then inspects the final part and back-propagates the adjustments: if the part has void defects, he tweaks the casting temperature upward, and so on.
 
-> Lao Wang’s process is remarkably similar to large-model training: the "process manual" is like the model’s parameters, the parts being machined are akin to training data, each individual process (casting, heat treatment, etc.) corresponds to different layers in a neural network, and the machine tools are analogous to GPUs. Finally, the quality check is akin to computing the loss function, and adjusting parameters based on the inspection is just like backpropagation.
+> Tony’s process is remarkably similar to large-model training: the "process manual" is like the model’s parameters, the parts being machined are akin to training data, each individual process (casting, heat treatment, etc.) corresponds to different layers in a neural network, and the machine tools are analogous to GPUs. Finally, the quality check is akin to computing the loss function, and adjusting parameters based on the inspection is just like backpropagation.
 
-When Lao Wang started his business, he took on relatively simple orders, like machining screws. For such parts, you only need a single multifunctional machine to handle two steps: cutting and polishing. If the part turned out unevenly polished, you’d adjust the polishing step; if the cutting was off, you’d adjust the cutting angle. It was all done on a single machine—like a **small handicraft workshop**. That was enough for basic parts, but there was no scalability.
+When Tony started his business, he took on relatively simple orders, like machining screws. For such parts, you only need a single multifunctional machine to handle two steps: cutting and polishing. If the part turned out unevenly polished, you’d adjust the polishing step; if the cutting was off, you’d adjust the cutting angle. It was all done on a single machine—like a **small handicraft workshop**. That was enough for basic parts, but there was no scalability.
 
 > This corresponds to **single-GPU training**. All model layers (all "process steps") run on the same GPU (the same machine). Both the forward pass (machining) and the backward pass (adjusting parameters) happen on a single device. It’s simple and reliable, but once the tasks become more complex, a single device becomes the bottleneck.
 
 ### Model Parallelism: The Art of Splitting the Process Manual
 
-One day, Lao Wang received a much bigger order for optimizing the process of manufacturing an engine crankshaft. He quickly realized that a single machine could not handle all the needed steps. So he split the processes (casting, heat treatment, precision machining) across three specialized machines, each equipped with its own operation instructions. He also had to keep track of how adjusting casting parameters might affect subsequent processes. It introduced a new problem—machine idle time. While the first machine was busy casting, the other machines might be waiting. Plus, moving items from one machine to the next took additional time. If not planned carefully, these machine transitions could cause extra idle periods.
+One day, Tony received a much bigger order for optimizing the process of manufacturing an engine crankshaft. He quickly realized that a single machine could not handle all the needed steps. So he split the processes (casting, heat treatment, precision machining) across three specialized machines, each equipped with its own operation instructions. He also had to keep track of how adjusting casting parameters might affect subsequent processes. It introduced a new problem—machine idle time. While the first machine was busy casting, the other machines might be waiting. Plus, moving items from one machine to the next took additional time. If not planned carefully, these machine transitions could cause extra idle periods.
 
-> In large language models, this is **model parallelism**. When a model is too large for a single GPU’s memory, you split it across multiple GPUs (e.g., different layers or different modules for each GPU). In this analogy, the casting is like an input layer, heat treatment is the intermediate layer, and precision machining is the output layer. As you train, each GPU is responsible for a segment of the model and must communicate intermediate outputs to others. This inevitably leads to idle time across GPUs and frequent cross-device data transfer. The problems Lao Wang faces resemble the scheduling and communication challenges among GPUs.
+> In large language models, this is **model parallelism**. When a model is too large for a single GPU’s memory, you split it across multiple GPUs (e.g., different layers or different modules for each GPU). In this analogy, the casting is like an input layer, heat treatment is the intermediate layer, and precision machining is the output layer. As you train, each GPU is responsible for a segment of the model and must communicate intermediate outputs to others. This inevitably leads to idle time across GPUs and frequent cross-device data transfer. The problems Tony faces resemble the scheduling and communication challenges among GPUs.
 
 ### Data Parallelism: A Plan to Clone the Workshop
 
-To further speed up the process-parameter optimization, Lao Wang—now with more funding—built three identical workshops next door. Each workshop has the same entire pipeline, just working on different batches of turbine discs (data shards). By the end of the day, the four workshop managers come together to compare notes and unify the process standards. An order of 10,000 raw parts that used to take a month now only needs about two weeks. Lao Wang wonders, "Why did quadrupling my workshop capacity only double the speed?" After talking to the managers, he found that each batch of raw materials might encounter unique problems, causing some workshops to finish later. When they’re done, they have to wait for the slowest one before summarizing the day’s results.
+To further speed up the process-parameter optimization, Tony—now with more funding—built three identical workshops next door. Each workshop has the same entire pipeline, just working on different batches of turbine discs (data shards). By the end of the day, the four workshop managers come together to compare notes and unify the process standards. An order of 10,000 raw parts that used to take a month now only needs about two weeks. Tony wonders, "Why did quadrupling my workshop capacity only double the speed?" After talking to the managers, he found that each batch of raw materials might encounter unique problems, causing some workshops to finish later. When they’re done, they have to wait for the slowest one before summarizing the day’s results.
 
 > This is **data parallelism**. Each workshop (GPU) holds a full copy of the process manual (model parameters) but processes a different portion of the data (different mini-batches). Once each workshop computes its local gradient (inspecting the part and figuring out parameter adjustments), they must gather and average these gradients (through **All-Reduce**) to form a unified set of parameters. The bottleneck is that the slowest workshop (straggler GPU) holds everyone up, and the communication overhead (All-Reduce bandwidth) increases dramatically with more parallel workshops.
 
 ### Tensor Parallelism: Collaborating on an Oversized Single Component
 
-One day, Lao Wang leveled up and received a **massive** project to optimize processes for airplane components—for instance, an aircraft wing. Even just the wing itself is so big that multiple identical machines must work together on the same sub-step. In other words, though this sub-step belongs to one particular process stage, it still exceeds the capacity of a single machine. So Lao Wang had multiple identical machines collaborate on one single huge part.
+One day, Tony leveled up and received a **massive** project to optimize processes for airplane components—for instance, an aircraft wing. Even just the wing itself is so big that multiple identical machines must work together on the same sub-step. In other words, though this sub-step belongs to one particular process stage, it still exceeds the capacity of a single machine. So Tony had multiple identical machines collaborate on one single huge part.
 
 > This is akin to **tensor parallelism** in large-model training. Even after splitting the model across different layers or modules, you might still find a single module too large for one GPU. In that case, you split the module’s **tensors** themselves—like partitioning a large matrix across multiple GPUs to perform parallel matrix multiplication. Once you finish each partial multiplication, you merge the results. This approach distributes the workload of a single, very large layer across multiple GPUs.
 
-At this point, Lao Wang realized that **scheduling** had become the key to higher efficiency. Machines had to coordinate closely, as many of them handled only a piece of a part. That part might be moved from one machine to another multiple times; subsequent steps often can’t start until a previous step finishes, and in the feedback loop, earlier steps can’t finalize parameter adjustments until later steps finish their own. This all leads to idle periods everywhere: some machines wait for their "brother machines" to finish, downstream processes wait for upstream results, upstream processes wait for feedback. Lao Wang felt he needed to do something to further boost efficiency.
+At this point, Tony realized that **scheduling** had become the key to higher efficiency. Machines had to coordinate closely, as many of them handled only a piece of a part. That part might be moved from one machine to another multiple times; subsequent steps often can’t start until a previous step finishes, and in the feedback loop, earlier steps can’t finalize parameter adjustments until later steps finish their own. This all leads to idle periods everywhere: some machines wait for their "brother machines" to finish, downstream processes wait for upstream results, upstream processes wait for feedback. Tony felt he needed to do something to further boost efficiency.
 
 > This is how tensor parallelism really works. When even a single process (a single layer in the model) exceeds a single GPU’s capacity, you split the large tensor into smaller chunks that a GPU group can handle. For example, polishing an airplane wing might require four machines working on different wing areas, then stitching them back together. That level of collaboration introduces communication overhead (merging partial outputs), synchronization overhead (one slow machine can hold up the rest), and additional "feedback loops" for gradient synchronization. Collectively, these can introduce new idle times—**"collaboration bubbles."**
 
 ### Pipeline Parallelism: Making Different Machines Work Simultaneously
 
-To deal with the collaboration challenges among different processes, Lao Wang devised an ingenious pipeline system. If the original processing route was **Casting → Forging → Heat Treatment → Polishing**, the moment the casting machine finished its first batch, that batch was immediately moved on to the forging machine; casting then started work on the second batch. By the time the first batch left forging for heat treatment, the second batch arrived at forging, and the third batch could head to casting—like **dominoes**.
+To deal with the collaboration challenges among different processes, Tony devised an ingenious pipeline system. If the original processing route was **Casting → Forging → Heat Treatment → Polishing**, the moment the casting machine finished its first batch, that batch was immediately moved on to the forging machine; casting then started work on the second batch. By the time the first batch left forging for heat treatment, the second batch arrived at forging, and the third batch could head to casting—like **dominoes**.
 
 <div class="row mt-3">
     <div class="col-sm mt-3 mt-md-0">
@@ -57,7 +57,7 @@ To deal with the collaboration challenges among different processes, Lao Wang de
     An overview of the data flow when not using pipeline parallelism: when data is passed to different parts of the model (on different GPUs), only one GPU works (either in a forward or backward way) at one time. This makes the GPU efficiency very low and thus not perferred.
 </div>
 
-Before implementing this pipeline system, the workflow in each workshop looked like the diagram above. During the first batch’s lifecycle (T1~T4), only one machine was working at a time; when it came time for inspection and parameter feedback (T5~T12), again just one machine was active while the others were idle (gray areas in the figure). Lao Wang quickly spotted the inefficiency: once the first batch moved on to the second stage, the first stage could be processing the second batch, and so on. So the pipeline became:
+Before implementing this pipeline system, the workflow in each workshop looked like the diagram above. During the first batch’s lifecycle (T1~T4), only one machine was working at a time; when it came time for inspection and parameter feedback (T5~T12), again just one machine was active while the others were idle (gray areas in the figure). Tony quickly spotted the inefficiency: once the first batch moved on to the second stage, the first stage could be processing the second batch, and so on. So the pipeline became:
 
 <div class="row mt-3">
     <div class="col-sm mt-3 mt-md-0">
@@ -71,7 +71,7 @@ Before implementing this pipeline system, the workflow in each workshop looked l
 
 > The diagram above illustrates the well-known **1F1B (one-forward-one-backward)** pipeline parallelism scheme. Its principle is: whenever a GPU (or a machine) is ready to perform the backward pass on a recent micro-batch, it will prioritize the backward pass. For instance, at time T5, Device 4 must choose between doing a forward pass for the second batch or a backward pass for the first batch, and it prioritizes the backward pass. Meanwhile, all data are backpropagated in micro-batch order; for example, the second micro-batch only starts its backward pass after the first micro-batch’s backward pass has begun. Also, each device keeps a limited number of forward activations (4 in the figure) to avoid storing too many intermediate results for backward computation. Returning to our analogy, these intermediate "activation data" are like the manufacturing logs that the workshop stores to assist with final quality assessment and parameter updates. As you can see, there are still idle periods in the 1F1B pipeline. In large-model training, such idle times are called **bubbles**—periods when GPUs are waiting rather than working. We aim to reduce these bubbles as much as possible.
 
-After closer observation, Lao Wang discovered that a key source of pipeline "bubbles" was how much time the parameter feedback process took—nearly twice the actual processing time for each batch. That meant once the first stage had processed the fourth batch, it had to wait a long time to receive the feedback updates on the first batch. To address this, he came up with a novel idea: since feedback consumes so much time, **split it into two independent parts** so they can be decoupled. For example, each process might involve **fixture design** and **manufacturing design**. If the fixture design can be updated immediately based on the quality inspection report, independent of the manufacturing design updates, we can eliminate some idle time. Based on this idea, Lao Wang designed the improved pipeline:
+After closer observation, Tony discovered that a key source of pipeline "bubbles" was how much time the parameter feedback process took—nearly twice the actual processing time for each batch. That meant once the first stage had processed the fourth batch, it had to wait a long time to receive the feedback updates on the first batch. To address this, he came up with a novel idea: since feedback consumes so much time, **split it into two independent parts** so they can be decoupled. For example, each process might involve **fixture design** and **manufacturing design**. If the fixture design can be updated immediately based on the quality inspection report, independent of the manufacturing design updates, we can eliminate some idle time. Based on this idea, Tony designed the improved pipeline:
 
 <div class="row mt-3">
     <div class="col-sm mt-3 mt-md-0">
@@ -111,13 +111,13 @@ By now, you understand the two baseline pipeline schemes in the DeepSeek-V3 repo
 
 From this table, you can see that **ZB1P** reduces bubbles substantially compared to **1F1B**, at the same level of activation memory usage. By decoupling the backward computations, ZB1P achieves more overlap between forward and backward, thus cutting down idle time. More advanced scheduling strategies (like **DualPipe**) push this idea further, aiming to maximize resource utilization and parallel performance in large-model training.
 
-In short, Lao Wang’s evolving pipeline schemes—from the original 1F1B to ZB1P and beyond to DualPipe—mirror how large language model training has advanced. Each new innovation reduces bubbles (idle times) and pushes the system to higher performance and better resource utilization.
+In short, Tony’s evolving pipeline schemes—from the original 1F1B to ZB1P and beyond to DualPipe—mirror how large language model training has advanced. Each new innovation reduces bubbles (idle times) and pushes the system to higher performance and better resource utilization.
 
 ---
 
 ### When the Pipeline Still Has “Blind Spots”: Limitations of ZB1P
 
-Although ZB1P’s decoupling approach significantly shortens idle periods, Lao Wang’s workshop still experiences some lingering gaps. Imagine a pipeline of **Casting → Forging → Heat Treatment → Polishing**: once the casting machine finishes its "fixture design update," it hands that info off to forging, but a deeper stage’s "manufacturing design update" might still have to wait on all preceding updates to be done. Because parts flow through multiple tightly coupled stages, even small delays in one stage can ripple through and create new bubbles.
+Although ZB1P’s decoupling approach significantly shortens idle periods, Tony’s workshop still experiences some lingering gaps. Imagine a pipeline of **Casting → Forging → Heat Treatment → Polishing**: once the casting machine finishes its "fixture design update," it hands that info off to forging, but a deeper stage’s "manufacturing design update" might still have to wait on all preceding updates to be done. Because parts flow through multiple tightly coupled stages, even small delays in one stage can ripple through and create new bubbles.
 
 In large-model training, ZB1P does boost overlap between forward and backward, but it can’t achieve **truly simultaneous** forward and backward passes. Why?
 
@@ -133,9 +133,9 @@ In large-model training, ZB1P does boost overlap between forward and backward, b
 4. **Insufficient front-back overlap**  
    Ideally, we want other micro-batches’ forward passes to run concurrently with backward passes on different GPUs. Doing so, however, requires a sophisticated scheduling design.
 
-Returning to Lao Wang’s workshop example: if both the casting and forging machines are fully utilized at a certain moment, but the heat treatment or polishing machine reduces output for some reason (akin to GPU load imbalance), you may quickly revert to a "front-waits-for-back, back-waits-for-front" scenario. ZB1P already improves scheduling flexibility, but there remain "blind spots" of idle time.
+Returning to Tony’s workshop example: if both the casting and forging machines are fully utilized at a certain moment, but the heat treatment or polishing machine reduces output for some reason (akin to GPU load imbalance), you may quickly revert to a "front-waits-for-back, back-waits-for-front" scenario. ZB1P already improves scheduling flexibility, but there remain "blind spots" of idle time.
 
-Seeking an even better approach, Lao Wang aimed to further **break down** the dependencies between forward and backward so they could fully interleave in adjacent pipeline nodes. In other words, if a machine is handling a backward pass, it could still process the next micro-batch’s forward pass. This approach greatly increases pipeline concurrency and minimizes downtime. Lao Wang’s new design for his workshop parallels a new scheduling strategy for model training, called **DualPipe**, the main focus of this article.
+Seeking an even better approach, Tony aimed to further **break down** the dependencies between forward and backward so they could fully interleave in adjacent pipeline nodes. In other words, if a machine is handling a backward pass, it could still process the next micro-batch’s forward pass. This approach greatly increases pipeline concurrency and minimizes downtime. Tony’s new design for his workshop parallels a new scheduling strategy for model training, called **DualPipe**, the main focus of this article.
 
 ---
 
@@ -143,7 +143,7 @@ Seeking an even better approach, Lao Wang aimed to further **break down** the de
 
 ### Bidirectional Scheduling: Pushing “Front and Back” onto the Production Line Together
 
-In **traditional (single-direction)** pipelines such as 1F1B or ZB1P, a machine either performs forward processing or waits for a feedback signal to do backward adjustments. These two modes are usually **mutually exclusive**. In **DualPipe**, however, Lao Wang equips each machine with a **"timesharing mode"** and a **flexible front-back transport system** that allows the same machine to handle **both** forward and backward tasks simultaneously. The machine can receive new raw materials from the "front" while also getting a feedback report from the "back."
+In **traditional (single-direction)** pipelines such as 1F1B or ZB1P, a machine either performs forward processing or waits for a feedback signal to do backward adjustments. These two modes are usually **mutually exclusive**. In **DualPipe**, however, Tony equips each machine with a **"timesharing mode"** and a **flexible front-back transport system** that allows the same machine to handle **both** forward and backward tasks simultaneously. The machine can receive new raw materials from the "front" while also getting a feedback report from the "back."
 
 By introducing this dual transport system, a machine can keep receiving new parts to process (the forward pass) while at the same time handling the backward pass updates from downstream. In a large language model, this translates to letting forward and backward passes truly occur **in parallel**, significantly boosting GPU utilization.
 
@@ -173,7 +173,7 @@ By comparing the three:
 - **DualPipe**  
   Uses a **bidirectional** pipeline plus overlapping compute and communication to drastically reduce idle times. The bubble time drops further to \(\left(\frac{PP}{2} - 1\right) (F\&B + B - 3W)\). However, it demands **increased activation storage**, up to \(2 \times PP + 1\), because each GPU holds extra activation data to support simultaneous forward and backward.
 
-In short, **DualPipe** trades off a bit more memory usage for a significantly higher overlap between forward and backward, thus achieving greater throughput in large-scale distributed training—just as Lao Wang’s workshop gains higher utilization by letting machines work in **both directions** simultaneously.
+In short, **DualPipe** trades off a bit more memory usage for a significantly higher overlap between forward and backward, thus achieving greater throughput in large-scale distributed training—just as Tony’s workshop gains higher utilization by letting machines work in **both directions** simultaneously.
 
 <div class="row mt-3">
     <div class="col-sm mt-3 mt-md-0">
@@ -192,7 +192,7 @@ DualPipe splits data transfers into smaller chunks—**“micro-batch streaming�
 
 #### Why “Chunked Transport” Improves Efficiency
 
-Imagine Lao Wang’s **casting** machine has 1,000 parts to send to the **forging** machine. If we do a **one-shot** transfer, forging can’t start until all 1,000 are delivered. During that time, forging is idle. After delivery, forging might quickly finish some tasks, only to wait again. This can lead to “you wait for me, I wait for you.” 
+Imagine Tony’s **casting** machine has 1,000 parts to send to the **forging** machine. If we do a **one-shot** transfer, forging can’t start until all 1,000 are delivered. During that time, forging is idle. After delivery, forging might quickly finish some tasks, only to wait again. This can lead to “you wait for me, I wait for you.” 
 
 But if we **break** the 1,000 parts into several smaller shipments (say 4 or 10 chunks), forging can start working on the first chunk immediately while the second chunk is in transit, removing idle time and ensuring a steady flow of tasks.
 
@@ -240,7 +240,7 @@ Compute:         [compute chunk1]   [compute chunk2]  ...
 
 They overlap like interlocking gears, drastically reducing idle periods and ensuring a continuous workflow. This is how DualPipe sustains high throughput even as model size and parallelism scale up. 
 
-Just like Lao Wang’s multi-stage workshop—where partial shipments of parts go back and forth and get processed without waiting for an entire batch to travel—DualPipe leverages chunk-based data flows to keep GPUs near full utilization, effectively **hiding** communication overhead behind concurrent computation.
+Just like Tony’s multi-stage workshop—where partial shipments of parts go back and forth and get processed without waiting for an entire batch to travel—DualPipe leverages chunk-based data flows to keep GPUs near full utilization, effectively **hiding** communication overhead behind concurrent computation.
 
 ---
 
@@ -275,7 +275,7 @@ Additionally, the code sets up parameters and flags related to distributed train
 - **`self.group` and `self.rank`**: These tie into `torch.distributed`, used to manage the pipeline rank (i.e., the stage) of the current process.
 - **`self.is_first_rank`, `self.is_last_rank`, `self.is_in_second_half`**: Flags that mark whether this node (machine) is at the “left end” or “right end” of the pipeline, i.e., whether it belongs to the first half or the second half.
 
-These flags and mappings resemble the labels Lao Wang might attach to each machine in his workshop, e.g. “Casting Line,” “Polishing Line,” or “Second-to-Last Step.”
+These flags and mappings resemble the labels Tony might attach to each machine in his workshop, e.g. “Casting Line,” “Polishing Line,” or “Second-to-Last Step.”
 
 ---
 
@@ -302,7 +302,7 @@ Below is the `_reset_states` method:
         self.comm_ops = []
         self.to_free = []
 
-- **`_reset_states`** is similar to clearing the workshop and re-laying out tools and logbooks whenever Lao Wang gets a new order:
+- **`_reset_states`** is similar to clearing the workshop and re-laying out tools and logbooks whenever Tony gets a new order:
 
   - `WeightGradStore.clear()` removes any stored “parameter gradient” callbacks, preparing for Zero-Bubble or partial-overlap strategies.
   - `input_chunks`, `output_chunks`, `input_grad_chunks`, `output_grad_chunks`: These are like the “work in progress” parts and their “gradient info.” Initializing them to empty lists so we can fill them with each micro-batch and move them along.
@@ -356,7 +356,7 @@ In large-model training, “forward computation” and “backward computation�
 
 - For backward, the main logic is: if you’re on the final stage, call `backward()` on the `loss`; otherwise call `run_backward()` on the intermediate outputs to pass the gradient upstream.
 - `enable_zb` activates the Zero-Bubble (e.g., ZB1P) approach, where some parameter-grad computations are deferred by putting them into `WeightGradStore` and flushing them at the right moment. This aligns with our earlier explanation of **decoupling “input gradient calc” and “parameter gradient calc.”**
-- Once backward finishes, the “gradients” for the upstream stage are placed into `self.input_grad_chunks[phase]`, akin to Lao Wang returning some defect report to the previous machine.
+- Once backward finishes, the “gradients” for the upstream stage are placed into `self.input_grad_chunks[phase]`, akin to Tony returning some defect report to the previous machine.
 
 #### 3.3 `_forward_backward_compute_chunk(self, phase0, phase1)`
 
@@ -434,7 +434,7 @@ During backward passes, the same weights may accumulate gradients multiple times
 
 ### 6. Overall Scheduling: The `step(...)` Method’s 8 Stages
 
-The core logic resides in `step(...)`. This function is like Lao Wang’s central command that orchestrates all machines. To achieve DualPipe’s two-way pipeline, it proceeds through these phases (in a simplified view, see code comments for details):
+The core logic resides in `step(...)`. This function is like Tony’s central command that orchestrates all machines. To achieve DualPipe’s two-way pipeline, it proceeds through these phases (in a simplified view, see code comments for details):
 
 1. **Step 1: nF0**  
    At pipeline startup, let one end process a certain number of forward batches first. Like partially “pre-processing” raw material on the left side while the right side is idle.
