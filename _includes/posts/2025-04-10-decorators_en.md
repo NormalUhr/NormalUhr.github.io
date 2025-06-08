@@ -17,7 +17,7 @@ Source code: https://github.com/huggingface/trl/blob/main/trl/core.py#L91
 
 A classic example can be found in the source code of HuggingFace's TRL library:
 
-```python3=
+```python
 class PPODecorators:
     optimize_device_cache = False
 
@@ -41,14 +41,14 @@ class PPODecorators:
 ```
 The purpose of `@classmethod` here is to define a context manager within the class's scope that can access class variables. When a function is decorated with `@classmethod`: it becomes a class method, not an instance method. Its first parameter is `cls` (the class itself), allowing it to access class attributes, such as `cls.optimize_device_cache`. When decorated with `@contextmanager`: it becomes a context manager that can be invoked with a `with` statement:
 
-```python3=
+```python
 with PPODecorators.empty_device_cache():
     # e.g. run a PPO optimization step
 ```
 
 Without `@classmethod`, this function could only be called as a regular function or an instance method, and it wouldn't be able to access class variables through the class. By adding `@classmethod`, it can access them like this:
 
-```python3=
+```python
 if cls.optimize_device_cache:
     ...
 ```
@@ -97,7 +97,7 @@ The execution order is as follows:
 4. After the `with` block finishes (or an exception occurs), the code after `yield` is executed.
 Exit the context.
 
-```python3=  
+```python  
 @contextmanager
 def empty_device_cache(cls):
     yield  # This is the insertion point for the code inside the with block
@@ -107,7 +107,7 @@ def empty_device_cache(cls):
 
 Before `yield`: There is no code (it's empty here). After `yield`: The code is automatically triggered after the with block finishes. Therefore, the cleanup operation is performed after the with block concludes. This is equivalent to the following logic:
 
-```python3=  
+```python  
 gen = empty_device_cache()
 next(gen)            # Enter the context, execute code before yield (empty here)
 do_something()       # Your code inside the 'with' block
@@ -122,7 +122,7 @@ Let's look at a more concrete example:
 
 Source Code: https://github.com/huggingface/trl/blob/main/trl/models/utils.py#L185
 
-```python3=  
+```python  
 @contextmanager
 def unwrap_model_for_generation(
     model: Union["DistributedDataParallel", "DeepSpeedEngine"],
@@ -147,7 +147,7 @@ def unwrap_model_for_generation(
 This is a context manager function, decorated with `@contextmanager` from `contextlib` to simplify writing context managers. Its function is to return an "unwrapped model ready for generation tasks," based on whether DeepSpeed Stage 3 is used and whether parameters need to be gathered. Similar to the previous example, the flow is as follows:
 
 
-```python3=  
+```python  
 with unwrap_model_for_generation(model, accelerator) as unwrapped_model:
     # When this code is executed, the code before yield has already run.
     # The object returned by yield is assigned to unwrapped_model.
@@ -161,19 +161,19 @@ At this point:
 
 Let's look at the logical branches step-by-step:
 * Case 1: Not DeepSpeed Stage 3
-    ```python3=
+    ```python
     if accelerator.state.deepspeed_plugin is None or accelerator.state.deepspeed_plugin.zero_stage != 3:
       yield unwrapped_model
     ```
   It directly returns the unwrapped model; there are no complex operations. This corresponds to regular DDP or DeepSpeed Stage 1/2.
 * Case 2: DeepSpeed Stage 3 and no gather needed
-    ```python3=
+    ```python
     if not gather_deepspeed3_params:
       yield accelerator.unwrap_model(model)
     ```
   If using DeepSpeed ZeRO Stage 3 without gathering parameters, it skips parameter collection. This saves VRAM but may slow down generation. Here, it also directly `yield`s an unwrapped model.
 * Case 3: DeepSpeed Stage 3 and gather is needed
-    ```python3=
+    ```python
     with deepspeed.zero.GatheredParameters(model.parameters()):
     remove_hooks(model)
     yield accelerator.unwrap_model(model)
@@ -191,7 +191,7 @@ In the next example, we'll look at two classic decorators in Python used for def
 
 源代码：https://github.com/vllm-project/vllm/blob/main/vllm/engine/protocol.py#L27
 
-```python3=
+```python
 from abc import ABC, abstractmethod
 class EngineClient(ABC):
 
@@ -243,7 +243,7 @@ class EngineClient(ABC):
 
 `@property` turns a method into a "property," allowing it to be accessed like a field. Take the following example:
 
-```python3=
+```python
 @property
 def is_running(self) -> bool:
     ...
@@ -283,7 +283,7 @@ A method decorated with `@staticmethod`:
 
 Source Code: https://github.com/huggingface/trl/blob/main/trl/trainer/dpo_trainer.py#L568
 
-```python3=
+```python
 @staticmethod
     def tokenize_row(features, processing_class, max_prompt_length, max_completion_length, add_special_tokens):
         tokenizer = processing_class  # the processing class is a tokenizer
@@ -316,7 +316,7 @@ Source Code: https://github.com/huggingface/trl/blob/main/trl/trainer/dpo_traine
 
 **So why use `@staticmethod` here?**
 
-```python3=
+```python
 @staticmethod
 def tokenize_row(features, processing_class, max_prompt_length, max_completion_length, add_special_tokens):
 ```
@@ -358,7 +358,7 @@ Common use cases include:
 The essence of a decorator is "syntactic sugar." When you see this syntax:
 
 
-```python3=
+```python
 @my_decorator
 def foo():
     ...
@@ -373,7 +373,7 @@ foo = my_decorator(foo)
 
 Any function that accepts another function as an argument and returns a callable object (usually also a function) can be used as a decorator.
 
-```python3=
+```python
 def my_decorator(func):
     def wrapper(*args, **kwargs):
         print("Before")
@@ -390,7 +390,7 @@ The `@my_decorator` syntactic sugar passes the foo function below it as the `fun
 
 If you want to write something like this:
 
-```python3=
+```python
 @my_decorator_with_args("DEBUG")
 def foo(): ...
 ```
@@ -398,7 +398,7 @@ def foo(): ...
 You need two levels of function nesting:
 
 
-```python3=
+```python
 def my_decorator_with_args(log_level):
     def real_decorator(func):
         def wrapper(*args, **kwargs):
@@ -412,7 +412,7 @@ def my_decorator_with_args(log_level):
 When used:
 
 
-```python3=
+```python
 @my_decorator_with_args("DEBUG")  # 实际执行顺序：
 def foo():
     pass
@@ -434,7 +434,7 @@ In the HuggingFace TRL library, there is a decorator that can automatically reco
 
 Source code: https://github.com/huggingface/trl/blob/main/trl/trainer/grpo_trainer.py#L822 
 
-```python3=
+```python
 class GRPOTrainer(Trainer):
 ...
     @profiling_decorator
@@ -519,7 +519,7 @@ def profiling_context(trainer: Trainer, name: str) -> Generator[None, None, None
 
 What does this decorator do? It automatically performs performance analysis for our functions, eliminating the need for manual instrumentation.
 
-```python3=
+```python
 
 def profiling_decorator(func):
     @functools.wraps(func)
@@ -545,7 +545,7 @@ Some functions require performance analysis, but you don't want to write profili
 As shown in the previous example, the purpose of this decorator is to preserve the original function's metadata (like its name, docstring, and signature) within a decorator. It plays an indispensable role in custom decorator definitions. The usage of `@functools.wraps` is as follows:
 
 
-```python3=
+```python
 @functools.wraps(orig_method)
 def wrapped_method(model_self, *args, **kwargs):
     ...
@@ -558,20 +558,20 @@ It is used to preserve the metadata of the original function `orig_method`:
 * This is helpful for debugging, logging, documentation tools, and tracing tools.
 
 Without` @wraps`:
-```python3=
+```python
 >>> module.forward.__name__
 'wrapped_method'
 ```
 With `@wraps(forward)`：
 
-```python3=
+```python
 >>> module.forward.__name__
 'forward'
 ```
 
 Why does it almost always appear in custom decorators? As mentioned earlier when discussing decorator syntax, when you see this:
 
-```python3=
+```python
 @my_decorator
 def foo():
     ...
@@ -579,7 +579,7 @@ def foo():
 
 It is actually equivalent to:
 
-```python3=
+```python
 def foo():
     ...
 
@@ -595,7 +595,7 @@ Here, the statement `foo = my_decorator(foo)` causes `foo`'s own metadata (like 
 When you correctly define a decorator as follows:
 
 
-```python3=
+```python
 import functools
 
 def my_decorator(func):
@@ -618,7 +618,7 @@ Besides its use in decorator definitions, `@functools.wraps` is also frequently 
 
 Source Code: https://github.com/huggingface/trl/blob/main/trl/trainer/online_dpo_trainer.py#L381
 
-```python3=
+```python
 @wraps(Trainer.get_eval_dataloader)
     def get_eval_dataloader(self, eval_dataset: Optional[Union[str, Dataset]] = None) -> DataLoader:
         if eval_dataset is None and self.eval_dataset is None:
@@ -670,7 +670,7 @@ Source Code: https://github.com/huggingface/trl/blob/main/trl/trainer/online_dpo
 
 The code above is an overridden or enhanced version of the `get_eval_dataloader()` method from the HuggingFace `Trainer` class.
 
-```python3=
+```python
 @wraps(Trainer.get_eval_dataloader)
 def get_eval_dataloader(self, eval_dataset: Optional[Union[str, Dataset]] = None) -> DataLoader:
     ...
@@ -678,7 +678,7 @@ def get_eval_dataloader(self, eval_dataset: Optional[Union[str, Dataset]] = None
 
 Here, `@wraps(Trainer.get_eval_dataloader)` is essentially saying: "I've written a new `get_eval_dataloader()` that enhances the original method, but I want to preserve the original method's metadata (like its name, docstring, signature, etc.)." An important use case this might involve is preserving the original method's info when overriding a parent class method. Let's abstract this process:
 
-```python3=
+```python
 from functools import wraps
 
 class Base:
@@ -699,7 +699,7 @@ Using `@wraps(...)` when overriding a method in a class ensures that the subclas
 
 On another note, `@functools.wraps` is also used when manually wrapping instance methods (monkey patching). Monkey patching refers to dynamically modifying the behavior of a class, module, or function at runtime (rather than in the source code). In simpler terms: you don't change the original code file, but you "secretly" rewrite the implementation of a function or class while the code is running. This is common for modifying the behavior of third-party libraries during debugging:
 
-```python3=
+```python
 class Greeter:
     def greet(self, name):
         """Greet someone."""
@@ -732,7 +732,7 @@ Now that we're on the topic, let's briefly discuss other commonly used decorator
 Source Code: https://github.com/volcengine/verl/blob/main/verl/utils/import_utils.py#L24
 
 
-```python3=
+```python
 @cache
 def is_megatron_core_available():
     try:
@@ -770,7 +770,7 @@ Using this decorator is ideal for situations where:
 Taking the example above:
 
 
-```python3=
+```python
 @cache
 def is_megatron_core_available():
     try:
@@ -784,7 +784,7 @@ This function's behavior is to call `importlib.util.find_spec()` to determine if
 
 Behind the scenes, `@cache` uses an unbounded dictionary for caching, with the function arguments as the key and the return value as the value:
 
-```python3=
+```python
 def f(x): ...
 f(1)  # → computes and caches
 f(1)  # → directly returns the cached result, does not execute the function body again
@@ -794,7 +794,7 @@ f(1)  # → directly returns the cached result, does not execute the function bo
 
 Source Code: https://github.com/vllm-project/vllm/blob/main/vllm/engine/output_processor/multi_step.py#L72
 
-```python3=
+```python
 @functools.lru_cache
     def _log_prompt_logprob_unsupported_warning_once():
         # Reminder: Please update docs/features/compatibility_matrix.md
@@ -814,7 +814,7 @@ This is actually equivalent to `@functools.lru_cache(maxsize=128)` (the default 
 
 Theoretically, the same goal could be achieved with an if-else statement:
 
-```python3=
+```python
 _warned = False
 
 def _log_prompt_logprob_unsupported_warning_once():
@@ -833,14 +833,14 @@ However, the benefits of using **@lru_cache** are:
 
 A more complex use case: logging only once for a specific `key`.
 
-```python3=
+```python
 @functools.lru_cache(maxsize=None)
 def warn_once_for_key(key):
     logger.warning(f"Warning for {key}")
 ```
 
 Calling it:
-```python3=
+```python
 warn_once_for_key("feature_a")  # Logs once
 warn_once_for_key("feature_a")  # Does not log again
 warn_once_for_key("feature_b")  # New key, logs once
