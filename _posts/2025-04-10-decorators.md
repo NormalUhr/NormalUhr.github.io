@@ -1,6 +1,6 @@
 ---
 layout:     post_lang
-title:      "Decorators in Machine Learning Projects"
+title:      "Decorators in Machine Learning Projects [En/中]"
 subtitle:   "机器学习中的装饰器"
 date:       2025-04-10
 author:     "Yihua Zhang"
