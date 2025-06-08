@@ -332,11 +332,11 @@ def tokenize_row(features, processing_class, max_prompt_length, max_completion_l
 * 更容易测试、不涉及类状态，测试时不需构造实例
 在调用时，可以直接用`tokenized = DPOTrainer.tokenize_row(features, tokenizer, 3, 3, False)`,不需要先实例化 `DPOTrainer`。这个 `tokenize_row` 明显只是一个和 tokenization 相关的工具函数，所以用 `@staticmethod` 是非常恰当的设计。
 
-`@staticmethod` 不需要 `self` / cls，不可访问类/实例状态，是工具函数，不依赖类或实例状态。@classmethod 需要 cls，可访问类变量，涉及类范围逻辑（如工厂方法）。
+`@staticmethod` 不需要 `self` / `cls`，不可访问类/实例状态，是工具函数，不依赖类或实例状态。@classmethod 需要 `cls`，可访问类变量，涉及类范围逻辑（如工厂方法）。
 
 有一条很实用的工程实践经验：如果一个方法不依赖类的状态（实例或类变量），就考虑把它变成静态方法；如果它甚至不属于这个类的“概念域”，那就干脆做成独立函数。
 
-什么时候应该写成独立的 util function？当这个函数跨多个类都有用；或者它的逻辑与当前类的语义没有强绑定关系；例如：tokenizer 的 padding 函数，字符串清洗，通用的日志格式化等。这时候写成 utils.py 里单独的函数会更好，易于复用、解耦和测试。
+什么时候应该写成独立的 util function？当这个函数跨多个类都有用；或者它的逻辑与当前类的语义没有强绑定关系；例如：tokenizer 的 padding 函数，字符串清洗，通用的日志格式化等。这时候写成 `utils.py` 里单独的函数会更好，易于复用、解耦和测试。
 
 
 
