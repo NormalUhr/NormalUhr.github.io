@@ -18,7 +18,7 @@ Python 装饰器（Decorators）可能是你见过最好用的语言特性之一
 
 在 HuggingFace 的 trl 库源码中，有一个很经典的例子：
 
-```python3=
+```python
 class PPODecorators:
     optimize_device_cache = False
 
@@ -42,14 +42,14 @@ class PPODecorators:
 ```
 
 这个 `@classmethod` 的作用是在类的作用域内定义一个可以访问类变量的上下文管理器（context manager）。一个函数如果被 `@classmethod` 修饰：它不是实例方法，而是类方法，第一个参数是 cls（类本身），可访问类属性，比如 `cls.optimize_device_cache`；被 `@contextmanager` 修饰：这意味着它是一个上下文管理器，可以用 with 语句调用：
-```python3=
+```python
 with PPODecorators.empty_device_cache():
     # 做某事，比如运行强化学习优化步骤
 ```
 
 如果没有 `@classmethod`，这个函数只能作为普通函数或实例方法调用，无法通过类来访问类变量。加了 `@classmethod` 后，它就可以这样访问：
 
-```python3=
+```python
 if cls.optimize_device_cache:
     ...
 ```
@@ -96,7 +96,7 @@ with PPODecorators.empty_device_cache():
 * `with` 块执行完后（或发生异常），继续执行 `yield` 之后的代码；
 * 退出上下文。
 
-```python3=  
+```python  
 @contextmanager
 def empty_device_cache(cls):
     yield  # 此处是 with 块内部代码的插入点
@@ -106,7 +106,7 @@ def empty_device_cache(cls):
 
 `yield` 前面：没有代码（这里空着）；yield 后面：会在 with 执行结束后自动触发；所以清理操作是在 with 块结束之后进行的。类似于这样一段等价逻辑：
 
-```python3=  
+```python  
 gen = empty_device_cache()
 next(gen)           # 进入上下文，执行 yield 之前（此处是空）
 do_something()      # 你在 with 里的代码
@@ -117,7 +117,7 @@ next(gen) or gen.close()   # 执行 yield 之后的逻辑
 
 源代码：https://github.com/huggingface/trl/blob/main/trl/models/utils.py#L185
 
-```python3=  
+```python  
 @contextmanager
 def unwrap_model_for_generation(
     model: Union["DistributedDataParallel", "DeepSpeedEngine"],
@@ -141,7 +141,7 @@ def unwrap_model_for_generation(
 
 这是一个上下文管理器函数，装饰器 `@contextmanager` 来自 `contextlib`，用于简化上下文管理器的编写。它的功能是：根据是否使用 DeepSpeed Stage 3，以及是否需要 `gather` 参数，返回一个“可用于生成任务”的未包装模型。和上一个例子类似，流程如下：
 
-```python3=  
+```python  
 with unwrap_model_for_generation(model, accelerator) as unwrapped_model:
     # 执行这段代码时，yield 前面的代码已经执行完
     # yield 返回的对象会赋值给 unwrapped_model
@@ -155,20 +155,20 @@ with unwrap_model_for_generation(model, accelerator) as unwrapped_model:
 
 如果逐步看逻辑分支：
 * 情况一：不是 DeepSpeed Stage 3
-    ```python3=
+    ```python
     if accelerator.state.deepspeed_plugin is None or accelerator.state.deepspeed_plugin.zero_stage != 3:
       yield unwrapped_model
     ```
   直接返回解包的模型；没有复杂操作；对应普通 DDP 或 DeepSpeed Stage 1/2。
 * 情况二：是 DeepSpeed Stage 3 且不需要 gather
-    ```python3=
+    ```python
     if not gather_deepspeed3_params:
       yield accelerator.unwrap_model(model)
     ```
   如果使用 DeepSpeed ZeRO Stage 3 且不聚合参数，则跳过参数收集；更省显存，但生成速度可能变慢；这里也直接 yield 一个解包模型。
 * 情况三：是 DeepSpeed Stage 3 且需要 gather
     
-    ```python3=
+    ```python
     with deepspeed.zero.GatheredParameters(model.parameters()):
     remove_hooks(model)
     yield accelerator.unwrap_model(model)
@@ -188,7 +188,7 @@ with unwrap_model_for_generation(model, accelerator) as unwrapped_model:
 
 源代码：https://github.com/vllm-project/vllm/blob/main/vllm/engine/protocol.py#L27
 
-```python3=
+```python
 from abc import ABC, abstractmethod
 class EngineClient(ABC):
 
@@ -239,7 +239,7 @@ class EngineClient(ABC):
 **为什么要用 `@property`？**
 
 `@property `是将方法变为一个“属性”，像访问字段一样调用方法。以下面为例：
-```python3=
+```python
 @property
 def is_running(self) -> bool:
     ...
@@ -281,7 +281,7 @@ class MyClass:
 
 源代码：https://github.com/huggingface/trl/blob/main/trl/trainer/dpo_trainer.py#L568
 
-```python3=
+```python
 @staticmethod
     def tokenize_row(features, processing_class, max_prompt_length, max_completion_length, add_special_tokens):
         tokenizer = processing_class  # the processing class is a tokenizer
@@ -314,7 +314,7 @@ class MyClass:
 
 那为什么这里要用 `@staticmethod`？
 
-```python3=
+```python
 @staticmethod
 def tokenize_row(features, processing_class, max_prompt_length, max_completion_length, add_special_tokens):
 ```
@@ -357,7 +357,7 @@ def tokenize_row(features, processing_class, max_prompt_length, max_completion_l
 
 装饰器的本质：是“语法糖”，当你看到的这个写法：
 
-```python3=
+```python
 @my_decorator
 def foo():
     ...
@@ -373,7 +373,7 @@ foo = my_decorator(foo)
 任何函数，只要它接受另一个函数作为参数，并返回一个可调用对象（通常也是个函数），就可以作为装饰器。
 
 
-```python3=
+```python
 def my_decorator(func):
     def wrapper(*args, **kwargs):
         print("Before")
@@ -390,14 +390,14 @@ def my_decorator(func):
 
 如果你想这样写：
 
-```python3=
+```python
 @my_decorator_with_args("DEBUG")
 def foo(): ...
 ```
 
 就需要两层函数嵌套：
 
-```python3=
+```python
 def my_decorator_with_args(log_level):
     def real_decorator(func):
         def wrapper(*args, **kwargs):
@@ -410,7 +410,7 @@ def my_decorator_with_args(log_level):
 
 使用时：
 
-```python3=
+```python
 @my_decorator_with_args("DEBUG")  # 实际执行顺序：
 def foo():
     pass
@@ -431,7 +431,7 @@ def foo():
 
 源代码：https://github.com/huggingface/trl/blob/main/trl/trainer/grpo_trainer.py#L822 
 
-```python3=
+```python
 class GRPOTrainer(Trainer):
 ...
     @profiling_decorator
@@ -516,7 +516,7 @@ def profiling_context(trainer: Trainer, name: str) -> Generator[None, None, None
 
 这个装饰器干了什么事？这个装饰器自动帮我们进行函数的性能分析，无需手动埋点。
 
-```python3=
+```python
 
 def profiling_decorator(func):
     @functools.wraps(func)
@@ -542,7 +542,7 @@ def profiling_decorator(func):
 
 正如上边这个例子所展示的，这个装饰器的作用是在装饰器中保留原函数的元信息（比如名字、docstring、签名），通常在自定义装饰器中起到不可替代的作用。`@functools.wrap` 的用法是：
 
-```python3=
+```python
 @functools.wraps(orig_method)
 def wrapped_method(model_self, *args, **kwargs):
     ...
@@ -555,27 +555,27 @@ def wrapped_method(model_self, *args, **kwargs):
 * 有助于调试、日志打印、文档工具、tracing 工具（比如 `TorchScript`）；
 
 不加 `@wraps` 的话：
-```python3=
+```python
 >>> module.forward.__name__
 'wrapped_method'
 ```
 加了 `@wraps(forward)`：
 
-```python3=
+```python
 >>> module.forward.__name__
 'forward'
 ```
 
 为什么在自定义装饰器中总是会出现呢？上边在讲述装饰器这个语法糖的时候就提过，当你看到的这个写法：
 
-```python3=
+```python
 @my_decorator
 def foo():
     ...
 ```
 
 其实等价于：
-```python3=
+```python
 def foo():
     ...
 
@@ -590,7 +590,7 @@ foo = my_decorator(foo)
 
 当你按照以下方式正确定义装饰器时：
 
-```python3=
+```python
 import functools
 
 def my_decorator(func):
@@ -613,7 +613,7 @@ print(say_hello.__doc__)    # Output: 'This function says hello'
 
 源代码：https://github.com/huggingface/trl/blob/main/trl/trainer/online_dpo_trainer.py#L381 
 
-```python3=
+```python
 @wraps(Trainer.get_eval_dataloader)
     def get_eval_dataloader(self, eval_dataset: Optional[Union[str, Dataset]] = None) -> DataLoader:
         if eval_dataset is None and self.eval_dataset is None:
@@ -665,7 +665,7 @@ print(say_hello.__doc__)    # Output: 'This function says hello'
 
 上边的代码是对 HuggingFace Trainer 类中 `get_eval_dataloader()` 方法的重写或增强版本。
 
-```python3=
+```python
 @wraps(Trainer.get_eval_dataloader)
 def get_eval_dataloader(self, eval_dataset: Optional[Union[str, Dataset]] = None) -> DataLoader:
     ...
@@ -673,7 +673,7 @@ def get_eval_dataloader(self, eval_dataset: Optional[Union[str, Dataset]] = None
 
 这里 `@wraps(Trainer.get_eval_dataloader)` 其实是说：“我写了一个新的 `get_eval_dataloader()`，它逻辑增强了原方法，但我希望保留原方法的元信息（如名字、文档、签名等）。” 这里可能涉及到的重要用法是：重写父类方法时保留原方法信息。我们把上述过程抽象出来：
 
-```python3=
+```python
 from functools import wraps
 
 class Base:
@@ -694,7 +694,7 @@ print(Sub.say.__doc__)   #  'Say something.'
 
 另一方面，手动 wrap 实例方法（monkey patch），也会用到 `@functools.wrap`。Monkey patching 是指在程序运行时（而不是在源代码中），动态修改类、模块或函数的行为。通俗讲：你没有改动原代码文件，但你在代码运行时“偷偷”改写了某个函数或类的实现。这在调试过程中修改第三方库的行为等经常出现：
 
-```python3=
+```python
 class Greeter:
     def greet(self, name):
         """Greet someone."""
@@ -727,7 +727,7 @@ print(g.greet.__doc__)   #  'Greet someone.'
 
 源代码：https://github.com/volcengine/verl/blob/main/verl/utils/import_utils.py#L24
 
-```python3=
+```python
 @cache
 def is_megatron_core_available():
     try:
@@ -762,7 +762,7 @@ def is_sglang_available():
 
 以上边的例子为例：
 
-```python3=
+```python
 @cache
 def is_megatron_core_available():
     try:
@@ -776,7 +776,7 @@ def is_megatron_core_available():
 
 `@cache` 背后使用的是无上限的字典缓存，函数参数作为 key，返回值作为 value：
 
-```python3=
+```python
 def f(x): ...
 f(1)  # → 计算并缓存
 f(1)  # → 直接返回缓存的结果，不再执行函数体
@@ -786,7 +786,7 @@ f(1)  # → 直接返回缓存的结果，不再执行函数体
 
 源代码：https://github.com/vllm-project/vllm/blob/main/vllm/engine/output_processor/multi_step.py#L72 
 
-```python3=
+```python
 @functools.lru_cache
     def _log_prompt_logprob_unsupported_warning_once():
         # Reminder: Please update docs/features/compatibility_matrix.md
@@ -805,7 +805,7 @@ f(1)  # → 直接返回缓存的结果，不再执行函数体
 
 理论上，相同的目的也可以通过 if-else 来实现：
 
-```python3=
+```python
 _warned = False
 
 def _log_prompt_logprob_unsupported_warning_once():
@@ -823,14 +823,14 @@ def _log_prompt_logprob_unsupported_warning_once():
 
 更复杂用法：只对某个 key 打一次日志
 
-```python3=
+```python
 @functools.lru_cache(maxsize=None)
 def warn_once_for_key(key):
     logger.warning(f"Warning for {key}")
 ```
 
 调用：
-```python3=
+```python
 warn_once_for_key("feature_a")  # 打一次
 warn_once_for_key("feature_a")  # 不打了
 warn_once_for_key("feature_b")  # 新 key 打一次

@@ -1,4 +1,4 @@
-# Decorators in Machine Learning Projects
+# Decorators in Machine Learning
 
 Python decorators are arguably one of the most powerful language features you will ever encounter. They allow you to add new functionality to your functions or classes without directly modifying the original code. In this post, we will deep-dive into the source code of two top-tier open-source machine-learning frameworks—**vllm** and **trl**—and dissect how Python decorators are used in practice: from built-in decorators you see every day, to advanced custom decorators, and finally to the handy utilities hidden in the standard-library module **`functools`**.
 
