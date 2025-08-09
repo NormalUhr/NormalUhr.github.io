@@ -43,7 +43,13 @@ $$
 
 这样就能在离线数据（旧策略）上评估新策略的期望，避免每次更新都重新采数据（降低成本）。但是如果如果新旧策略差距太大，权重方差会很高，这就导致训练不稳定。
 
-重要性采样存在的意义在于：我们想要估计一个预期的分布，但是我们手上只有另一个 behavior 分布，我们就只能在 behavior policy 下进行采样，通过这个样本，赋予这个重要性权重，来估计 出target policy 下函数的值。在 PPO/GRPO 中，我们不直接用新策略去采数据，而是先用旧策略生成数据（因为采样代价高），这个过程被称为 Rollout。所以更新时，我们需要修正分布差异，这就是重要性采样。定义每次采样后每个 token 的 importance ratio 为：$r_t = \frac{\pi_\theta(a_t|s_t)}{\pi_{\theta_{\text{old}}}(a_t|s_t)}$，那么PPO/GRPO的目标函数可以写为：
+重要性采样存在的意义在于：我们想要估计一个预期的分布，但是我们手上只有另一个 behavior 分布，我们就只能在 behavior policy 下进行采样，通过这个样本，赋予这个重要性权重，来估计 出target policy 下函数的值。在 PPO/GRPO 中，我们不直接用新策略去采数据，而是先用旧策略生成数据（因为采样代价高），这个过程被称为 Rollout。所以更新时，我们需要修正分布差异，这就是重要性采样。定义每次采样后每个 token 的 importance ratio 为：
+
+$$
+r_t = \frac{\pi_\theta(a_t|s_t)}{\pi_{\theta_{\text{old}}}(a_t|s_t)},
+$$
+
+那么PPO/GRPO的目标函数可以写为：
 
 $$
 L(\theta) = \mathbb{E}_t [\text{min}(r_tA_t, \text{CLIP}(r_t, 1-\epsilon, 1+\epsilon)A_t)]
@@ -82,7 +88,7 @@ $$
 $$
 
 $$
-\text{s.t.}, 0 <   |\{o_i | \text{is\_equivalent}(a, o_i)\}| <   G
+\text{s.t.}, 0 <   |\{o_i | \text{is_equivalent}(a, o_i)\}| <   G
 $$
 
 ### DAPO 为什么选择把 $1-\epsilon_{\text{low}}$ 和 $1+\epsilon_{\text{high}}$ 中的后者提高？这里的原因是什么？
@@ -93,15 +99,33 @@ $$
 
 Clip-Higher 解决的是“好 token 上涨受限”的问题，但它并未触及另一个常见浪费：采样的多样性缺失。为此，DAPO 引入了 Dynamic Sampling。
 
-### DAPO - Dynamic Sampling
+### DAPO - 动态采样
 
-DAPO选择的第二个技术创新点被称为dynamical sampling。这个项技术的背景是来源于：假如一个query我们sample了10次，这10次每次都答得很好/或者很差，都取得了max reward/zero reward，这个时候由于GRPO的计算方法，导致这10次采样的advantage都是0，所以这些sample所带来的gradient就也都是0；这样做的一个后果就是，实际的有梯度的sample要远低于名义sample数，导致最后梯度汇集的时候没有收集到足够的信息，从而形成高方差，训练的不稳定性，以及sample的浪费。需要注意的是，这种现象是在训练初期；以及后期随着训练的进行在不断加强的，因为刚开始时模型效果很差，而训练越到后边模型效果越好，给出满分回答的几率就越大。因此，DAPO在采集样本时，额外做了一件事：保证每次采样出来的回答，reward不全是0或者1，如果采样出来的回答全是0或者1就继续采样，直到不满足为止。这也是损失函数中 $\text{s.t.}, 0 <   |\{o_i | \text{is\_equivalent}(a, o_i)\}| <   G$ 的由来，它保证了针对同一个输入采样到的一组回答中，既有错误的也有正确的。
+DAPO提出的第二个技术创新点被称为dynamical sampling。这个项技术的背景是来源于：假如一个query我们sample了10次，这10次每次都答得很好/或者很差，都取得了max reward/zero reward，这个时候由于GRPO的计算方法，导致这10次采样的advantage都是0，所以这些sample所带来的gradient就也都是0；这样做的一个后果就是，实际的有梯度的sample要远低于名义sample数，导致最后梯度汇集的时候没有收集到足够的信息，从而形成高方差，训练的不稳定性，以及sample的浪费。需要注意的是，这种现象是在训练初期；以及后期随着训练的进行在不断加强的，因为刚开始时模型效果很差，而训练越到后边模型效果越好，给出满分回答的几率就越大。因此，DAPO在采集样本时，额外做了一件事：保证每次采样出来的回答，reward不全是0或者1，如果采样出来的回答全是0或者1就继续采样，直到不满足为止。这也是损失函数中 
+
+$$
+\text{s.t.}, 0 <   |\{o_i | \text{is\_equivalent}(a, o_i)\}| < G
+$$
+
+的由来，它保证了针对同一个输入采样到的一组回答中，既有错误的也有正确的。
 
 除了采样多样性，GRPO 在长回答的训练中还有一个隐性缺陷：token 梯度的权重会随回答长度变长而被稀释。DAPO 的第三个改进正是 Token-Level Gradient Loss。
 
 ### DAPO - Token-Level Gradient Loss
 
-DAPO 第三个方面的创新是为了解决GRPO在训练长回答时token gradient的权重会随着采样回答的长度变长而下降的问题。首先解释为什么采样长度变长权重会下降。假设采样了2次，有一次回答一共有200个token，而另一次回答有10个token。那么根据GRPO的计算公式，每次回答的梯度先在sample内求平均，再在batch内求平均。第一次回答每个token的权重是 (1/200) * (1/2)，而第二个回答每个token的权重是 (1/10) * (1/2)，所以第二次回答的token的影响要明显高于第一次回答。再来说采样长度变长权重下降的危害：对于一些比较难的问题，长回答本身就很正常，如果这些回答本身非常好，那么由于长度平均就会导致本来非常有用的梯度信号被稀释；假如回答是不好的，长度长仅仅也是因为重复单词，或者回答冗余词太多，长度归一就导致这次采样本该带来的纠正信号没法正确传递到policy model上。所以DAPO采用的方法是：把一次梯度计算时所有采样生成的token总数加起来求平均，回到上边这个例子，第一次采样和第二次采样每个token的权重都是 1/(200 + 10)，即对不同回答中的token一视同仁。这样就能改善GRPO在长样本训练中的效率低下的问题。这对应着损失函数中的改变，对于loss的aggregation方式由原来GRPO的 $\frac{1}{G} \sum_{i = 1}^{G} \frac{1}{|o_i|} \sum_{t=1}^{|o_i|}$ 改为了DAPO的 $\frac{1}{\sum_{i=1}^G |o_i|} \sum_{i = 1}^{G} \sum_{t=1}^{|o_i|}$。从最后的结果也可以看出，token-level的loss训练过程更加稳定，而且控制entropy不会过高（过高引起策略偏向随机，过低则引起探索不足，clip-high可以解决过低问题）。DAPO将sample-level的loss改为了token-level的loss计算，可以有效的让长回答更多影响最后的梯度。每个token的损失将直接对整体梯度产生影响，而不再依赖其所属样本的长度。
+DAPO 第三个方面的创新是为了解决GRPO在训练长回答时token gradient的权重会随着采样回答的长度变长而下降的问题。首先解释为什么采样长度变长权重会下降。假设采样了2次，有一次回答一共有200个token，而另一次回答有10个token。那么根据GRPO的计算公式，每次回答的梯度先在sample内求平均，再在batch内求平均。第一次回答每个token的权重是 (1/200) * (1/2)，而第二个回答每个token的权重是 (1/10) * (1/2)，所以第二次回答的token的影响要明显高于第一次回答。再来说采样长度变长权重下降的危害：对于一些比较难的问题，长回答本身就很正常，如果这些回答本身非常好，那么由于长度平均就会导致本来非常有用的梯度信号被稀释；假如回答是不好的，长度长仅仅也是因为重复单词，或者回答冗余词太多，长度归一就导致这次采样本该带来的纠正信号没法正确传递到policy model上。所以DAPO采用的方法是：把一次梯度计算时所有采样生成的token总数加起来求平均，回到上边这个例子，第一次采样和第二次采样每个token的权重都是 1/(200 + 10)，即对不同回答中的token一视同仁。这样就能改善GRPO在长样本训练中的效率低下的问题。这对应着损失函数中的改变，对于loss的aggregation方式由原来GRPO的 
+
+$$
+\frac{1}{G} \sum_{i = 1}^{G} \frac{1}{|o_i|} \sum_{t=1}^{|o_i|}
+$$ 
+
+改为了DAPO的 
+
+$$
+\frac{1}{\sum_{i=1}^G |o_i|} \sum_{i = 1}^{G} \sum_{t=1}^{|o_i|}
+$$
+
+从最后的结果也可以看出，token-level的loss训练过程更加稳定，而且控制entropy不会过高（过高引起策略偏向随机，过低则引起探索不足，clip-high可以解决过低问题）。DAPO将sample-level的loss改为了token-level的loss计算，可以有效的让长回答更多影响最后的梯度。每个token的损失将直接对整体梯度产生影响，而不再依赖其所属样本的长度。
 
 最后一个改进点与回答长度也有关，但切入角度不同：这次不是梯度稀释，而是过长回答对整体奖励的负面影响。
 
@@ -153,7 +177,7 @@ $$
 
 > “既然奖励是 sequence-level，那 importance ratio 也应该是sequence-level。”
 
-从上边公式上看，对于重要性采样的 importance ratio，从GRPO原来的 $r_{i,t}(\theta)$ 变成了现在的 $s_i(\theta)$，可以发现这个比值不再和当前 step 的 step index $t$ 挂钩。GSPO的算法希望抛弃掉 GRPO 的 token-level objective，而是把 importance rate 直接用在 sequence-level 上，这也就自然得引入了 GSPO 的优化算法目标，即把token-level的importance rate 换成了 sequence-level 的 importance rate。这里对 sequence-level 的重要性做了长度归一化，这里主要是为了减少方差和统一数值范围。如果不做长度归一化，不同的问题可能回答长度是不一样的，因此importance rate可能会对长度很敏感。这里，由于所有属于同意采样的token用到的importance ratio 都是一样的，所以一旦 clipping 发生，所 clip 掉的将是整个采样到的 sequence，而不是一次采样中的某些 token。长度归一化 $\frac{1}{|o_i|}$ 避免长句子几个 token 波动就导致 ratio 爆炸。
+从上边公式上看，对于重要性采样的 importance ratio，从GRPO原来的 $r_{i,t}(\theta)$ 变成了现在的 $s_i(\theta)$，可以发现这个比值不再和当前 step 的 step index $t$ 挂钩。GSPO的算法希望抛弃掉 GRPO 的 token-level objective，而是把 importance rate 直接用在 sequence-level 上，这也就自然得引入了 GSPO 的优化算法目标，即把token-level的importance rate 换成了 sequence-level 的 importance rate。这里对 sequence-level 的重要性做了长度归一化，这里主要是为了减少方差和统一数值范围。如果不做长度归一化，不同的问题可能回答长度是不一样的，因此importance rate可能会对长度很敏感。这里，由于所有属于同意采样的token用到的importance ratio 都是一样的，所以一旦 clipping 发生，所 clip 掉的将是整个采样到的 sequence，而不是一次采样中的某些 token。长度归一化 $\frac{1}{\|o_i\|}$ 避免长句子几个 token 波动就导致 ratio 爆炸。
 
 **关于新的重要性采样比值 $s_i({\theta})$ 的讨论：为什么 GSPO 使用指数化的概率比值而不是直接使用对数似然差值？**
 
@@ -200,7 +224,7 @@ $$
 \nabla_\theta J_{\text{GRPO}}(\theta) 
 = \mathbb{E} \left[ \frac{1}{G} \sum_{i=1}^G \frac{\hat{A}_i}{|y_i|} \sum_{t=1}^{|y_i|} w_{i,t}(\theta) \, \nabla_\theta \log \pi_\theta(y_{i,t} \mid x, y_{i,<  t}) \right].
 $$
-可以看出，GRPO 在同一条回复的不同 token 上采用不同的权重 $r_{i,t}(\theta) A_i / |o_i|$，这些权重会随 token 位置和上下文变化而波动，且可能出现较大方差，尤其在长序列或 MoE 模型中更为严重。
+可以看出，GRPO 在同一条回复的不同 token 上采用不同的权重 $r_{i,t}(\theta) A_i / \|o_i\|$，这些权重会随 token 位置和上下文变化而波动，且可能出现较大方差，尤其在长序列或 MoE 模型中更为严重。
 
 
 另外一个区别在于，GRPO原本的重要性采样权重对clip范围的影响。对于大于零的advantage的样本，GRPO允许的范围是零到一点几，但是对于advantage小于0的样本，clip的数值范围是零点几到正无穷，这是个很大的波动范围。当序列变长的时候，这个时候所携带的噪声是会不断积累的。这也是MoE模型在用GRPO训练时候崩溃的原因之一。
