@@ -1,5 +1,9 @@
 # From GRPO to DAPO and GSPO
 
+> **Disclaimer:**  
+> This article was translated from my originally written Chinese version to English using GPT-5. While every effort has been made to ensure accuracy, there may still be errors or inaccuracies in the translation. If you notice anything inappropriate, unclear, or incorrect, please feel free to contact me for clarification or correction.
+
+
 In the reinforcement learning stage of large language models, PPO was once the mainstream approach. However, its reliance on the value model reveals limitations when handling long text outputs and complex tasks. GRPO removes the dependency on the value model, significantly improving scalability, but still leaves room for optimization in efficiency and stability. This motivated DAPO, which refines details such as sampling, clipping, and gradient calculation. Yet, in MoE architectures with dynamically activated experts, token-level optimization under the GRPO framework still struggles to converge stably. GSPO takes this a step further by shifting the optimization granularity to the sequence level, fundamentally reducing high variance and structural noise. This article follows this evolutionary path—starting from GRPO and gradually unpacking the design motivations and implementation details behind DAPO and GSPO.
 
 ## Recap: GRPO
@@ -16,7 +20,7 @@ $$
 where
 
 $$
-r_{i,t}(\theta) = \frac{\pi_{\theta}(o_{i,t}|q,o_{i,<t})}{\pi_{\theta_{\text{old}}}(o_{i,t}|q,o_{i,<t})}
+r_{i,t}(\theta) = \frac{\pi_{\theta}(o_{i,t}|q,o_{i,&lt;t})}{\pi_{\theta_{\text{old}}}(o_{i,t}|q,o_{i,&lt;t})}
 $$
 
 $$
@@ -53,17 +57,17 @@ With this intuition of importance sampling in mind, we can further consider its 
 
 ### How do the signs of $A_t$ and $r_t$ affect training?
 
-Let’s analyze the scenarios. Suppose $A_t > 0$ (the action is better than expected); we want to increase the probability of this action. If we set $\epsilon = 0.2$ in clipping, then when $r_t > 1.2$, the `min` and `clip` operations will cap it at 1.2. When $r_t < 0.8$, no clipping occurs due to the `min` operation, so positive advantages have their upward change limited.
+Let’s analyze the scenarios. Suppose $A_t > 0$ (the action is better than expected); we want to increase the probability of this action. If we set $\epsilon = 0.2$ in clipping, then when $r_t > 1.2$, the `min` and `clip` operations will cap it at 1.2. When $r_t &lt; 0.8$, no clipping occurs due to the `min` operation, so positive advantages have their upward change limited.
 
-Conversely, when $A_t < 0$ (the action is worse than expected), we should reduce the probability of this action. If $r_t < 0.8$, the `min` operation limits it further, capping at $0.8A_t$; but when $r_t > 1.2$, the `min` operation imposes no restriction (it can go to $+\infty$, and with a negative sign becomes $-\infty$). Thus, the downward adjustment for negative advantages is also bounded.
+Conversely, when $A_t &lt; 0$ (the action is worse than expected), we should reduce the probability of this action. If $r_t &lt; 0.8$, the `min` operation limits it further, capping at $0.8A_t$; but when $r_t > 1.2$, the `min` operation imposes no restriction (it can go to $+\infty$, and with a negative sign becomes $-\infty$). Thus, the downward adjustment for negative advantages is also bounded.
 
-$A_t$ measures whether the current action/trajectory is better or worse than average. If $A_t$ is positive, we encourage it; if negative, we penalize it so it appears less in the future. The importance ratio $r_t$ reflects how much more (or less) likely the new policy is to choose this action compared to the old policy. If $r_t > 1$, the new model prefers this action; if $r_t < 1$, it prefers it less. Among the four possible sign combinations of $A_t$ and $r_t$, we only desire two: when they have the same sign—positive $A_t$ with $r_t > 1$ (reinforce), or negative $A_t$ with $r_t < 1$ (correct mistakes).
+$A_t$ measures whether the current action/trajectory is better or worse than average. If $A_t$ is positive, we encourage it; if negative, we penalize it so it appears less in the future. The importance ratio $r_t$ reflects how much more (or less) likely the new policy is to choose this action compared to the old policy. If $r_t > 1$, the new model prefers this action; if $r_t &lt; 1$, it prefers it less. Among the four possible sign combinations of $A_t$ and $r_t$, we only desire two: when they have the same sign—positive $A_t$ with $r_t > 1$ (reinforce), or negative $A_t$ with $r_t &lt; 1$ (correct mistakes).
 
 However, matching the signs of $A_t$ and $r_t$ is not enough. In PPO/GRPO, the **clipping operation** is equally critical for stable training, as it decides which tokens’ gradients truly contribute to the update.
 
 ### Impact of clipping on gradients and token efficiency
 
-For $A_t > 0$, when $r_t > 1 + \epsilon$—i.e., the increase hits the cap—we apply clipping, and the gradient becomes zero. This effectively nullifies the token’s contribution to training. Similarly, for $A_t < 0$, if $r_t < 1 - \epsilon$—i.e., the decrease exceeds the cap—the clipping also sets the gradient to zero. A common misconception is that clipping uses a straight-through estimator to pass the gradient of the clipped value back to the unclipped value; in reality, this does not happen—the gradient before clipping is directly set to zero.
+For $A_t > 0$, when $r_t > 1 + \epsilon$—i.e., the increase hits the cap—we apply clipping, and the gradient becomes zero. This effectively nullifies the token’s contribution to training. Similarly, for $A_t &lt; 0$, if $r_t &lt; 1 - \epsilon$—i.e., the decrease exceeds the cap—the clipping also sets the gradient to zero. A common misconception is that clipping uses a straight-through estimator to pass the gradient of the clipped value back to the unclipped value; in reality, this does not happen—the gradient before clipping is directly set to zero.
 
 At this point, we have a relatively complete understanding of GRPO’s mechanism, strengths, and limitations. Next, we will see how DAPO, while preserving GRPO’s basic framework, introduces more fine-grained improvements to address efficiency and stability challenges.
 
@@ -80,7 +84,7 @@ $$
 $$
 
 $$
-\text{s.t.}, 0 < |\{o_i | \text{is_equivalent}(a, o_i)\}| < G
+\text{s.t.}, 0 &lt; |\{o_i | \text{is_equivalent}(a, o_i)\}| &lt; G
 $$
 
 ### Why does DAPO raise the upper bound $1+\epsilon_{\text{high}}$ while keeping $1-\epsilon_{\text{low}}$ fixed?
@@ -102,7 +106,7 @@ This means the number of effective gradient-contributing samples is far lower th
 To counter this, DAPO enforces an additional sampling rule: for each query, the set of sampled responses must not all have rewards of 0 or 1. If all samples are 0 or all are 1, additional samples are drawn until this condition is violated. This is expressed in the constraint:
 
 $$
-\text{s.t.}, 0 < |\{o_i | \text{is_equivalent}(a, o_i)\}| < G
+\text{s.t.}, 0 &lt; |\{o_i | \text{is_equivalent}(a, o_i)\}| &lt; G
 $$
 
 which ensures that for the same input, the sampled set contains both correct and incorrect answers.
@@ -148,7 +152,8 @@ With Clip-Higher, Dynamic Sampling, Token-Level Gradient Loss, and Overlong Rewa
 
 If DAPO can be seen as a “fine-tuning and refinement” within the GRPO framework, GSPO takes a more fundamental step: it changes the optimization granularity from token-level to sequence-level. The motivation behind this shift stems from the fact that, during training with MoE architectures, GRPO’s importance sampling introduces large variance and instability. The core idea of GSPO is to reduce reliance on per-token optimization during reward processing while placing more emphasis on the overall sequence outcome. Below, we introduce the main concepts behind GSPO.
 
-> **TL;DR:** Traditional algorithms such as PPO and GRPO typically optimize each token in the model’s output individually, giving some tokens higher weights and others lower. While this aims for fine-grained optimization, in long-text, large-model scenarios it can instead introduce noise and reward bias, causing the model to lose direction—or even collapse suddenly. The root of the problem is that we evaluate the model based on the full response, yet train it token-by-token, leading to a mismatch between the reward granularity and the optimization objective. GSPO aligns the reward and the optimization target by switching from per-token scoring to sequence-level optimization. This shift offers two main benefits:  
+> **TL;DR:** Traditional algorithms such as PPO and GRPO typically optimize each token in the model’s output individually, giving some tokens higher weights and others lower. While this aims for fine-grained optimization, in long-text, large-model scenarios it can instead introduce noise and reward bias, causing the model to lose direction—or even collapse suddenly. The root of the problem is that we evaluate the model based on the full response, yet train it token-by-token, leading to a mismatch between the reward granularity and the optimization objective. GSPO aligns the reward and the optimization target by switching from per-token scoring to sequence-level optimization. This shift offers two main benefits: 
+
 > 1. **Stability** – GSPO optimizes entire sequences, reducing the training noise from token-level fluctuations.  
 > 2. **Efficiency** – GSPO filters and retains only high-quality samples for optimization, accelerating convergence and improving results.  
 > In MoE architectures, the benefits are even greater: since only a small subset of expert modules is activated per inference, the routing path is dynamic and hard to control. Traditional methods often rely on **Routing Replay**—recording expert activations during inference and enforcing the same routing during training—to ensure consistency. While effective, this greatly increases engineering cost and limits performance. GSPO’s sequence-level logic naturally avoids the need for Routing Replay, making MoE training lighter and more stable. For the growing number of large MoE models, this is a valuable breakthrough. The QWen3 series, for example, has adopted GSPO. From PPO → GRPO → GSPO, we see that RL optimization objectives for LLMs should align closely with the nature of the task, while keeping the training logic simple, scalable, and deployable. Progress is often driven not by complex tricks, but by insights into the core problem.
@@ -185,7 +190,7 @@ $$
 $$
 
 $$
-s_i({\theta}) = \left( \frac{\pi_\theta(o_i|q)}{\pi_{\theta_{\text{old}}}(o_i|q)}}^{\frac{1}{|o_i|}} \right) = \text{exp}\left(\frac{1}{|o_i|}\sum_{t=1}^{|o_i|} \text{log} \frac{\pi_\theta(o_{i,t}|q,o_{i,<t})}{\pi_{\theta_{\text{old}}}(o_{i,t}|q,o_{i,<t})} \right)
+s_i({\theta}) = \left( \frac{\pi_\theta(o_i|q)}{\pi_{\theta_{\text{old}}}(o_i|q)}}^{\frac{1}{|o_i|}} \right) = \text{exp}\left(\frac{1}{|o_i|}\sum_{t=1}^{|o_i|} \text{log} \frac{\pi_\theta(o_{i,t}|q,o_{i,&lt;t})}{\pi_{\theta_{\text{old}}}(o_{i,t}|q,o_{i,&lt;t})} \right)
 $$
 
 > “If the reward is sequence-level, the importance ratio should also be sequence-level.”
@@ -214,7 +219,7 @@ which is no longer an unbiased importance sampling correction.
 GSPO normalizes in log space by $\frac{1}{|y_i|}$ and then exponentiates:
 
 $$
-s_i(\theta) = \exp\left( \frac{1}{|y_i|} \sum_{t=1}^{|y_i|} \log \frac{\pi_\theta(y_{i,t} \mid x, y_{i,<t})}{\pi_{\theta_{\text{old}}}(y_{i,t} \mid x, y_{i,<t})} \right)
+s_i(\theta) = \exp\left( \frac{1}{|y_i|} \sum_{t=1}^{|y_i|} \log \frac{\pi_\theta(y_{i,t} \mid x, y_{i,&lt;t})}{\pi_{\theta_{\text{old}}}(y_{i,t} \mid x, y_{i,&lt;t})} \right)
 $$
 
 This ensures consistent scaling of importance ratios across sequence lengths, avoiding extreme values from a few token probability shifts in long sequences. Staying in log space without exponentiation would make ratios length-sensitive, require clip range adjustment, and break compatibility with the KL regularization used in PPO/GRPO.
@@ -229,7 +234,7 @@ GSPO’s gradient:
 
 \begin{equation}
 \nabla_\theta J_{\text{GSPO}}(\theta) 
-= \mathbb{E} \left[ \frac{1}{G} \sum_{i=1}^G s_i(\theta) \, A_i \cdot \frac{1}{|o_i|} \sum_{t=1}^{|o_i|} \nabla_\theta \log \pi_\theta(o_{i,t} \mid q, o_{i,<t}) \right]
+= \mathbb{E} \left[ \frac{1}{G} \sum_{i=1}^G s_i(\theta) \, A_i \cdot \frac{1}{|o_i|} \sum_{t=1}^{|o_i|} \nabla_\theta \log \pi_\theta(o_{i,t} \mid q, o_{i,&lt;t}) \right]
 \end{equation}
 
 Here, all tokens in a response share the same weight $s_i(\theta) A_i / |o_i|$, ensuring intra-sequence gradient consistency.
@@ -238,7 +243,7 @@ GRPO’s gradient:
 
 $$
 \nabla_\theta J_{\text{GRPO}}(\theta) 
-= \mathbb{E} \left[ \frac{1}{G} \sum_{i=1}^G \frac{\hat{A}_i}{|y_i|} \sum_{t=1}^{|y_i|} w_{i,t}(\theta) \, \nabla_\theta \log \pi_\theta(y_{i,t} \mid x, y_{i,<t}) \right]
+= \mathbb{E} \left[ \frac{1}{G} \sum_{i=1}^G \frac{\hat{A}_i}{|y_i|} \sum_{t=1}^{|y_i|} w_{i,t}(\theta) \, \nabla_\theta \log \pi_\theta(y_{i,t} \mid x, y_{i,&lt;t}) \right]
 $$
 
 Here, weights $r_{i,t}(\theta) A_i / |o_i|$ vary by token position and context, leading to higher variance—especially in long sequences or MoE models.
