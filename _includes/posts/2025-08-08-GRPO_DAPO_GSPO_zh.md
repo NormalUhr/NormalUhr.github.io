@@ -2,6 +2,15 @@
 
 在大语言模型的强化学习阶段，PPO 曾经是主流方案，但其对 value model 的依赖在长文本和复杂任务中暴露出局限。GRPO 通过摆脱 value model，显著提升了可扩展性，但在效率和稳定性上仍有改进空间，于是有了 DAPO 对采样、clip、梯度计算等细节的精细优化。然而，在专家动态激活的 MoE 架构中，GRPO 框架下的 token-level 优化依旧难以稳定收敛，GSPO 则进一步将优化粒度提升到 sequence-level，从根本上缓解了高方差与结构性噪声的问题。本文将沿着这一演进路径，从 GRPO 出发，逐步讲清 DAPO 与 GSPO 背后的设计动机与实现思路。
 
+在下文中，你将了解到：
+
+1. 为什么 GRPO 能够摆脱 PPO 对 value model 的依赖，却依然在某些场景下会“崩溃”。
+2. DAPO 的 Clip-Higher 如何解决“好 token 涨幅受限”的隐性问题。
+3. Dynamic Sampling 怎样避免大量无效采样浪费计算资源。
+4. Token-Level Gradient Loss 如何让长回答不再稀释梯度信号。
+5. 在 MoE 架构下，为什么 GRPO 的 per-token 重要性采样会带来巨大方差。
+6. GSPO 如何用 sequence-level 优化替代 token-level 优化，从根本上提高稳定性与效率。
+
 ## 前情回顾：GRPO
 
 GRPO的训练目标函数是：
@@ -15,7 +24,7 @@ $$
 
 其中
 $$
-r_{i,t}(\theta) = \frac{\pi_{\theta}(o_{i,t}|q,o_{i,\textless t})}{\pi_{theta_{\text{old}}}(o_{i,t}|q,o_{i,\textless t})}
+r_{i,t}(\theta) = \frac{\pi_{\theta}(o_{i,t}|q,o_{i,<  t})}{\pi_{theta_{\text{old}}}(o_{i,t}|q,o_{i,<  t})}
 $$
 
 $$
@@ -46,9 +55,9 @@ $$
 
 ### $A_t$ 和 $r_t$ 的符号如何影响训练？
 
-情况分析：假如 $A_t > 0$ (动作比期望好)，那么我们本意是希望增加该动作的概率。假设我们clip时候的参数 $\epsilon$ 设置成 $0.2$，那么当 $r_t > 1.2$ 时，我们通过min和clip的操作会把这个值给确定在1.2，当 $r_t \textless  0.8$ 时，我们不会做任何clipping，因为有min操作。所以当优势为正时，增幅被限制。
+情况分析：假如 $A_t > 0$ (动作比期望好)，那么我们本意是希望增加该动作的概率。假设我们clip时候的参数 $\epsilon$ 设置成 $0.2$，那么当 $r_t > 1.2$ 时，我们通过min和clip的操作会把这个值给确定在1.2，当 $r_t <   0.8$ 时，我们不会做任何clipping，因为有min操作。所以当优势为正时，增幅被限制。
 
-反之，当 $A_t \textless  0$ 时，这个时候我们采样生成的sequence动作比期望是差的，那么我们应该见效该动作的概率。当 $r_t \textless  0.8$ 时，min 操作会限制 $r_t$ 进一步减小，所以会被限制到最小 $0.8A_t$，但是当 $t > 1.2$ 时，由于 `min` 操作，我们不会对其进行限制 （可以变成无穷大，带上负号就是无穷负）；即负优势动作的减幅被限制。
+反之，当 $A_t <   0$ 时，这个时候我们采样生成的sequence动作比期望是差的，那么我们应该见效该动作的概率。当 $r_t <   0.8$ 时，min 操作会限制 $r_t$ 进一步减小，所以会被限制到最小 $0.8A_t$，但是当 $t > 1.2$ 时，由于 `min` 操作，我们不会对其进行限制 （可以变成无穷大，带上负号就是无穷负）；即负优势动作的减幅被限制。
 
 $A_t$ 衡量“当前动作/轨迹下比平均状态好还是差”。如果 $A_t$ 是正值，那么我们就应当鼓励；如果 $A_t$ 是负值，那么就应该惩罚，在未来少出现。重要性采样的值 $r_t$ 表明新策略和旧策略在该动作上的概率比，如果大于1则表明新模型更倾向于选择这个动作；反之则表明新模型更少选这个动作。所以在 $A_t$ 和 $r_t$ 的正负四种组合中，我们只希望两种情况，即 $A_t$ 和 $r_t$ 同号：当 $A_t$ 大于 $0$ 时，我们希望新模型加强这个动作；当 $A_t$ 小于 $0$ 时，我们希望旧模型减少这个动作，即模型在修正错误。
 
@@ -56,7 +65,7 @@ $A_t$ 衡量“当前动作/轨迹下比平均状态好还是差”。如果 $A_
 
 ### clip 操作对梯度和 token 效率的影响
 
-对于 $A_t > 0$ 时，当 $r_t > 1 + \epsilon$，即涨幅达到了限制，我们会采用clip操作，这里梯度就变成了0，这里变相地把当前token对训练的影响给抹去了；类似的，当 A_t \textless  0 时，如果 r_t \textless  1 - \epsilon，即跌幅（修正）超过了限制，clip操作一样会使得当前token所带来的梯度变成0。这里有一个可能的误区就是，误以为clip会使用类似于straight-through的方法在back propagation的时候把clip后的值的gradient原封不动地copy到clip前的值，但实际上不会这样的，会直接让被clip前的gradient被置为0。
+对于 $A_t > 0$ 时，当 $r_t > 1 + \epsilon$，即涨幅达到了限制，我们会采用clip操作，这里梯度就变成了0，这里变相地把当前token对训练的影响给抹去了；类似的，当 A_t <   0 时，如果 r_t <   1 - \epsilon，即跌幅（修正）超过了限制，clip操作一样会使得当前token所带来的梯度变成0。这里有一个可能的误区就是，误以为clip会使用类似于straight-through的方法在back propagation的时候把clip后的值的gradient原封不动地copy到clip前的值，但实际上不会这样的，会直接让被clip前的gradient被置为0。
 
 到这里，我们对 GRPO 的机制、优势与局限有了相对完整的认识。接下来，我们看 DAPO 如何在保留 GRPO 基本框架的前提下，引入更细致的改进，缓解效率与稳定性问题。
 
@@ -73,7 +82,7 @@ $$
 $$
 
 $$
-\text{s.t.}, 0 \textless  |\{o_i | \text{is_equivalent}(a, o_i)\}| \textless  G
+\text{s.t.}, 0 <   |\{o_i | \text{is\_equivalent}(a, o_i)\}| <   G
 $$
 
 ### DAPO 为什么选择把 $1-\epsilon_{\text{low}}$ 和 $1+\epsilon_{\text{high}}$ 中的后者提高？这里的原因是什么？
@@ -86,7 +95,7 @@ Clip-Higher 解决的是“好 token 上涨受限”的问题，但它并未触�
 
 ### DAPO - Dynamic Sampling
 
-DAPO选择的第二个技术创新点被称为dynamical sampling。这个项技术的背景是来源于：假如一个query我们sample了10次，这10次每次都答得很好/或者很差，都取得了max reward/zero reward，这个时候由于GRPO的计算方法，导致这10次采样的advantage都是0，所以这些sample所带来的gradient就也都是0；这样做的一个后果就是，实际的有梯度的sample要远低于名义sample数，导致最后梯度汇集的时候没有收集到足够的信息，从而形成高方差，训练的不稳定性，以及sample的浪费。需要注意的是，这种现象是在训练初期；以及后期随着训练的进行在不断加强的，因为刚开始时模型效果很差，而训练越到后边模型效果越好，给出满分回答的几率就越大。因此，DAPO在采集样本时，额外做了一件事：保证每次采样出来的回答，reward不全是0或者1，如果采样出来的回答全是0或者1就继续采样，直到不满足为止。这也是损失函数中 $\text{s.t.}, 0 \textless  |\{o_i | \text{is_equivalent}(a, o_i)\}| \textless  G$ 的由来，它保证了针对同一个输入采样到的一组回答中，既有错误的也有正确的。
+DAPO选择的第二个技术创新点被称为dynamical sampling。这个项技术的背景是来源于：假如一个query我们sample了10次，这10次每次都答得很好/或者很差，都取得了max reward/zero reward，这个时候由于GRPO的计算方法，导致这10次采样的advantage都是0，所以这些sample所带来的gradient就也都是0；这样做的一个后果就是，实际的有梯度的sample要远低于名义sample数，导致最后梯度汇集的时候没有收集到足够的信息，从而形成高方差，训练的不稳定性，以及sample的浪费。需要注意的是，这种现象是在训练初期；以及后期随着训练的进行在不断加强的，因为刚开始时模型效果很差，而训练越到后边模型效果越好，给出满分回答的几率就越大。因此，DAPO在采集样本时，额外做了一件事：保证每次采样出来的回答，reward不全是0或者1，如果采样出来的回答全是0或者1就继续采样，直到不满足为止。这也是损失函数中 $\text{s.t.}, 0 <   |\{o_i | \text{is\_equivalent}(a, o_i)\}| <   G$ 的由来，它保证了针对同一个输入采样到的一组回答中，既有错误的也有正确的。
 
 除了采样多样性，GRPO 在长回答的训练中还有一个隐性缺陷：token 梯度的权重会随回答长度变长而被稀释。DAPO 的第三个改进正是 Token-Level Gradient Loss。
 
@@ -139,7 +148,7 @@ $$
 $$
 
 $$
-s_i({\theta}) = \left( \frac{\pi_\theta(o_i|q)}{\pi_{\theta_{\text{old}}(o_i|q)}}^{\frac{1}{|o_i|}} \right) = \text{exp}\left(\frac{1}{|o_i|}\sum_{t=1}^{|o_i|} \text{log} \frac{\pi_\theta(o_{i,t}|q,o_{i,\textless t})}{\pi_{\theta_{\text{old}}}(o_{i,t}|q,o_{i,\textless t})} \right)
+s_i({\theta}) = \left( \frac{\pi_\theta(o_i|q)}{\pi_{\theta_{\text{old}}(o_i|q)}}^{\frac{1}{|o_i|}} \right) = \text{exp}\left(\frac{1}{|o_i|}\sum_{t=1}^{|o_i|} \text{log} \frac{\pi_\theta(o_{i,t}|q,o_{i,< t})}{\pi_{\theta_{\text{old}}}(o_{i,t}|q,o_{i,< t})} \right)
 $$
 
 > “既然奖励是 sequence-level，那 importance ratio 也应该是sequence-level。”
@@ -167,7 +176,7 @@ $$
 GSPO 在对数空间进行 $\frac{1}{|y_i|}$ 归一化后再指数化：
 
 $$
-s_i(\theta) = \exp\left( \frac{1}{|y_i|} \sum_{t=1}^{|y_i|} \log \frac{\pi_\theta(y_{i,t} \mid x, y_{i,\textless t})}{\pi_{\theta_{\text{old}}}(y_{i,t} \mid x, y_{i,\textless t})} \right).
+s_i(\theta) = \exp\left( \frac{1}{|y_i|} \sum_{t=1}^{|y_i|} \log \frac{\pi_\theta(y_{i,t} \mid x, y_{i,<  t})}{\pi_{\theta_{\text{old}}}(y_{i,t} \mid x, y_{i,<  t})} \right).
 $$
 
 这样可以保证不同长度序列的重要性比值处于一致的数值范围，不会因为长序列中少数 token 概率变化而导致比值极端放大或缩小。若直接停留在对数空间，长度差异会导致尺度变化很大，clip 范围也需随之调整。同时，PPO 与 GRPO 都是在概率空间中定义重要性比值。若改用对数比值，则需重新推导目标函数，并会破坏与现有 KL 正则项的兼容性。
@@ -183,13 +192,13 @@ $$
 如果忽略掉clip机制，那么二者梯度本质上的区别在于，是否要对一个回复里边的不同token，他们的梯度做加权平均。GRPO是会对一个回复里边的不同token根据他们各自的重要性权重做加权，但是GSPO对一整个句子做相同importance ratio的放缩。具体而言，GSPO的梯度为：
 \begin{equation}
 \nabla_\theta J_{\text{GSPO}}(\theta) 
-= \mathbb{E} \left[ \frac{1}{G} \sum_{i=1}^G s_i(\theta) \, A_i \cdot \frac{1}{|o_i|} \sum_{t=1}^{|o_i|} \nabla_\theta \log \pi_\theta(o_{i,t} \mid q, o_{i,\textless t}) \right].
+= \mathbb{E} \left[ \frac{1}{G} \sum_{i=1}^G s_i(\theta) \, A_i \cdot \frac{1}{|o_i|} \sum_{t=1}^{|o_i|} \nabla_\theta \log \pi_\theta(o_{i,t} \mid q, o_{i,<  t}) \right].
 \end{equation}
 
 可以看出，GSPO 对同一条回复中的所有 token 赋予相同的权重 $s_i(\theta) {A}_i / |o_i|$，从而保证了序列内部梯度权重的一致性。相比之下，GRPO 的梯度为：
 $$
 \nabla_\theta J_{\text{GRPO}}(\theta) 
-= \mathbb{E} \left[ \frac{1}{G} \sum_{i=1}^G \frac{\hat{A}_i}{|y_i|} \sum_{t=1}^{|y_i|} w_{i,t}(\theta) \, \nabla_\theta \log \pi_\theta(y_{i,t} \mid x, y_{i,\textless t}) \right].
+= \mathbb{E} \left[ \frac{1}{G} \sum_{i=1}^G \frac{\hat{A}_i}{|y_i|} \sum_{t=1}^{|y_i|} w_{i,t}(\theta) \, \nabla_\theta \log \pi_\theta(y_{i,t} \mid x, y_{i,<  t}) \right].
 $$
 可以看出，GRPO 在同一条回复的不同 token 上采用不同的权重 $r_{i,t}(\theta) A_i / |o_i|$，这些权重会随 token 位置和上下文变化而波动，且可能出现较大方差，尤其在长序列或 MoE 模型中更为严重。
 
