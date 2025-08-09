@@ -1,7 +1,7 @@
 ---
 layout:     post_lang
-title:      "One Article from GRPO to DAPO and GSPO: What, Why and How [En/中]"
-subtitle:   "一篇文章从GRPO走向DAPO和GSPO"
+title:      "From GRPO to DAPO and GSPO: What, Why and How [En/中]"
+subtitle:   "GRPO的进化之路：从 GRPO 走向 DAPO 和 GSPO"
 date:       2025-08-08
 author:     "Yihua Zhang"
 header-img: "img/in-post/2025-08-08-GRPO_DAPO_GSPO/bg.jpg"
