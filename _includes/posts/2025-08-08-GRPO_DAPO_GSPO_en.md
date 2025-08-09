@@ -221,10 +221,10 @@ $$
 
 which is no longer an unbiased importance sampling correction.
 
-GSPO normalizes in log space by $\frac{1}{\|y_i\|}$ and then exponentiates:
+GSPO normalizes in log space by $\frac{1}{\|o_i\|}$ and then exponentiates:
 
 $$
-s_i(\theta) = \exp\left( \frac{1}{|y_i|} \sum_{t=1}^{|y_i|} \log \frac{\pi_\theta(y_{i,t} \mid x, y_{i,< t})}{\pi_{\theta_{\text{old}}}(y_{i,t} \mid x, y_{i,< t})} \right)
+s_i(\theta) = \exp\left( \frac{1}{|o_i|} \sum_{t=1}^{|o_i|} \log \frac{\pi_\theta(o_{i,t} \mid q, o_{i,< t})}{\pi_{\theta_{\text{old}}}(o_{i,t} \mid q, o_{i,< t})} \right)
 $$
 
 This ensures consistent scaling of importance ratios across sequence lengths, avoiding extreme values from a few token probability shifts in long sequences. Staying in log space without exponentiation would make ratios length-sensitive, require clip range adjustment, and break compatibility with the KL regularization used in PPO/GRPO.
@@ -248,7 +248,7 @@ GRPO’s gradient:
 
 $$
 \nabla_\theta J_{\text{GRPO}}(\theta) 
-= \mathbb{E} \left[ \frac{1}{G} \sum_{i=1}^G \frac{\hat{A}_i}{|y_i|} \sum_{t=1}^{|y_i|} w_{i,t}(\theta) \, \nabla_\theta \log \pi_\theta(y_{i,t} \mid x, y_{i,< t}) \right]
+= \mathbb{E} \left[ \frac{1}{G} \sum_{i=1}^G \frac{\hat{A}_i}{|o_i|} \sum_{t=1}^{|o_i|} r_{i,t}(\theta) \, \nabla_\theta \log \pi_\theta(o_{i,t} \mid q, o_{i,< t}) \right]
 $$
 
 Here, weights $r_{i,t}(\theta) A_i / \|o_i\|$ vary by token position and context, leading to higher variance, especially in long sequences or MoE models.
