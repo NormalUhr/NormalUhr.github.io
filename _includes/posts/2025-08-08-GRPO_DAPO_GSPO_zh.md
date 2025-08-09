@@ -219,18 +219,15 @@ $$
 = \mathbb{E} \left[ \frac{1}{G} \sum_{i=1}^G s_i(\theta) \, A_i \cdot \frac{1}{|o_i|} \sum_{t=1}^{|o_i|} \nabla_\theta \log \pi_\theta(o_{i,t} \mid q, o_{i,<  t}) \right].
 \end{equation}
 
-可以看出，GSPO 对同一条回复中的所有 token 赋予相同的权重 $s_i(\theta) {A}_i / |o_i|$，从而保证了序列内部梯度权重的一致性。相比之下，GRPO 的梯度为：
+可以看出，GSPO 对同一条回复中的所有 token 赋予相同的权重 $s_i(\theta) {A}_i / \|o_i\|$，从而保证了序列内部梯度权重的一致性。相比之下，GRPO 的梯度为：
+
 $$
 \nabla_\theta J_{\text{GRPO}}(\theta) 
 = \mathbb{E} \left[ \frac{1}{G} \sum_{i=1}^G \frac{\hat{A}_i}{|y_i|} \sum_{t=1}^{|y_i|} w_{i,t}(\theta) \, \nabla_\theta \log \pi_\theta(y_{i,t} \mid x, y_{i,<  t}) \right].
 $$
+
 可以看出，GRPO 在同一条回复的不同 token 上采用不同的权重 $r_{i,t}(\theta) A_i / \|o_i\|$，这些权重会随 token 位置和上下文变化而波动，且可能出现较大方差，尤其在长序列或 MoE 模型中更为严重。
 
-
-另外一个区别在于，GRPO原本的重要性采样权重对clip范围的影响。对于大于零的advantage的样本，GRPO允许的范围是零到一点几，但是对于advantage小于0的样本，clip的数值范围是零点几到正无穷，这是个很大的波动范围。当序列变长的时候，这个时候所携带的噪声是会不断积累的。这也是MoE模型在用GRPO训练时候崩溃的原因之一。
-
-reward监控指标对于模型学偏这件事情是有一定滞后性的，就是模型学偏了一段时间以后，指标上才会有反馈。从实验结果上来看，GSPO实际用于训练的token比GRPO少很多（由于clipping），但同时达到了更高的训练效率。
-
-GSPO-Token：给一个sequence的不同片段分配不同的重要性权重，为了能够进行更细粒度得调整每个token的权重，这里就有了GSPO-Token的变体。其实是变化了一下GRPO的重要性权重的公式。对sequence-level的重要性权重取了一个截断梯度的数值， 
+另外一个区别在于 GRPO 原本的重要性采样权重对 clip 范围的影响。对于大于零的advantage的样本，GRPO 允许的范围是零到一点几，但是对于 advantage 小于 0 的样本，clip 的数值范围是零点几到正无穷，这是个很大的波动范围。当序列变长的时候，这个时候所携带的噪声是会不断积累的。这也是MoE模型在用GRPO训练时候崩溃的原因之一。而 Reward 监控指标对于模型学偏这件事情是有一定滞后性的，就是模型学偏了一段时间以后，指标上才会有反馈。从实验结果上来看，GSPO实际用于训练的token比GRPO少很多（由于clipping），但同时达到了更高的训练效率。
 
 总的来说，GSPO 在梯度计算上实现了序列内部权重的一致性，减少了 token 间的波动方差，尤其适合在长序列和 MoE 结构下进行稳定训练。它的出现，标志着从 PPO → GRPO → GSPO 的演化路线，从依赖 value model 的 token-level 优化，走向了直接面向任务性质的 sequence-level 优化。

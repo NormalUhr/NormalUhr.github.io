@@ -221,7 +221,7 @@ $$
 
 which is no longer an unbiased importance sampling correction.
 
-GSPO normalizes in log space by $\frac{1}{|y_i|}$ and then exponentiates:
+GSPO normalizes in log space by $\frac{1}{\|y_i\|}$ and then exponentiates:
 
 $$
 s_i(\theta) = \exp\left( \frac{1}{|y_i|} \sum_{t=1}^{|y_i|} \log \frac{\pi_\theta(y_{i,t} \mid x, y_{i,< t})}{\pi_{\theta_{\text{old}}}(y_{i,t} \mid x, y_{i,< t})} \right)
@@ -242,7 +242,7 @@ GSPO’s gradient:
 = \mathbb{E} \left[ \frac{1}{G} \sum_{i=1}^G s_i(\theta) \, A_i \cdot \frac{1}{|o_i|} \sum_{t=1}^{|o_i|} \nabla_\theta \log \pi_\theta(o_{i,t} \mid q, o_{i,< t}) \right]
 \end{equation}
 
-Here, all tokens in a response share the same weight $s_i(\theta) A_i / |o_i|$, ensuring intra-sequence gradient consistency.
+Here, all tokens in a response share the same weight $s_i(\theta) A_i / \|o_i\|$, ensuring intra-sequence gradient consistency.
 
 GRPO’s gradient:
 
@@ -251,13 +251,11 @@ $$
 = \mathbb{E} \left[ \frac{1}{G} \sum_{i=1}^G \frac{\hat{A}_i}{|y_i|} \sum_{t=1}^{|y_i|} w_{i,t}(\theta) \, \nabla_\theta \log \pi_\theta(y_{i,t} \mid x, y_{i,< t}) \right]
 $$
 
-Here, weights $r_{i,t}(\theta) A_i / |o_i|$ vary by token position and context, leading to higher variance, especially in long sequences or MoE models.
+Here, weights $r_{i,t}(\theta) A_i / \|o_i\|$ vary by token position and context, leading to higher variance, especially in long sequences or MoE models.
 
 Another difference is how clipping interacts with these ratios. For positive-advantage samples, GRPO’s ratio range is roughly [0, ~1.x]; for negative-advantage samples, it can be [~0.x, ∞), a much wider range. Over long sequences, noise from this asymmetry can accumulate, contributing to MoE instability under GRPO.
 
 Reward metrics also lag in detecting model drift, by the time the issue appears, the model may have diverged for a while. Experiments show GSPO trains with fewer effective tokens (due to more aggressive clipping) yet achieves higher training efficiency.
-
-**GSPO-Token**: A variant that assigns different importance ratios to different sequence segments for finer-grained token adjustment. It modifies GRPO’s ratio formula by applying a truncated-gradient value to the sequence-level ratio.
 
 ---
 
