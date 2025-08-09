@@ -82,10 +82,8 @@ $A_t$ 衡量当前动作或轨迹相对于平均水平的优劣：$A_t>0$ 时应
 DAPO 的出发点非常直接：在实际训练中，GRPO 往往因 clip 范围设置不合理、采样冗余以及长序列梯度被稀释等问题，导致大量训练信号被浪费。针对这些问题，DAPO 逐一提出改进，形成了四个核心优化点。
 
 $$
-\begin{aligned}
 \mathcal{J}_{DAPO}(\theta) = \mathbb{E}_{(q,a) \sim P(Q),\ \{o_{i}\}_{i = 1}^{G} \sim \pi_{\theta_{\text{old}}}(O | q)}\Bigg[\frac{1}{\sum_{i=1}^G |o_i|} \sum_{i = 1}^{G} \sum_{t=1}^{|o_i|} \min \Bigg(r_{i,t}(\theta) A_{i},\ 
 \text{clip}\Big(r_{i,t}(\theta), 1-\varepsilon_{\text{low}}, 1+\varepsilon_{\text{high}}\Big) A_{i}\Bigg) \Bigg]
-\end{aligned}
 $$
 
 $$
@@ -215,10 +213,10 @@ $$
 
 这已经不再是无偏的重要性采样修正。
 
-GSPO 在对数空间进行 $\frac{1}{|y_i|}$ 归一化后再指数化：
+GSPO 在对数空间进行 $\frac{1}{\|o_i\|}$ 归一化后再指数化：
 
 $$
-s_i(\theta) = \exp\left( \frac{1}{|y_i|} \sum_{t=1}^{|y_i|} \log \frac{\pi_\theta(y_{i,t} \mid x, y_{i,<  t})}{\pi_{\theta_{\text{old}}}(y_{i,t} \mid x, y_{i,<  t})} \right).
+s_i(\theta) = \exp\left( \frac{1}{|o_i|} \sum_{t=1}^{|o_i|} \log \frac{\pi_\theta(o_{i,t} \mid q, o_{i,< t})}{\pi_{\theta_{\text{old}}}(o_{i,t} \mid q, o_{i,< t})} \right).
 $$
 
 这样可以保证不同长度序列的重要性比值处于一致的数值范围，不会因为长序列中少数 token 概率变化而导致比值极端放大或缩小。若直接停留在对数空间，长度差异会导致尺度变化很大，clip 范围也需随之调整。同时，PPO 与 GRPO 都是在概率空间中定义重要性比值。若改用对数比值，则需重新推导目标函数，并会破坏与现有 KL 正则项的兼容性。
@@ -241,7 +239,7 @@ $$
 
 $$
 \nabla_\theta J_{\text{GRPO}}(\theta) 
-= \mathbb{E} \left[ \frac{1}{G} \sum_{i=1}^G \frac{\hat{A}_i}{|y_i|} \sum_{t=1}^{|y_i|} w_{i,t}(\theta) \, \nabla_\theta \log \pi_\theta(y_{i,t} \mid x, y_{i,<  t}) \right].
+= \mathbb{E} \left[ \frac{1}{G} \sum_{i=1}^G \frac{\hat{A}_i}{|o_i|} \sum_{t=1}^{|o_i|} r_{i,t}(\theta) \, \nabla_\theta \log \pi_\theta(o_{i,t} \mid q, o_{i,< t}) \right].
 $$
 
 可以看出，GRPO 在同一条回复的不同 token 上采用不同的权重 $r_{i,t}(\theta) A_i / \|o_i\|$，这些权重会随 token 位置和上下文变化而波动，且可能出现较大方差，尤其在长序列或 MoE 模型中更为严重。
