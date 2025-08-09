@@ -1,4 +1,4 @@
-# From GRPO to DAPO and GSPO
+# From GRPO to DAPO and GSPO: What, Why and How?
 
 
 In the reinforcement learning stage of large language models, PPO was once the mainstream approach. However, its reliance on the value model reveals limitations when handling long text outputs and complex tasks. GRPO removes the dependency on the value model, significantly improving scalability, but still leaves room for optimization in efficiency and stability. This motivated DAPO, which refines details such as sampling, clipping, and gradient calculation. Yet, in MoE architectures with dynamically activated experts, token-level optimization under the GRPO framework still struggles to converge stably. GSPO takes this a step further by shifting the optimization granularity to the sequence level, fundamentally reducing high variance and structural noise. This article follows this evolutionary path: starting from GRPO and gradually unpacking the design motivations and implementation details behind DAPO and GSPO.
@@ -89,7 +89,7 @@ $$
 $$
 
 $$
-\text{s.t.}, 0 < |\{o_i | \text{is\_equivalent} (a, o_i)\}| < G
+\text{s.t.}, 0 < |\{o_i | \text{is_equivalent} (a, o_i)\}| < G
 $$
 
 ### Why does DAPO raise the upper bound $1+\epsilon_{\text{high}}$ while keeping $1-\epsilon_{\text{low}}$ fixed?
@@ -111,7 +111,7 @@ This means the number of effective gradient-contributing samples is far lower th
 To counter this, DAPO enforces an additional sampling rule: for each query, the set of sampled responses must not all have rewards of 0 or 1. If all samples are 0 or all are 1, additional samples are drawn until this condition is violated. This is expressed in the constraint:
 
 $$
-\text{s.t.}, 0 < |\{o_i | \text{is\_equivalent} (a, o_i)\}| < G
+\text{s.t.}, 0 < |\{o_i | \text{is_equivalent} (a, o_i)\}| < G
 $$
 
 which ensures that for the same input, the sampled set contains both correct and incorrect answers.
@@ -202,7 +202,7 @@ $$
 
 From the above, GSPO replaces GRPO’s per-token ratio $r_{i,t}(\theta)$ with a sequence-level ratio $s_i(\theta)$, which is no longer tied to the step index $t$. The idea is to drop the token-level objective in favor of sequence-level scaling. This naturally leads to GSPO’s new optimization target: replacing token-level importance ratios with sequence-level ones.  
 
-Sequence-level ratios are **length-normalized** to reduce variance and keep values on a consistent scale. Without normalization, answers of different lengths would make the ratio highly length-sensitive. Since all tokens from the same sequence share the same importance ratio, clipping (if triggered) will clip the **entire sequence**, not just certain tokens. The normalization factor $\frac{1}{|o_i|}$ also prevents a few volatile tokens in a long sequence from causing the ratio to explode.
+Sequence-level ratios are **length-normalized** to reduce variance and keep values on a consistent scale. Without normalization, answers of different lengths would make the ratio highly length-sensitive. Since all tokens from the same sequence share the same importance ratio, clipping (if triggered) will clip the **entire sequence**, not just certain tokens. The normalization factor $\frac{1}{\|o_i\|}$ also prevents a few volatile tokens in a long sequence from causing the ratio to explode.
 
 **Why exponentiate instead of using log-likelihood differences directly?**
 
