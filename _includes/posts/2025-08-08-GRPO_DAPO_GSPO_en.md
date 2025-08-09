@@ -237,10 +237,10 @@ Without clipping, the distinction is whether to weight tokens differently within
 
 GSPO’s gradient:
 
-\begin{equation}
+$$
 \nabla_\theta J_{\text{GSPO}}(\theta) 
 = \mathbb{E} \left[ \frac{1}{G} \sum_{i=1}^G s_i(\theta) \, A_i \cdot \frac{1}{|o_i|} \sum_{t=1}^{|o_i|} \nabla_\theta \log \pi_\theta(o_{i,t} \mid q, o_{i,< t}) \right]
-\end{equation}
+$$
 
 Here, all tokens in a response share the same weight $s_i(\theta) A_i / \|o_i\|$, ensuring intra-sequence gradient consistency.
 
