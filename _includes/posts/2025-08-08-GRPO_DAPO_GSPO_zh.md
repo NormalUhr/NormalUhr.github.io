@@ -1,4 +1,4 @@
-# GRPO的进化之路：从 GRPO 走向 DAPO 和 GSPO
+# GRPO 的进化之路：从 GRPO 走向 DAPO 和 GSPO
 
 在大语言模型的强化学习阶段，PPO 曾经是主流方案，但其对 value model 的依赖在长文本和复杂任务中暴露出局限。GRPO 通过摆脱 value model，显著提升了可扩展性，但在效率和稳定性上仍有改进空间，于是有了 DAPO 对采样、clip、梯度计算等细节的精细优化。然而，在专家动态激活的 MoE 架构中，GRPO 框架下的 token-level 优化依旧难以稳定收敛，GSPO 则进一步将优化粒度提升到 sequence-level，从根本上缓解了高方差与结构性噪声的问题。本文将沿着这一演进路径，从 GRPO 出发，逐步讲清 DAPO 与 GSPO 背后的设计动机与实现思路。
 
