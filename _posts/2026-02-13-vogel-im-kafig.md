@@ -53,37 +53,37 @@ tags:
 
 <div style="max-width: 800px; margin: 20px auto; border: 2px solid #666; border-radius: 8px; padding: 15px; background-color: #ffffff; height: 150px; overflow-y: auto; resize: vertical;">
 
-**Der innere Reichtum der Leute ist**
+Der innere Reichtum der Leute ist
 人们内心的丰盈，<br>
 
-**wie Licht bunt, durch Farbglas hereinzuscheinen**
+wie Licht bunt, durch Farbglas hereinzuscheinen
 宛如透过彩绘玻璃照进来的绚丽光芒。<br>
 
-**Das angenehme tägliche Leben ist**
+Das angenehme tägliche Leben ist
 那惬意的日常生活，<br>
 
-**wie ein warmes Kerzenlicht**
+wie ein warmes Kerzenlicht
 就像是一盏温暖的烛光。<br>
 
-**Die sehr weite grüne Erde**
+Die sehr weite grüne Erde
 辽阔的翠绿大地，<br>
 
-**Das reiche schöne Wasser**
+Das reiche schöne Wasser
 富饶的秀美水源，<br>
 
-**Die grandiose Natur sorgt immernoch für ihre Kinder**
+Die grandiose Natur sorgt immernoch für ihre Kinder
 宏伟的大自然依然在以此哺育她的孩子们。<br>
 
-**Hoffentlich können wir es irgendwann verstehen**
+Hoffentlich können wir es irgendwann verstehen
 但愿终有一天我们能明白<br>
 
-**Wir gehen zur anderen Seite des Horizontes**
+Wir gehen zur anderen Seite des Horizontes
 我们正走向地平线的彼方。<br>
 
-**Hoffentlich können wir es irgendwann verstehen**
+Hoffentlich können wir es irgendwann verstehen
 但愿终有一天我们能明白<br>
 
-**Wir gehen festen Schrittes**
+Wir gehen festen Schrittes
 我们要迈着坚定的步伐前行。<br>
 
 </div>
@@ -92,40 +92,40 @@ tags:
 
 <div style="max-width: 800px; margin: 20px auto; border: 2px solid #666; border-radius: 8px; padding: 15px; background-color: #ffffff; height: 150px; overflow-y: auto; resize: vertical;">
 
-**Alles Lebendige stirbt eines Tages**
+Alles Lebendige stirbt eines Tages
 万物生灵终有一死<br>
 
-**Ob wir zum Sterben bereit sind oder nicht,**
+Ob wir zum Sterben bereit sind oder nicht,
 无论我们就死得觉悟与否<br>
 
-**der Tag kommt sicher**
+der Tag kommt sicher
 那一刻终将到来。<br>
 
-**Ist das der Engel, der vom dämmernden Himmel hinunter flog?**
+Ist das der Engel, der vom dämmernden Himmel hinunter flog?
 那是从微光天际飞下的天使吗？<br>
 
-**Ist das der Teufel, der aus der Felsenspalte heraus kroch?**
+Ist das der Teufel, der aus der Felsenspalte heraus kroch?
 还是从岩缝深处爬出的恶魔？<br>
 
-**Tränen, Ärger, Mitleid, Grausamkeit.**
+Tränen, Ärger, Mitleid, Grausamkeit.
 泪水、愤怒、怜悯、残酷。<br>
 
-**Frieden, Chaos, Glaube, Verrat.**
+Frieden, Chaos, Glaube, Verrat.
 和平、混沌、信仰、背叛。<br>
 
-**Wir werden gegen unser Schicksal ankämpfen**
+Wir werden gegen unser Schicksal ankämpfen
 我们将与我们的命运抗争，<br>
 
-**Wir dürfen uns nicht in unser Schicksal ergeben**
+Wir dürfen uns nicht in unser Schicksal ergeben
 我们绝不能向命运屈服。<br>
 
-**Mit Trauer und Entscheidung im Herzen**
+Mit Trauer und Entscheidung im Herzen
 怀着心中的悲伤与决意<br>
 
-**zeigen wir den Willen weiterzugehen**
+zeigen wir den Willen weiterzugehen
 我们展现出继续前行的意志。<br>
 
-**Niemand darf eigensinnig seines Lebens beraubt werden**
+Niemand darf eigensinnig seines Lebens beraubt werden
 任何人的生命都不该被肆意剥夺。<br>
 
 </div>
@@ -467,7 +467,7 @@ Do'-Si，这是一个小二度下行，而且是这个下行阶梯的第一步�
 </video>
 </div>
 
-这种阶梯式上行 Do-Re-Mi（第二轮）让人短暂地以为情况在好转，但紧随其后又是 La-Do'-Re'-Si-Do'-Si，下行半音Do'-Si 不断出现，这个段落的旋律运动是"两步前进，一步后退"：你往上走了两个音（Do-Re-Mi），但中间每一步都伴随着下行半音（Fa-Mi）的拖累。就像在泥泞中行走，每走一步，脚都会滑回去半步。注意这段上行中 Si-Do' 的小二度上行又回来了，但这次它不再是温暖的"回家"，而是痛苦的攀爬，因为整个音乐的情绪语境已经被第二 Motif 彻底改染了。同样的音程，在不同的上下文中传达完全不同的情感。这就是语境（context）对音程意义的决定性作用，在这里，半音不会自己说话，是周围的音符告诉它应该说什么。后半段 Fa Mi~ | Sol Sol~ | Fa Mi~ | Mi Fa Fa：Fa-Mi 是下行半音反复出现。这个Fa-Mi，正好是第一主题中 Mi-Fa（上行半音，代表希望）的镜像。同一个半音关系（Mi与Fa之间），在第一主题中向上走代表希望，在第二主题中向下走代表坠落。
+这种阶梯式上行 Do-Re-Mi（第二轮）让人短暂地以为情况在好转，但紧随其后又是 La-Do'-Re'-Si-Do'-Si，下行半音Do'-Si 不断出现，这个段落的旋律运动是"两步前进，一步后退"：你往上走了两个音（Do-Re-Mi），但中间每一步都伴随着下行半音（Fa-Mi）的拖累。就像在泥泞中行走，每走一步，脚都会滑回去半步。注意这段上行中 Si-Do' 的小二度上行又回来了，但这次它不再是温暖的"回家"，而是痛苦的攀爬，因为整个音乐的情绪语境已经被第二 Motif 彻底改染了。同样的音程，在不同的上下文中传达完全不同的情感。这就是语境（context）对音程意义的决定性作用，在这里，半音不会自己说话，是周围的音符告诉它应该说什么。后半段 Fa Mi~ Sol Sol~ Fa Mi~ Mi Fa Fa：Fa-Mi 是下行半音反复出现。这个Fa-Mi，正好是第一主题中 Mi-Fa（上行半音，代表希望）的镜像。同一个半音关系（Mi与Fa之间），在第一主题中向上走代表希望，在第二主题中向下走代表坠落。
 
 ### 剧集片段：Episode 7
 
@@ -572,7 +572,7 @@ Mi'-升Re'-Mi'-升Sol'-La'
 
 **两个篇章中主题的对偶**
 
-现在，让我们把两个主题并列起来，看看泽野弘之最精妙的设计。第一段有一个核心 Motif：Fa-Mi-Fa-Sol-Sol...；第二主题有一个对应的动机：Mi-升Re-Mi-升Sol-La...。它们是精确的平行结构，包括同样的节奏（短-短-短-短|长），同样的轮廓（先下后上），但泽野弘之做了三处关键修改：
+现在，让我们把两个主题并列起来，看看泽野弘之最精妙的设计。第一段有一个核心 Motif：Fa-Mi-Fa-Sol-Sol...；第二主题有一个对应的动机：Mi-升Re-Mi-升Sol-La...。它们是精确的平行结构，包括同样的节奏（短-短-短-短-长），同样的轮廓（先下后上），但泽野弘之做了三处关键修改：
 
 * 第一处，从自然半音到变化半音。Fa-Mi是C大调中自然存在的半音，耳朵习惯它，接受它；而Mi-升Re不属于C大调，它是被硬生生"扭曲"出来的色彩音。同样是下行半音，后者听起来更尖锐、更刺痛，因为它打破了调性的安全感。
 
@@ -661,7 +661,7 @@ Mi'-升Re'-Mi'-升Sol'-La'
 在下边《阿兰胡埃斯协奏曲》第二乐章前奏的乐谱中，红色箭头代表上/下行小二度，绿色箭头代表乐句解决在B小调的五级（属音）和一级（主音），在半音上下行后解决到稳定音让人安心，给人希望。
 
 <div align="center">
-<img src="./videos/in-post/2026-02-13-vogel-im-kafig/clips/scores/digimon.png" width="70%" height="auto">
+<img src="./videos/in-post/2026-02-13-vogel-im-kafig/clips/scores/digimon.png" width="100%" height="auto">
 </div>
 
 
