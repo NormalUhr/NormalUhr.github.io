@@ -15,7 +15,7 @@ tags:
 
 <div align="center">
 <audio controls>
-  <source src="/videos/in-post/2026-02-13-vogel-im-kafig/clips/audios/Vogel Im Kafig.mp3" type="audio/mpeg">
+  <source src="./videos/in-post/2026-02-13-vogel-im-kafig/clips/audios/Vogel Im Kafig.mp3" type="audio/mpeg">
   您的浏览器不支持音频播放。
 </audio>
 </div>
@@ -24,7 +24,7 @@ tags:
 
 <div align="center">
 <audio controls>
-  <source src="/videos/in-post/2026-02-13-vogel-im-kafig/clips/audios/Vogel im Käfig Choir Alto.mp3" type="audio/mpeg">
+  <source src="./videos/in-post/2026-02-13-vogel-im-kafig/clips/audios/Vogel im Käfig Choir Alto.mp3" type="audio/mpeg">
   您的浏览器不支持音频播放。
 </audio>
 </div>
@@ -37,7 +37,7 @@ tags:
 
 <div align="center">
 <video controls width="70%">
-  <source src=".//videos/in-post/2026-02-13-vogel-im-kafig/clips/scenes/ep01.mp4" type="video/mp4">
+  <source src="./videos/in-post/2026-02-13-vogel-im-kafig/clips/scenes/ep01.mp4" type="video/mp4">
 </video>
 </div>
 
@@ -45,88 +45,88 @@ tags:
 
 ### 歌词：光明与黑暗的预言
 
-在进入音乐分析之前，先让我们读一读这首歌的歌词。用德语写就的这些文字，已经预示了音乐将要展现的双重世界。
+在进入音乐分析之前，先让我们读一读这首歌的歌词。用德语写下的这些文字，已经预示了音乐将要展现的双重世界。
 
 <p style="text-align: center; color: #888; font-size: 0.9em; margin-top: 10px;">
 <em>提示：可以滚动查看完整歌词，也可以拖动窗口右下角调整大小</em>
 </p>
 
-<div style="max-width: 800px; margin: 20px auto; border: 2px solid #666; border-radius: 8px; padding: 15px; background-color: #000000; height: 150px; overflow-y: auto; resize: vertical;">
+<div style="max-width: 800px; margin: 20px auto; border: 2px solid #666; border-radius: 8px; padding: 15px; background-color: #ffffff; height: 150px; overflow-y: auto; resize: vertical;">
 
 **Der innere Reichtum der Leute ist**
-人们内心的丰盈，
+人们内心的丰盈，<br>
 
 **wie Licht bunt, durch Farbglas hereinzuscheinen**
-宛如透过彩绘玻璃照进来的绚丽光芒。
+宛如透过彩绘玻璃照进来的绚丽光芒。<br>
 
 **Das angenehme tägliche Leben ist**
-那惬意的日常生活，
+那惬意的日常生活，<br>
 
 **wie ein warmes Kerzenlicht**
-就像是一盏温暖的烛光。
+就像是一盏温暖的烛光。<br>
 
 **Die sehr weite grüne Erde**
-辽阔的翠绿大地，
+辽阔的翠绿大地，<br>
 
 **Das reiche schöne Wasser**
-富饶的秀美水源，
+富饶的秀美水源，<br>
 
 **Die grandiose Natur sorgt immernoch für ihre Kinder**
-宏伟的大自然依然在以此哺育她的孩子们。
+宏伟的大自然依然在以此哺育她的孩子们。<br>
 
 **Hoffentlich können wir es irgendwann verstehen**
-但愿终有一天我们能明白
+但愿终有一天我们能明白<br>
 
 **Wir gehen zur anderen Seite des Horizontes**
-我们正走向地平线的彼方。
+我们正走向地平线的彼方。<br>
 
 **Hoffentlich können wir es irgendwann verstehen**
-但愿终有一天我们能明白
+但愿终有一天我们能明白<br>
 
 **Wir gehen festen Schrittes**
-我们要迈着坚定的步伐前行。
+我们要迈着坚定的步伐前行。<br>
 
 </div>
 
 这是第一部分，充满了光、温暖、大地、希望。就像墙内看似和平的生活，就像加入调查兵团时、为人类献出心脏的誓言。然后，音乐和歌词一起坠入深渊：
 
-<div style="max-width: 800px; margin: 20px auto; border: 2px solid #666; border-radius: 8px; padding: 15px; background-color: #000000; height: 150px; overflow-y: auto; resize: vertical;">
+<div style="max-width: 800px; margin: 20px auto; border: 2px solid #666; border-radius: 8px; padding: 15px; background-color: #ffffff; height: 150px; overflow-y: auto; resize: vertical;">
 
 **Alles Lebendige stirbt eines Tages**
-万物生灵终有一死
+万物生灵终有一死<br>
 
 **Ob wir zum Sterben bereit sind oder nicht,**
-无论我们就死得觉悟与否
+无论我们就死得觉悟与否<br>
 
 **der Tag kommt sicher**
-那一刻终将到来。
+那一刻终将到来。<br>
 
 **Ist das der Engel, der vom dämmernden Himmel hinunter flog?**
-那是从微光天际飞下的天使吗？
+那是从微光天际飞下的天使吗？<br>
 
 **Ist das der Teufel, der aus der Felsenspalte heraus kroch?**
-还是从岩缝深处爬出的恶魔？
+还是从岩缝深处爬出的恶魔？<br>
 
 **Tränen, Ärger, Mitleid, Grausamkeit.**
-泪水、愤怒、怜悯、残酷。
+泪水、愤怒、怜悯、残酷。<br>
 
 **Frieden, Chaos, Glaube, Verrat.**
-和平、混沌、信仰、背叛。
+和平、混沌、信仰、背叛。<br>
 
 **Wir werden gegen unser Schicksal ankämpfen**
-我们将与我们的命运抗争，
+我们将与我们的命运抗争，<br>
 
 **Wir dürfen uns nicht in unser Schicksal ergeben**
-我们绝不能向命运屈服。
+我们绝不能向命运屈服。<br>
 
 **Mit Trauer und Entscheidung im Herzen**
-怀着心中的悲伤与决意
+怀着心中的悲伤与决意<br>
 
 **zeigen wir den Willen weiterzugehen**
-我们展现出继续前行的意志。
+我们展现出继续前行的意志。<br>
 
 **Niemand darf eigensinnig seines Lebens beraubt werden**
-任何人的生命都不该被肆意剥夺。
+任何人的生命都不该被肆意剥夺。<br>
 
 </div>
 
@@ -144,7 +144,7 @@ tags:
 
 <div align="center">
 <video controls width="70%">
-  <source src="/videos/in-post/2026-02-13-vogel-im-kafig/clips/others/digimon.mp4" type="video/mp4">
+  <source src="./videos/in-post/2026-02-13-vogel-im-kafig/clips/others/digimon.mp4" type="video/mp4">
 </video>
 </div>
 
@@ -154,7 +154,7 @@ tags:
 
 <div align="center">
 <video controls width="70%">
-  <source src="/videos/in-post/2026-02-13-vogel-im-kafig/clips/others/taj_heaven.mp4" type="video/mp4">
+  <source src="./videos/in-post/2026-02-13-vogel-im-kafig/clips/others/taj_heaven.mp4" type="video/mp4">
 </video>
 </div>
 
@@ -162,7 +162,7 @@ tags:
 
 <div align="center">
 <video controls width="70%">
-  <source src="/videos/in-post/2026-02-13-vogel-im-kafig/clips/others/taj_hell.mp4" type="video/mp4">
+  <source src="./videos/in-post/2026-02-13-vogel-im-kafig/clips/others/taj_hell.mp4" type="video/mp4">
 </video>
 </div>
 
@@ -176,7 +176,7 @@ tags:
 
 <div align="center">
 <video controls width="70%">
-  <source src="/videos/in-post/2026-02-13-vogel-im-kafig/clips/audios/parts/part1.mp4" type="video/mp4">
+  <source src="./videos/in-post/2026-02-13-vogel-im-kafig/clips/audios/parts/part1.mp4" type="video/mp4">
 </video>
 </div>
 
@@ -190,7 +190,7 @@ tags:
 
 <div align="center">
 <video controls width="70%">
-  <source src="/videos/in-post/2026-02-13-vogel-im-kafig/clips/scenes/ep04.mp4" type="video/mp4">
+  <source src="./videos/in-post/2026-02-13-vogel-im-kafig/clips/scenes/ep04.mp4" type="video/mp4">
 </video>
 </div>
 
@@ -200,7 +200,7 @@ tags:
 
 <div align="center">
 <video controls width="70%">
-  <source src="/videos/in-post/2026-02-13-vogel-im-kafig/clips/audios/parts/part2.mp4" type="video/mp4">
+  <source src="./videos/in-post/2026-02-13-vogel-im-kafig/clips/audios/parts/part2.mp4" type="video/mp4">
 </video>
 </div>
 
@@ -214,7 +214,7 @@ tags:
 
 <div align="center">
 <video controls width="70%">
-  <source src="/videos/in-post/2026-02-13-vogel-im-kafig/clips/audios/parts/part2_sentence1.mp4" type="video/mp4">
+  <source src="./videos/in-post/2026-02-13-vogel-im-kafig/clips/audios/parts/part2_sentence1.mp4" type="video/mp4">
 </video>
 </div>
 
@@ -228,7 +228,7 @@ tags:
 
 <div align="center">
 <video controls width="70%">
-  <source src="/videos/in-post/2026-02-13-vogel-im-kafig/clips/audios/parts/part2_sentence2.mp4" type="video/mp4">
+  <source src="./videos/in-post/2026-02-13-vogel-im-kafig/clips/audios/parts/part2_sentence2.mp4" type="video/mp4">
 </video>
 </div>
 
@@ -242,7 +242,7 @@ tags:
 
 <div align="center">
 <video controls width="70%">
-  <source src="/videos/in-post/2026-02-13-vogel-im-kafig/clips/audios/parts/part2_sentence3.mp4" type="video/mp4">
+  <source src="./videos/in-post/2026-02-13-vogel-im-kafig/clips/audios/parts/part2_sentence3.mp4" type="video/mp4">
 </video>
 </div>
 
@@ -258,7 +258,7 @@ Fa - Mi（下行半音）- Fa（上行半音）- Sol - Sol
 
 <div align="center">
 <video controls width="70%">
-  <source src="/videos/in-post/2026-02-13-vogel-im-kafig/clips/audios/parts/part2_sentence4.mp4" type="video/mp4">
+  <source src="./videos/in-post/2026-02-13-vogel-im-kafig/clips/audios/parts/part2_sentence4.mp4" type="video/mp4">
 </video>
 </div>
 
@@ -274,7 +274,7 @@ Fa - Mi（下行半音）- Fa（上行半音）- Do' - Do'
 
 <div align="center">
 <video controls width="70%">
-  <source src="/videos/in-post/2026-02-13-vogel-im-kafig/clips/audios/parts/part2_sentence6.mp4" type="video/mp4">
+  <source src="./videos/in-post/2026-02-13-vogel-im-kafig/clips/audios/parts/part2_sentence6.mp4" type="video/mp4">
 </video>
 </div>
 
@@ -286,7 +286,7 @@ Si-Do'，Si-Do'，Si-Do'……导音解决，反复出现，在高音区，在�
 
 <div align="center">
 <video controls width="70%">
-  <source src="/videos/in-post/2026-02-13-vogel-im-kafig/clips/audios/parts/part2_sentence6_1.mp4" type="video/mp4">
+  <source src="./videos/in-post/2026-02-13-vogel-im-kafig/clips/audios/parts/part2_sentence6_1.mp4" type="video/mp4">
 </video>
 </div>
 
@@ -298,7 +298,7 @@ Si上行到Do'（解决），然后还继续到了Re'，再回到Do'。这个"�
 
 <div align="center">
 <video controls width="70%">
-  <source src=".//videos/in-post/2026-02-13-vogel-im-kafig/clips/scenes/ep12.mp4" type="video/mp4">
+  <source src="./videos/in-post/2026-02-13-vogel-im-kafig/clips/scenes/ep12.mp4" type="video/mp4">
 </video>
 </div>
 
@@ -321,7 +321,7 @@ Si上行到Do'（解决），然后还继续到了Re'，再回到Do'。这个"�
 
 <div align="center">
 <video controls width="70%">
-  <source src="/videos/in-post/2026-02-13-vogel-im-kafig/clips/audios/parts/part3.mp4" type="video/mp4">
+  <source src="./videos/in-post/2026-02-13-vogel-im-kafig/clips/audios/parts/part3.mp4" type="video/mp4">
 </video>
 </div>
 
@@ -337,7 +337,7 @@ Si - - -, Sol - La ~, La - - -, Si - - -, Sol - - - ~, Sol - - -
 
 <div align="center">
 <video controls width="70%">
-  <source src="/videos/in-post/2026-02-13-vogel-im-kafig/clips/audios/parts/part4.mp4" type="video/mp4">
+  <source src="./videos/in-post/2026-02-13-vogel-im-kafig/clips/audios/parts/part4.mp4" type="video/mp4">
 </video>
 </div>
 
@@ -347,7 +347,7 @@ Si - - -, Sol - La ~, La - - -, Si - - -, Sol - - - ~, Sol - - -
 
 <div align="center">
 <video controls width="70%">
-  <source src="/videos/in-post/2026-02-13-vogel-im-kafig/clips/audios/parts/part4_sentence1.mp4" type="video/mp4">
+  <source src="./videos/in-post/2026-02-13-vogel-im-kafig/clips/audios/parts/part4_sentence1.mp4" type="video/mp4">
 </video>
 </div>
 
@@ -359,7 +359,7 @@ Si - - -, Sol - La ~, La - - -, Si - - -, Sol - - - ~, Sol - - -
 
 <div align="center">
 <video controls width="70%">
-  <source src="/videos/in-post/2026-02-13-vogel-im-kafig/clips/scenes/ep21.mp4" type="video/mp4">
+  <source src="./videos/in-post/2026-02-13-vogel-im-kafig/clips/scenes/ep21.mp4" type="video/mp4">
 </video>
 </div>
 
@@ -377,7 +377,7 @@ Si - - -, Sol - La ~, La - - -, Si - - -, Sol - - - ~, Sol - - -
 
 <div align="center">
 <video controls width="70%">
-  <source src="/videos/in-post/2026-02-13-vogel-im-kafig/clips/audios/parts/part4_sentence2.mp4" type="video/mp4">
+  <source src="./videos/in-post/2026-02-13-vogel-im-kafig/clips/audios/parts/part4_sentence2.mp4" type="video/mp4">
 </video>
 </div>
 
@@ -391,7 +391,7 @@ Si - - -, Sol - La ~, La - - -, Si - - -, Sol - - - ~, Sol - - -
 
 <div align="center">
 <video controls width="70%">
-  <source src="/videos/in-post/2026-02-13-vogel-im-kafig/clips/audios/parts/part4_sentence3.mp4" type="video/mp4">
+  <source src="./videos/in-post/2026-02-13-vogel-im-kafig/clips/audios/parts/part4_sentence3.mp4" type="video/mp4">
 </video>
 </div>
 
@@ -410,7 +410,7 @@ Si-Do短暂上行，像是希望露了个头，但马上就被小调的阴影截
 
 <div align="center">
 <video controls width="70%">
-  <source src="/videos/in-post/2026-02-13-vogel-im-kafig/clips/audios/parts/part4_sentence4.m p4" type="video/mp4">
+  <source src="./videos/in-post/2026-02-13-vogel-im-kafig/clips/audios/parts/part4_sentence4.m p4" type="video/mp4">
 </video>
 </div>
 
@@ -429,7 +429,7 @@ Do'-Si，Si-Do'，又是Do'-Si……小二度上行和下行交替出现，像�
 
 <div align="center">
 <video controls width="70%">
-  <source src="/videos/in-post/2026-02-13-vogel-im-kafig/clips/scenes/ep09.mp4" type="video/mp4">
+  <source src="./videos/in-post/2026-02-13-vogel-im-kafig/clips/scenes/ep09.mp4" type="video/mp4">
 </video>
 </div>
 
@@ -441,7 +441,7 @@ Do'-Si，Si-Do'，又是Do'-Si……小二度上行和下行交替出现，像�
 
 <div align="center">
 <video controls width="70%">
-  <source src="/videos/in-post/2026-02-13-vogel-im-kafig/clips/audios/parts/part5_sentence1.mp4" type="video/mp4">
+  <source src="./videos/in-post/2026-02-13-vogel-im-kafig/clips/audios/parts/part5_sentence1.mp4" type="video/mp4">
 </video>
 </div>
 
@@ -453,7 +453,7 @@ Do'-Si，这是一个小二度下行，而且是这个下行阶梯的第一步�
 
 <div align="center">
 <video controls width="70%">
-  <source src="/videos/in-post/2026-02-13-vogel-im-kafig/clips/audios/parts/part5_sentence2.mp4" type="video/mp4">
+  <source src="./videos/in-post/2026-02-13-vogel-im-kafig/clips/audios/parts/part5_sentence2.mp4" type="video/mp4">
 </video>
 </div>
 
@@ -463,7 +463,7 @@ Do'-Si，这是一个小二度下行，而且是这个下行阶梯的第一步�
 
 <div align="center">
 <video controls width="70%">
-  <source src="/videos/in-post/2026-02-13-vogel-im-kafig/clips/audios/parts/part5_sentence3.mp4" type="video/mp4">
+  <source src="./videos/in-post/2026-02-13-vogel-im-kafig/clips/audios/parts/part5_sentence3.mp4" type="video/mp4">
 </video>
 </div>
 
@@ -475,7 +475,7 @@ Do'-Si，这是一个小二度下行，而且是这个下行阶梯的第一步�
 
 <div align="center">
 <video controls width="70%">
-  <source src="/videos/in-post/2026-02-13-vogel-im-kafig/clips/scenes/ep07.mp4" type="video/mp4">
+  <source src="./videos/in-post/2026-02-13-vogel-im-kafig/clips/scenes/ep07.mp4" type="video/mp4">
 </video>
 </div>
 
@@ -486,7 +486,7 @@ Do'-Si，这是一个小二度下行，而且是这个下行阶梯的第一步�
 
 <div align="center">
 <video controls width="70%">
-  <source src="/videos/in-post/2026-02-13-vogel-im-kafig/clips/scenes/ep30.mp4" type="video/mp4">
+  <source src="./videos/in-post/2026-02-13-vogel-im-kafig/clips/scenes/ep30.mp4" type="video/mp4">
 </video>
 </div>
 
@@ -498,7 +498,7 @@ Do'-Si，这是一个小二度下行，而且是这个下行阶梯的第一步�
 
 <div align="center">
 <video controls width="70%">
-  <source src="/videos/in-post/2026-02-13-vogel-im-kafig/clips/audios/parts/part6.mp4" type="video/mp4">
+  <source src="./videos/in-post/2026-02-13-vogel-im-kafig/clips/audios/parts/part6.mp4" type="video/mp4">
 </video>
 </div>
 
@@ -516,7 +516,7 @@ Re'-Mi'-Mi'-Do'-Si-La
 
 <div align="center">
 <video controls width="70%">
-  <source src="/videos/in-post/2026-02-13-vogel-im-kafig/clips/audios/parts/part7.mp4" type="video/mp4">
+  <source src="./videos/in-post/2026-02-13-vogel-im-kafig/clips/audios/parts/part7.mp4" type="video/mp4">
 </video>
 </div>
 
@@ -524,7 +524,7 @@ Re'-Mi'-Mi'-Do'-Si-La
 
 <div align="center">
 <video controls width="70%">
-  <source src="/videos/in-post/2026-02-13-vogel-im-kafig/clips/audios/parts/part7_sentence1.mp4" type="video/mp4">
+  <source src="./videos/in-post/2026-02-13-vogel-im-kafig/clips/audios/parts/part7_sentence1.mp4" type="video/mp4">
 </video>
 </div>
 
@@ -545,7 +545,7 @@ Re'-Mi'-Mi'-Do'-Si-La
 
 <div align="center">
 <video controls width="70%">
-  <source src="/videos/in-post/2026-02-13-vogel-im-kafig/clips/audios/parts/part7_sentence2.mp4" type="video/mp4">
+  <source src="./videos/in-post/2026-02-13-vogel-im-kafig/clips/audios/parts/part7_sentence2.mp4" type="video/mp4">
 </video>
 </div>
 
@@ -599,7 +599,7 @@ Mi'-升Re'-Mi'-升Sol'-La'
 
 <div align="center">
 <video controls width="70%">
-  <source src="/videos/in-post/2026-02-13-vogel-im-kafig/clips/audios/parts/part8.mp4" type="video/mp4">
+  <source src="./videos/in-post/2026-02-13-vogel-im-kafig/clips/audios/parts/part8.mp4" type="video/mp4">
 </video>
 </div>
 
@@ -617,7 +617,7 @@ Mi'-升Re'-Mi'-升Sol'-La'
 
 <div align="center">
 <video controls width="70%">
-  <source src=".//videos/in-post/2026-02-13-vogel-im-kafig/clips/scenes/ep01_bridge.mp4" type="video/mp4">
+  <source src="./videos/in-post/2026-02-13-vogel-im-kafig/clips/scenes/ep01_bridge.mp4" type="video/mp4">
 </video>
 </div>
 
@@ -627,7 +627,7 @@ Mi'-升Re'-Mi'-升Sol'-La'
 
 <div align="center">
 <video controls width="70%">
-  <source src="/videos/in-post/2026-02-13-vogel-im-kafig/clips/audios/parts/part9.mp4" type="video/mp4">
+  <source src="./videos/in-post/2026-02-13-vogel-im-kafig/clips/audios/parts/part9.mp4" type="video/mp4">
 </video>
 </div>
 
@@ -639,7 +639,7 @@ Mi'-升Re'-Mi'-升Sol'-La'
 
 <div align="center">
 <audio controls>
-  <source src="/videos/in-post/2026-02-13-vogel-im-kafig/clips/audios/remix.mp3" type="audio/mpeg">
+  <source src="./videos/in-post/2026-02-13-vogel-im-kafig/clips/audios/remix.mp3" type="audio/mpeg">
   您的浏览器不支持音频播放。
 </audio>
 </div>
@@ -650,7 +650,7 @@ Mi'-升Re'-Mi'-升Sol'-La'
 
 <div align="center">
 <video controls width="70%">
-  <source src=".//videos/in-post/2026-02-13-vogel-im-kafig/clips/scenes/ep31.mp4" type="video/mp4">
+  <source src="./videos/in-post/2026-02-13-vogel-im-kafig/clips/scenes/ep31.mp4" type="video/mp4">
 </video>
 </div>
 
@@ -661,7 +661,7 @@ Mi'-升Re'-Mi'-升Sol'-La'
 在下边《阿兰胡埃斯协奏曲》第二乐章前奏的乐谱中，红色箭头代表上/下行小二度，绿色箭头代表乐句解决在B小调的五级（属音）和一级（主音），在半音上下行后解决到稳定音让人安心，给人希望。
 
 <div align="center">
-<img src="/videos/in-post/2026-02-13-vogel-im-kafig/clips/scores/digimon.png" width="70%" height="auto">
+<img src="./videos/in-post/2026-02-13-vogel-im-kafig/clips/scores/digimon.png" width="70%" height="auto">
 </div>
 
 
@@ -695,7 +695,7 @@ Mi'-升Re'-Mi'-升Sol'-La'
 
 <div align="center">
 <audio controls>
-  <source src="/videos/in-post/2026-02-13-vogel-im-kafig/clips/audios/Vogel Im Kafig.mp3" type="audio/mpeg">
+  <source src="./videos/in-post/2026-02-13-vogel-im-kafig/clips/audios/Vogel Im Kafig.mp3" type="audio/mpeg">
   您的浏览器不支持音频播放。
 </audio>
 </div>
