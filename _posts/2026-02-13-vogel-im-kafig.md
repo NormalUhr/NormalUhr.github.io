@@ -20,7 +20,7 @@ tags:
 </audio>
 </div>
 
-如果我们剥离掉所有宏大的打击乐，把稀薄的弦乐揉进人声，你会听到这样一个更纯粹的版本（我自己扒的简单的谱子可以在[这里](img/in-post/2026-02-13-vogel-im-kafig/score.pdf)找到。）：
+如果我们剥离掉所有宏大的打击乐，把稀薄的弦乐揉进人声，你会听到这样一个更纯粹的版本（我自己扒的简单的谱子可以在[这里](/img/in-post/2026-02-13-vogel-im-kafig/score.pdf)找到。：
 
 <div align="center">
 <audio controls>
