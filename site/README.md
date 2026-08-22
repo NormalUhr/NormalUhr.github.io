@@ -114,12 +114,19 @@ src/content/notes/zh/2026-09-01-torch-compile.md
 ```markdown
 ---
 date: 2026-09-01
+origin: zh          # the language it was actually written in
 ---
 
 Short thought. Inline `$k_3$` and `code` both work.
 ```
 
-Both languages are required. A short post with only one fails the build.
+Both files carry the same `origin`. The one whose folder matches it is the piece as
+written; the other is a translation, and the page says so underneath it — *Translated
+from Chinese by AI* / *本文由 AI 译自英文*. Nothing machine-written is shown without
+that line.
+
+The build fails, by name, if a translation is missing or if the two files disagree
+about which language is the original.
 
 ## Turning on the optional services
 

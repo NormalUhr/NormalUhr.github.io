@@ -143,6 +143,8 @@ export async function allNotes(lang: Lang): Promise<NoteEntry[]> {
   for (const [id, langs] of byId) {
     const missing = LANGS.filter((l) => !langs.has(l))
     if (missing.length) throw new Error(`short post "${id}" is missing its ${missing.join(' and ')} version`)
+    const origins = new Set(notes.filter((nt) => nt.id.endsWith(`/${id}`)).map((nt) => nt.data.origin))
+    if (origins.size > 1) throw new Error(`short post "${id}" disagrees about its origin language: ${[...origins].join(', ')}`)
   }
   return notes
     .filter((nt) => nt.id.startsWith(`${lang}/`))

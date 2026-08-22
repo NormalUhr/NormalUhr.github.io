@@ -28,11 +28,16 @@ const articles = defineCollection({
 /**
  * Short posts, as "<lang>/<id>.md". Both languages are required for every id; the
  * build fails otherwise, so a half-translated post cannot reach the site.
+ *
+ * `origin` is the language the post was actually written in. The other file is a
+ * translation, and the page says so, so a reader is never shown machine-written prose
+ * without being told.
  */
 const notes = defineCollection({
   loader: glob({ pattern: '**/*.md', base: './src/content/notes' }),
   schema: z.object({
     date: z.coerce.date(),
+    origin: z.enum(['en', 'zh']),
     draft: z.boolean().default(false),
   }),
 })

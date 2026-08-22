@@ -125,6 +125,14 @@ p.lede { font-size: 17.5px; line-height: 1.58; color: var(--ink-soft); margin: 0
 .note .bd :not(pre) > code { font-family: var(--mono); font-size: .82em; background: var(--paper-3); padding: 1px 4px; border-radius: 3px; color: var(--vermilion); }
 .note .katex { font-size: .96em; }
 .side .note .code-block { display: none; }
+/* Says plainly that the text above was machine-translated, and from which language. */
+.xlat {
+  margin: 7px 0 0; font-family: var(--sans); font-size: 11px; letter-spacing: .02em;
+  color: var(--ink-faint); display: flex; align-items: center; gap: 6px;
+}
+.xlat::before {
+  content: ""; width: 12px; height: 1px; background: var(--rule); flex: none;
+}
 .empty { font-family: var(--sans); font-size: 13px; color: var(--ink-faint); border: 1px dashed var(--rule); padding: 14px 16px; margin-top: 12px; line-height: 1.55; }
 .morelink { display: inline-block; margin-top: 14px; font-family: var(--sans); font-size: 12px; }
 
