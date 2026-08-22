@@ -8,8 +8,6 @@ DROP    2020-02-02-LeetCode-Notes  (刷题笔记——快慢指针)
 DROP    2020-02-10-LeetCode-Notes  (刷题笔记——卡特兰数)
 DROP    2020-02-14-Bitset  (刷题笔记——Bitset详解)
 DROP    2020-03-02-Monotonous-Stack  (算法笔记——单调栈)
-FIXPATH 2026-02-13-vogel-im-kafig  4 path(s) corrected from ".//" to "/"
-FIXPATH 2026-02-13-vogel-im-kafig  extension typo ".m p4" corrected to ".mp4"
 OK      ai-infra               en     systems        -
 OK      auto                   zh     archive        mantan-cpp
 OK      auto-function          zh     archive        mantan-cpp
