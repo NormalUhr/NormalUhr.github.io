@@ -9,3 +9,7 @@ node_modules
 .DS_Store
 */.DS_Store
 */*/.DS_Store
+
+# Generated output from the design exploration; the sources in design/src stay.
+design/demos/
+design/shots/

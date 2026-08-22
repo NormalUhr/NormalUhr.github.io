@@ -1,0 +1,44 @@
+---
+import Base from '../../layouts/Base.astro'
+import ArticleRow from '../../components/ArticleRow.astro'
+import NoteList from '../../components/NoteList.astro'
+import { site, LANGS, type Lang } from '../../site.config'
+import { t } from '../../lib/taxonomy'
+import { liveArticles, archiveArticles, allNotes, titleFor } from '../../lib/articles'
+
+export function getStaticPaths() {
+  return LANGS.map((lang) => ({ params: { lang } }))
+}
+
+const lang = Astro.params.lang as Lang
+const L = t(lang)
+const articles = await liveArticles(lang)
+const archived = await archiveArticles(lang)
+const notes = await allNotes(lang)
+---
+<Base lang={lang} title="" description={site.tagline[lang]} altPaths={{ en: '/en/', zh: '/zh/' }}>
+  <h1 class="big">{site.name[lang]}</h1>
+  {site.tagline[lang] && <p class="lede">{site.tagline[lang]}</p>}
+
+  <div class="home">
+    <div>
+      <div class="sechead" style="margin-top:2px"><h2 class="lbl">{L.articles}</h2></div>
+      <div class="stream">
+        {articles.map((a) => (
+          <ArticleRow
+            lang={lang} slug={a.slug} title={titleFor(a, lang)} subtitle={a.entry.data.subtitle}
+            date={a.entry.data.date} categoryId={a.entry.data.category} seriesId={a.entry.data.series}
+            part={a.entry.data.part} tags={a.entry.data.tags} langs={a.langs} eqns={a.eqns}
+          />
+        ))}
+      </div>
+      <a class="morelink" href={`/${lang}/archive`}>{L.archive} ({archived.length}) →</a>
+    </div>
+
+    <div class="side">
+      <div class="sechead"><h2 class="lbl">{L.posts}</h2></div>
+      <NoteList lang={lang} notes={notes.slice(0, 12)} compact />
+      {notes.length > 0 && <a class="morelink" href={`/${lang}/posts`}>{L.posts} →</a>}
+    </div>
+  </div>
+</Base>

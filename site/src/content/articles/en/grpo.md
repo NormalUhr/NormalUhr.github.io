@@ -1,0 +1,387 @@
+---
+title: "DeepSeek-R1 Dissection: Understanding PPO & GRPO Without Any Prior Reinforcement Learning Knowledge"
+date: 2025-02-07
+category: post-training
+series: grpo-line
+part: 1
+tags: ["GRPO", "RLHF"]
+---
+
+## 1. Introduction
+
+In Reinforcement Learning (RL), simply knowing “how many points you score” often isn’t enough. **Pursuing high scores alone** can lead to various side effects, such as excessive exploration, instability in the model, or even “shortcutting” behaviors that deviate from reasonable policies. To address these challenges, RL incorporates several mechanisms—such as the Critic (value function), Clip operation, Reference Model, and the more recent Group Relative Policy Optimization (GRPO).
+
+To make these concepts more intuitive, let’s draw an analogy: **think of the RL training process as an elementary school exam scenario.** We (the model being trained) are like students trying to get high grades, the teacher who grades our exams are like the reward model, while our parents handing out pocket money based on our grades is similar to the Critic. Next, let’s walk step by step through why **final scores alone** are insufficient, how Critic, Clip, and Reference Model come into play, and finally how GRPO extends these ideas.
+
+---
+
+## 2. The Naive Approach of Only Using Reward: What’s the Problem?
+
+Suppose my younger brother and I are in the same elementary school class. The teacher grades our exams and gives an “absolute score.” I typically score above 80 out of 100, while my brother often gets around 30. We then take these scores directly to our dad to ask for pocket money—meaning our “reward” (in RL terms) is simply our raw exam score. Whoever gets a higher score receives more pocket money.
+
+At first glance, that seems fine. But two big issues quickly arise:
+
+* **Unfairness**: If my brother improves from 30 to 60 points through a lot of hard work, he still pales in comparison to my usual 80+. He doesn’t get the encouragement he deserves.
+* **Instability**: Chasing higher scores myself could lead me to extreme study methods (e.g., cramming at all hours, staying up very late). Sometimes I might get 95, other times only 60, so my score—and hence the reward signal—fluctuates dramatically.
+
+As a result, **using absolute scores as Reward** causes large reward fluctuations, and my brother ends up feeling it’s not worth trying to improve in small increments.
+
+### Mathematical Correspondence
+
+In RL, if we simply do:
+
+$$
+\mathcal{J}_{\text{naive}}(\theta) 
+= \mathbb{E}_{(q, o) \sim (\text{data}, \pi_{\theta})}\big[r(o)\big],
+$$
+
+which means “optimize only the final reward,” we can run into high variance and insufficient incentives for partial improvements. In other words, the Actor lacks a **baseline** that matches its own current level, and that hinders training efficiency.
+
+---
+
+## 3. Introducing the Critic: Using a “Predicted Score Line” to Improve Rewards
+
+Recognizing this problem, Dad realizes that **“it’s not just about the absolute score; it’s about how much you’ve improved relative to your current level.”**
+
+So he decides:
+
+* Set my “predicted score line” at 80 points and my brother’s at 40. If we exceed these lines on an exam, we get more pocket money; if not, we get very little or none.
+
+Hence, if my brother works hard and jumps from 30 to 60, he’s 20 points above his “predicted score line,” which translates into a hefty reward. Meanwhile, if I remain around the 80s, the incremental gain is smaller, so I won’t necessarily receive much more than he does. This arrangement **encourages each person** to improve from their own baseline instead of purely comparing absolute scores.
+
+Of course, Dad is busy, so once a line is set, it doesn’t just remain static—he needs to keep **“readjusting”** as we progress. If my brother levels up to the 60 range, then a 40-point baseline is no longer fair. Likewise, if I consistently hover around 85, Dad might need to tweak my line as well. In other words, **Dad also has to learn**, specifically about the pace at which my brother and I are improving.
+
+### Mathematical Correspondence
+
+In RL, this “score line” is known as the **value function**, $V_{\psi}(s)$. It acts as a baseline. Our training objective evolves from “just reward” to “how much we outperform that baseline,” expressed by the Advantage:
+
+$$
+A_t = r_t - V_{\psi}(s_t).
+$$
+
+For a given state $s_t$ and action $o_t$, if the actual reward exceeds the Critic’s expectation, it means the action performed better than predicted. If it’s lower, that action underperformed. In the simplest formulation, we optimize something like:
+
+$$
+\mathcal{J}_{\text{adv}}(\theta) = \mathbb{E}\big[A(o)\big],
+\quad
+\text{where } A(o) = r(o) - V_{\psi}(o).
+$$
+
+By subtracting this “score line,” we reduce variance in training, giving higher gradient signals to actions that exceed expectations and penalizing those that fall short.
+
+## 4. Adding Clip and Min Operations: Preventing Over-Updates
+
+Even with the “score line,” new problems can emerge. For instance:
+
+* If I suddenly **break through** on a test and score 95 or 100, Dad might give me a huge reward, pushing me to adopt overly aggressive study patterns before the next exam. My grades might swing between extremes (95 and 60), causing massive reward volatility.
+
+Thus, Dad decides to moderate how drastically I can update my study strategy in each step—he won’t give me **exponentially** more pocket money just because of one good test. If he gives too much, I might veer into extreme exploration; if too little, I won’t be motivated. So he must find a balance.
+
+### Mathematical Correspondence
+
+In **PPO (Proximal Policy Optimization)**, this balance is achieved through the “Clip” mechanism. The core of the PPO objective includes:
+
+$$
+\min \Big(r_t(\theta) A_t,\ \text{clip}\big(r_t(\theta), 1 - \varepsilon,\, 1 + \varepsilon\big)\,A_t\Big),
+$$
+
+where
+
+$$
+r_t(\theta) = \frac{\pi_{\theta}(o_t\mid s_t)}{\pi_{\theta_{\text{old}}}(o_t\mid s_t)},
+$$
+
+represents the probability ratio between the new and old policies for that action. If the ratio deviates too far from 1, it’s clipped within $\bigl[\,1-\varepsilon,\ 1+\varepsilon\bigr]$, which **limits** how much the policy can shift in one update.
+
+In simpler terms:
+
+* Scoring 100 gets me extra rewards, but Dad imposes a “ceiling” so I don’t go overboard. He’ll then reassess on the next exam, maintaining a steady approach rather than fueling extreme fluctuations.
+
+## 5. Reference Model: Preventing Cheating and Extreme Strategies
+
+Even so, if I’m solely fixated on high scores, I might **resort to questionable tactics**—for instance, cheating or intimidating the teacher into awarding me a perfect score. Clearly, that breaks all rules. In the realm of large language models, an analogous scenario is producing harmful or fabricated content to artificially boost some reward metric.
+
+Dad, therefore, sets an additional rule:
+
+* “No matter what, you can’t deviate too much from your original, honest approach to studying. If you’re too far off from your baseline, even with a high score, I’ll disqualify you and withhold your pocket money.”
+
+That’s akin to marking down a **“reference line”** from the start of the semester (i.e., after initial supervised fine-tuning). You can’t stray too far from that original strategy or you face penalties.
+
+### Mathematical Correspondence
+
+In PPO, this is reflected by adding a KL penalty against the **Reference Model** (the initial policy). Concretely, we include something like:
+
+$$
+-\beta\, \mathbb{D}_{\mathrm{KL}}\big(\pi_{\theta}\,\|\ \pi_{\text{ref}}\big)
+$$
+
+in the loss. This keeps the Actor from drifting too far from the original, sensible policy, avoiding “cheating” or other drastically out-of-bounds behaviors.
+
+## 6. GRPO: Replacing the Value Function with “Multiple Simulated Averages”
+
+One day, Dad says, “I don’t have time to keep assessing your learning progress and draw new score lines all the time. Why not do five sets of simulated tests first, then take their **average score** as your **expected score**? If you surpass that average on the real test, it shows you did better than your own expectations, so I’ll reward you. Otherwise, you won’t get much.” My brother and I, and potentially more classmates, can each rely on a personal set of simulated tests rather than an external “value network” that Dad would have to constantly adjust.
+
+Up until now, we saw that PPO relies on the Actor + Critic + Clip + KL penalty framework. However, in large language model (LLM) scenarios, the Critic (value function) **often needs to be as large as the Actor** to accurately evaluate states, which can be costly and sometimes impractical—especially if you only have a single final reward at the end (like a final answer quality).
+
+Hence, **Group Relative Policy Optimization (GRPO)** steps in. Its core idea:
+
+* **No separate value network** for the Critic,
+* Sample multiple outputs from the old policy for the same question or state,
+* **Treat the average reward of these outputs as the baseline**,
+* Anything above average yields a “positive advantage,” anything below yields a “negative advantage.”
+
+Meanwhile, GRPO **retains** PPO’s Clip and KL mechanisms to ensure stable, compliant updates.
+
+### Mathematical Correspondence
+
+According to DeepSeekMath’s technical report, the GRPO objective (omitting some symbols) is:
+
+$$
+\begin{aligned}
+\mathcal{J}_{GRPO}(\theta) 
+= \mathbb{E}\Bigg[
+& \sum_{i = 1}^{G}\Bigg(\min \Bigg(\frac{\pi_{\theta}\left(o_{i}\right)}{\pi_{\theta_{\text{old}}}\left(o_{i}\right)} A_{i},\ 
+\text{clip}\Big(\frac{\pi_{\theta}\left(o_{i}\right)}{\pi_{\theta_{\text{old}}}\left(o_{i}\right)}, 1-\varepsilon, 1+\varepsilon\Big) A_{i}\Bigg) \\
+& \quad -\ \beta\ \mathbb{D}_{KL}\left(\pi_{\theta}\ \|\ \pi_{\text{ref}}\right)\Bigg) 
+\Bigg],
+\end{aligned}
+$$
+
+where
+
+$$
+A_{i} = \frac{r_{i} - \mathrm{mean}(\{r_1, r_2, \cdots, r_G\})}{\mathrm{std}(\{r_1, r_2, \cdots, r_G\})}
+$$
+
+calculates a “relative score” by averaging multiple outputs from the same question and normalizing. In this way, **we no longer need a dedicated value function**, yet we still get a dynamic “score line” that simplifies training and conserves resources.
+
+## 7. Elementary School Weekly Exams: A New Multi-step Challenge
+
+In the previous sections, we treated the **score from a single exam** as the Reward and used the Critic (value function) as our “score line.” This addressed the issues of high variance and unfairness caused by “only looking at absolute scores,” while mechanisms such as those in PPO/GRPO (Clip, Reference Model, etc.) helped control the magnitude and compliance of policy updates.
+
+However, in real school life, **exams rarely happen just once**. Imagine this scenario:
+
+> **Every Monday morning**, the teacher hands out a short quiz, scored between 0 and 100.  
+> **Every Monday afternoon**, Dad checks my quiz result against the predicted score line, then gives me some pocket money or a penalty accordingly.  
+> **From Tuesday to Sunday**, I spend my time studying and adjusting my strategy—perhaps attending a tutoring class, studying together with classmates, or just completely relaxing.  
+>
+> By the time **next Monday morning** comes, there’s another quiz, which again yields a new score and influences how much pocket money I receive. This repeats every week, one exam after another.
+
+Over the course of this cycle, each **learning-plan decision (Action)** I make will accumulate and affect the quiz score in the following week. Ultimately, I want to **achieve higher overall scores and more pocket money** by the end of the entire semester. This contrasts with the earlier scenario of “only one exam,” where training concluded after a single test. Now, we continuously evaluate and update our performance each week.
+
+### 7.1 Single-Step vs. Multi-step: The New Dilemma
+
+- Previously, Dad only needed to assess whether I exceeded his expectations **after one exam**, then give me pocket money right away or slightly adjust my score line (the Critic) before the next test.  
+- Now, there’s an exam each week, and **my performance next week is often influenced by what learning actions I took once this week’s exam was over**. For example, if I choose to pull all-nighters for intense study this week, I might suddenly become **physically exhausted** next week, causing a drop in my score. Conversely, if I study in moderation this week, I might remain stable next week.  
+- Even more complicated: should I adopt a **long-term strategy**? Perhaps I take it easy for the first two weeks, then ramp up my efforts in the third week, ultimately benefiting my performance on the final exam. In Reinforcement Learning terms, this is now a **multi-step decision-making** problem, where we must consider **the accumulated performance over a span of time**, not just a single test.
+
+In RL notation, the situation is similar: if we receive a reward $r_t$ each week, and each week’s **action** (learning plan) affects the scores in subsequent weeks, **how do we figure out whether a particular action is beneficial**? Clearly, we can’t just look at “this week’s exam result minus the score line.” Sometimes we have to consider the domino effects in the weeks that follow.
+
+### 7.2 The Role of Policy $\pi$ in the Analogy
+
+In Reinforcement Learning terminology, a “policy” $\pi$ is a **decision rule**: given a state $s_t$, it determines the probability or manner in which we select a specific action $a_t$.
+
+- **In the elementary school exam analogy**, you can imagine that “policy” refers to my **overall study method** or “course selection approach.” It bases the decision of whether I should do extra tutoring, take a break, or something else this week on my current condition, such as tiredness level, recent score fluctuations, or unsolved difficulties.  
+- The **action** $a_t$ is the specific study plan carried out this week, whereas the **policy** $\pi$ is the overarching function or distribution that “generates” these actions. A better policy consistently makes more suitable decisions each week, thereby accumulating higher long-term scores (Reward).
+
+Each time I execute an action $a_t$ and observe the outcome, I update my confidence in the policy $\pi$. Over time, it moves toward a direction of “higher scores, higher Reward,” which is essentially the **policy update** process.
+
+---
+
+## 8. Introduce TD Error and GAE for Multi-step Scenarios
+
+As **weekly exams** become more frequent, aiming to score well in “multiple cumulative tests” calls for a better way to “estimate the long-term impact of this week’s actions.” In Reinforcement Learning terms, that means we can’t just compare each week’s superficial Reward to our predicted value; we also need to account for rewards in the following weeks.
+
+### 8.1 What Is the TD (Temporal Difference) Error?
+
+In RL, we regard each week as a time step $t$. My current state $s_t$ may include:
+
+- My current study level, tiredness, or understanding of next week’s exam scope,  
+- My most recent exam score,  
+- Possibly even my mood (if we want to be very realistic).
+
+Then the action (Action) I choose might be “attend a certain tutoring class,” “study on my own,” or “just rest,” etc.  
+When **the week ends**, I receive a **reward** $r_{t+1}$ (such as the score on next week’s test or the pocket money earned), and move on to **the next week’s state** $s_{t+1}$ (a new situation with different tiredness, knowledge level, etc.).
+
+> **TD Error** (Temporal Difference Error) measures the difference between the “value we assigned to this current week” and the combination of “the actual reward for next week + the estimated value of next week.” Formally:
+> 
+> $$
+> \delta_t = r_{t+1} + \gamma V(s_{t+1}) - V(s_t),
+> $$  
+> 
+> where $\gamma \in [0,1]$ is a discount factor to account for diminishing emphasis on future rewards.
+>
+> - In the elementary school analogy, it’s like saying, “**I originally believed that this week (state $s_t$) should yield at least 80 points**. The actual result was 75, and I expect to get around 78 next week, so there’s a gap when I compare that to my initial expectation.”  
+> It basically reflects, “How many points did I expect this week plus the future potential, versus what I really observed this time plus the new future estimate?”  
+> - If $\delta_t$ is positive, it means I performed **better than expected**; if negative, it means there’s room for improvement.
+
+This is the **single-step** TD Error. It allows Dad (the Critic) to continually refine the estimation $V(s)$ of my “current state value.”
+
+### 8.2 What Is GAE, and Why Do We Need It?
+
+> **Problem**: If we rely solely on the **single-step** TD Error, we essentially “only look at the next week’s exam score + next week’s value” each time. This leads to very quick data updates and potentially lower variance, but it might **overlook more distant consequences**. For example, if I burn myself out this week, I might not crash next week but collapse the week after. Conversely, if we “use the entire future exam sequence’s total scores” like **Monte Carlo** methods, we might not be able to update until many weeks have passed. During that time, random fluctuations or luck might cause **very high variance** in our estimates.
+
+**GAE (Generalized Advantage Estimation)** strikes a compromise **between single-step TD and full Monte Carlo**, introducing a parameter $\lambda$ to control “how many steps of feedback we consider.” A typical form is:
+
+$$
+\hat{A}_t^{\mathrm{GAE}(\gamma, \lambda)} 
+= \sum_{k=0}^{\infty} (\gamma \lambda)^k \,\delta_{t+k},
+$$
+
+where  
+
+$$
+\delta_{t+k} = r_{t+k+1} + \gamma V(s_{t+k+1}) - V(s_{t+k}),
+$$
+
+is the TD Error for each week, and $(\gamma \lambda)^k$ reduces the weight of feedback that lies further in the future.
+
+> - When $\lambda = 0$, it falls back to single-step TD.  
+> - When $\lambda$ approaches 1, it gets closer to full Monte Carlo (with potential truncation in actual implementation).
+
+#### Analogy Explanation
+
+- **$\delta_t$**: The deviation for “this week + next week’s value.”  
+- **$\delta_{t+1}$**: The deviation for “next week + the week after next,” and so on.  
+- In the end, GAE applies a decaying sum of these **multiple-week** discrepancies to arrive at a more stable, comprehensive measure of the Advantage for “this week’s decision.”
+
+### 8.3 GAE’s Significance in the Analogy
+
+1. **I (the student) receive a reward each week based on “last week’s exam score - expected score line,”** but I also need to consider the longer-range trend—is it going to affect performance in the subsequent weeks?  
+2. Dad wants to judge comprehensively: my learning plan’s impact on next week and the weeks after. He can partially account for it, but the further away the exam is, the more he discounts it, avoiding an overreaction to future uncertainty.  
+3. This explains why **single-step** knowledge might miss major leaps or collapses a few weeks later, while **full Monte Carlo** waits too long for all the results and suffers high variance in multi-week scenarios.
+
+---
+
+## 9. Redefining State Value and Action Value in the New Setup
+
+Compared to the earlier “one exam” setup, now we have an exam every week, creating a multi-step decision process. Hence, we need new definitions for the state value function and the action value function.
+
+1. **State Value Function $V^\pi(s_t)$**  
+   - During “week $t$,” my overall condition, tiredness, and recent scores form the state $s_t$. If I continue to use the current policy $\pi$ for all upcoming weeks (studying, resting, tutoring), how much cumulative performance can I expect to achieve?  
+   - $V^\pi(s_t)$ represents: **if from this week onward, I follow policy $\pi$ for each week’s learning actions until the semester ends, how much total pocket money or weighted sum of scores do I expect to earn?**  
+   - It’s like **Dad** forming a forecast of “how many good grades you’ll probably earn in the upcoming weeks, given your present level.”  
+   - **Formula**:  
+     
+     $$
+     V^\pi(s_t) = \mathbb{E}_{\pi}\bigl[r_{t+1} + \gamma r_{t+2} + \gamma^2 r_{t+3} + \dots \bigr].
+     $$
+
+
+2. **Action Value Function $Q^\pi(s_t, a_t)$**  
+   - If I choose a specific action $a_t$ during week $t$ (for instance, signing up for an expensive tutoring course), and in future weeks I continue with $\pi$, what total performance can I expect to accumulate over the remaining weeks?  
+   - $Q^\pi(s_t, a_t)$ indicates: **if I pick action $a_t$ this week and subsequently follow policy $\pi$, how much total reward or scores will I obtain?**  
+   - For instance, if I “find a balance between rest and study” this week, maintaining stable scores next week, I might avoid crashing later and achieve a better sum overall.  
+   - **Formula**:  
+     
+     $$
+     Q^\pi(s_t,a_t) = \mathbb{E}_{\pi}\bigl[r_{t+1} + \gamma r_{t+2} + \dots \mid s_t,a_t \bigr].
+     $$
+
+
+3. **Advantage Function $A^\pi(s_t, a_t)$**  
+   
+   $$
+   A^\pi(s_t, a_t) = Q^\pi(s_t, a_t) - V^\pi(s_t).
+   $$  
+
+   - This indicates how “much better (or worse)” choosing action $a_t$ at state $s_t$ is relative to the **average** outcome.  
+   - If $A^\pi(s_t, a_t)$ is greater than 0, that means this choice is potentially bringing more gains over the upcoming weeks than the baseline expectation. If it’s negative, it suggests it might be worse than normal study methods at that point.
+
+---
+
+## 10. What Loss Are We Training, Exactly?
+
+In common policy gradient methods like PPO, A3C, or GRPO, there are typically **two models** to train:
+
+1. **Actor (the policy network)**: outputs the probability of taking each action in a given state or directly picks the best action.  
+2. **Critic (the value network)**: outputs $V(s)$ (or an action value) as a baseline, helping us evaluate how good or bad an action was more reliably.
+
+These are often updated with a combined **loss function**. A typical example:
+
+- **Critic Loss**: Often **mean squared error (MSE)** that forces the Critic estimate $V_{\psi}(s_t)$ to match the target return computed from actual feedback (Reward).  
+  
+  $$
+  \mathcal{L}_{\text{Critic}} = \Bigl(V_{\psi}(s_t) - \text{Target Value}\Bigr)^2.
+  $$
+
+  In the multi-week exam context, the **Target Value** might be the “one-step TD target” $r_{t+1} + \gamma V_{\psi}(s_{t+1})$ or a longer return estimate (like the sum in GAE).
+
+- **Actor Loss**: We take the **Advantage** $A_t = Q_t - V_t$ (or an equivalent estimate), multiply by $\log \pi_\theta(a_t\mid s_t)$, and perform **gradient ascent** (or equivalently, negative descent).  
+  
+  $$
+  \mathcal{L}_{\text{Actor}} \propto -\,\mathbb{E}\big[A_t \,\log \pi_\theta(a_t\mid s_t)\big].
+  $$
+
+  If an action’s Advantage is high (scoring well above the baseline), the policy is encouraged to increase the probability of taking that action; otherwise, it’s reduced.
+
+In PPO/GRPO, we also see **Clip**, **KL penalty**, and other additional terms added to the Loss to constrain the update step from being too large or from deviating excessively from the initial policy.
+
+> **From a high-level perspective**:  
+> - The **Actor** is essentially “my own internal decision maker,” continuously learning **which actions** to select.  
+> - The **Critic** acts like “my internal predictive model” or “Dad’s predicted score line,” constantly refining the assessment of my current learning state.  
+> - **The final Loss** integrates both networks’ errors, enabling them to enhance each other synergistically.
+
+---
+
+## 11. Bias and Variance in the “Weekly Exams” Analogy
+
+In a multi-step setting, why do we encounter **bias** and **variance** issues? We can compare a few different estimation methods:
+
+1. **Full Monte Carlo**:  
+   - Approach: Wait until multiple weeks’ exams are done, sum up all the scores, then go back to see how the action in week $t$ actually panned out.  
+   - Upside: We incorporate **true long-term returns** comprehensively, so it’s unbiased.  
+   - Downside: **If some exams are heavily influenced by luck**—like a sudden illness or a random difficulty spike—final scores can fluctuate drastically, leading to **very high variance** during training.
+
+2. **Single-step TD**:  
+   - Approach: Evaluate “this week’s score + next week’s estimated value,” then compare with this week’s value to form the TD Error ($\delta_t = r_{t+1} + \gamma V(s_{t+1}) - V(s_t)$).  
+   - Upside: Fast updates, **relatively lower variance**, suitable for online learning.  
+   - Downside: Can lead to **bias**, since we’re ignoring the impact of further weeks.
+
+3. **GAE**:  
+   - Approach: Aggregate multiple weeks of TD with a decay (controlled by $\lambda$).  
+   - Upside: **Strikes a balance** between reducing bias and controlling variance, often leading to more stable and effective training.  
+   - Downside: Needs some extra implementation logic to accumulate multi-step TD errors and a good choice of $\lambda$.
+
+In simpler terms:
+
+- **Bias** means our judgment about a particular week’s decision might be overly influenced by immediate outcomes, neglecting the big picture over future weeks.  
+- **Variance** means if we try to account for every week far into the future, it might be too sensitive to random events—like “someone got sick,” “a quiz was unexpectedly easy,” or “unexpected personal circumstances”—so our estimates might swing wildly, like an unpredictable weather forecast.
+
+GAE effectively adds a decay factor for “the influence of upcoming weeks,” so the further out it is, the less it matters. We neither ignore the future entirely nor overload ourselves with all distant noise.
+
+---
+
+## 12. Contrasting Three Methods for Advantage Estimation
+
+Below is a concise comparison of **Full Monte Carlo**, **Single-step TD**, and **GAE** in multi-step scenarios. Although your original blog might not have explicitly mentioned “full MC,” it’s a common RL approach and somewhat parallels the “one-shot exam” scenario, so we include it here to illustrate **why GAE is a compromise**.
+
+| **Method**                | **Approach**                                                                                                                                   | **Advantages**                                              | **Disadvantages**                                                                                                           | **Elementary School Analogy**                                                                                              |
+|---------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------|
+| **Full Monte Carlo (MC)** | Wait until the end of the sequence (all weekly exams finished for the term), sum up all rewards, then go back to update the advantage for each week’s action based on actual returns. | Unbiased for the **true long-term returns**; conceptually simple if no value function is used. | For long sequences, **variance is huge**; you must wait until everything finishes, so updates are slow and data-inefficient. | You wait until **all weeks** are done, then evaluate how good the decision in week 1 was. Meanwhile, many unexpected factors can appear, causing large fluctuations and feedback delays. |
+| **Single-step TD**        | Only use this week’s reward + next week’s value minus this week’s value for the TD Error ($\delta_t = r_{t+1} + \gamma V(s_{t+1}) - V(s_{t})$).                                | Fast updates, **relatively low variance**; good for online learning.                 | Often **biased** because it ignores the returns from further weeks.                                                         | Right after this week’s exam, you update using “this score + next week’s expectation”—it’s simpler, but disregards what might happen in later weeks.             |
+| **GAE**                   | Weighted multi-step TD: $\hat{A}_t = \sum_{k=0}^{\infty} (\gamma \lambda)^k \delta_{t+k}$. Paired with a Critic, it balances short-term and long-term rewards.                     | **Balances bias and variance**; proven stable and effective in practice.            | Requires a suitable $\lambda$ hyperparameter; slightly more complex to implement.                                          | Partially takes into account multiple upcoming weeks but discounts distant ones. Not too slow (unlike waiting for all weeks) and not too shallow (like single-step), striking a good balance.    |
+
+---
+
+## 13. Conclusion: Retrospect and Prospects
+
+Through this elementary school exam analogy, we’ve gradually evolved from a naive emphasis on **absolute scores** to the full PPO mechanism (Critic, Advantage, Clip, Reference Model), and then to the **GRPO** approach, which uses an average of multiple outputs as the baseline, sparing us the complexity of a separate value function. A few key points are worth restating:
+
+* **The Critic’s significance**: it provides a “reasonable expectation” for each state or stage, greatly reducing training variance.  
+* **Clip & min mechanism**: limits policy update magnitudes, preventing huge swings after one “breakthrough” exam.  
+* **Reference Model**: restricts “cheating” or extreme behavior so the policy doesn’t stray too far from an initially compliant strategy.  
+* **GRPO’s benefit**: in large language models, it removes the need for a big value network, saving memory and compute, while aligning naturally with a “comparison-based Reward Model.”
+
+Much like Dad switching to “letting the child run multiple simulations themselves and using their average score as the predicted baseline,” GRPO allows us to skip maintaining a huge Critic while still obtaining a similar relative reward signal. This preserves the stability and compliance of PPO while making training more direct and efficient.
+
+By extending our “elementary school exam” scenario to **weekly exams**, we see that:
+
+1. We need **TD Error** (Temporal Difference) to gauge the discrepancy between actual returns and the previously estimated value.  
+2. To better estimate the Advantage, we don’t just rely on single-step TD or full Monte Carlo—**GAE (Generalized Advantage Estimation)** emerges as a solution.  
+3. It sums multi-step TD errors with a decay factor, striking a **balance between bias and variance**.  
+4. **State value function** $V^\pi(s)$ and **action value function** $Q^\pi(s,a)$ must be framed in a multi-step context: each week we make a learning decision, each week we get a reward, creating a deeper and more complex training sequence.
+
+In practice, mainstream policy-gradient algorithms like PPO and A3C often use GAE as a fundamental component, making Advantage estimation more stable. In large language model fine-tuning or text-generation tasks, if each response can be broken into multiple steps with partial feedback, **GAE**-like approaches similarly help balance the “short-term vs. long-term” reward, leading to better training outcomes.
+
+Hopefully, this article helps you intuitively grasp the rationale behind PPO and GRPO, and inspires you for future applications. If you’re interested in process supervision or iterative RL, keep an eye on my blog for more advanced techniques!

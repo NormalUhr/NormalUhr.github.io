@@ -1,0 +1,13 @@
+---
+import type { Lang } from '../site.config'
+import type { Series } from '../lib/taxonomy'
+const { lang, series, counts } = Astro.props as { lang: Lang; series: Series[]; counts: Map<string, number> }
+---
+<div class="cards">
+  {series.map((s) => (
+    <a class="card" href={`/${lang}/s/${s.id}`}>
+      <span class="n">{counts.get(s.id) ?? 0}</span>
+      <h3>{s.name[lang]}</h3>
+    </a>
+  ))}
+</div>

@@ -1,0 +1,36 @@
+---
+import Base from '../../../layouts/Base.astro'
+import ArticleStream from '../../../components/ArticleStream.astro'
+import TopicChips from '../../../components/TopicChips.astro'
+import SeriesCards from '../../../components/SeriesCards.astro'
+import { LANGS, type Lang } from '../../../site.config'
+import { CATEGORIES, SERIES, category as cat, t } from '../../../lib/taxonomy'
+import { resolved, liveArticles, categoryCounts, seriesCounts } from '../../../lib/articles'
+
+export function getStaticPaths() {
+  return LANGS.flatMap((lang) => CATEGORIES.map((c) => ({ params: { lang, category: c.id } })))
+}
+
+const lang = Astro.params.lang as Lang
+const id = Astro.params.category as string
+const L = t(lang)
+const c = cat(id)
+const articles = (await resolved(lang)).filter((a) => a.entry.data.category === id)
+const counts = await categoryCounts(lang)
+const sCounts = await seriesCounts(lang)
+const here = SERIES.filter((s) => s.category === id)
+const total = (await liveArticles(lang)).length
+---
+<Base lang={lang} title={c.name[lang]} section="articles"
+      altPaths={{ en: `/en/topics/${id}`, zh: `/zh/topics/${id}` }}>
+  <h1 class="big">{c.name[lang]}</h1>
+  <TopicChips lang={lang} current={id} counts={counts} total={total} />
+  {here.length > 0 && (
+    <>
+      <div class="sechead" style="margin-top:26px"><h2 class="lbl">{L.series}</h2></div>
+      <SeriesCards lang={lang} series={here} counts={sCounts} />
+    </>
+  )}
+  <div class="sechead" style="margin-top:26px"><h2 class="lbl">{articles.length} {articles.length === 1 ? L.article : L.articles_n}</h2></div>
+  <ArticleStream lang={lang} articles={articles} />
+</Base>

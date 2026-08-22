@@ -1,0 +1,45 @@
+files written: 44
+posts dropped: 7
+
+DROP    2019-12-10-LeetCode-Records  (LeetCode 刷题记录)
+DROP    2020-01-31-LeetCode-Notes  (刷题笔记——异或的用法)
+DROP    2020-02-01-LeetCode-Notes  (刷题笔记——滑动窗口)
+DROP    2020-02-02-LeetCode-Notes  (刷题笔记——快慢指针)
+DROP    2020-02-10-LeetCode-Notes  (刷题笔记——卡特兰数)
+DROP    2020-02-14-Bitset  (刷题笔记——Bitset详解)
+DROP    2020-03-02-Monotonous-Stack  (算法笔记——单调栈)
+FIXPATH 2026-02-13-vogel-im-kafig  4 path(s) corrected from ".//" to "/"
+FIXPATH 2026-02-13-vogel-im-kafig  extension typo ".m p4" corrected to ".mp4"
+OK      ai-infra               en     systems        -
+OK      auto                   zh     archive        mantan-cpp
+OK      auto-function          zh     archive        mantan-cpp
+OK      bauklotze              zh     music          -
+OK      const-1                zh     archive        const#1
+OK      const-2                zh     archive        const#2
+OK      const-3                zh     archive        const#3
+OK      constexpr-1            zh     archive        constexpr#1
+OK      constexpr-2            zh     archive        constexpr#2
+OK      constexpr-3            zh     archive        constexpr#3
+OK      constexpr-4            zh     archive        constexpr#4
+OK      decorators             en+zh  systems        -
+OK      deepseek-r1            en+zh  post-training  deepseek#1
+OK      dualpipe               en+zh  systems        deepseek#3
+OK      dynamic                zh     archive        mantan-cpp
+OK      effective-c            en+zh  archive        -
+OK      enum                   zh     archive        mantan-cpp
+OK      grpo                   en+zh  post-training  grpo-line#1
+OK      grpo-dapo-gspo         en+zh  post-training  grpo-line#2
+OK      kl                     en+zh  post-training  grpo-line#3
+OK      lie-group              zh     archive        -
+OK      mla                    en+zh  systems        deepseek#2
+OK      moe-load-balancing     en+zh  systems        -
+OK      nullptr                zh     archive        mantan-cpp
+OK      optional               zh     archive        mantan-cpp
+OK      override-final         zh     archive        mantan-cpp
+OK      passkey-idiom          zh     archive        mantan-cpp
+OK      rlhf                   en+zh  post-training  -
+OK      rvalue                 zh     archive        mantan-cpp
+OK      top-const              zh     archive        mantan-cpp
+OK      unlearning-pitfalls    en+zh  post-training  -
+OK      vogel-im-kafig         zh     music          -
+OK      void                   zh     archive        mantan-cpp

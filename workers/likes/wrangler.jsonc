@@ -1,0 +1,23 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "blog-likes",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-21",
+  "compatibility_flags": ["nodejs_compat"],
+  "vars": {
+    // Origins allowed to call this Worker. Add localhost while developing.
+    "ALLOWED_ORIGINS": "https://normaluhr.github.io,http://localhost:4321,http://localhost:4399"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "blog-likes",
+      // Filled in by `wrangler d1 create blog-likes`.
+      "database_id": "REPLACE_WITH_DATABASE_ID"
+    }
+  ],
+  "observability": {
+    "enabled": true,
+    "logs": { "head_sampling_rate": 1 }
+  }
+}

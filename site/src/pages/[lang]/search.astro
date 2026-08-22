@@ -1,0 +1,69 @@
+---
+import Base from '../../layouts/Base.astro'
+import { LANGS, type Lang } from '../../site.config'
+import { category, t } from '../../lib/taxonomy'
+import { resolved, allNotes, dateISO, titleFor } from '../../lib/articles'
+
+export function getStaticPaths() { return LANGS.map((lang) => ({ params: { lang } })) }
+
+const lang = Astro.params.lang as Lang
+const L = t(lang)
+
+/**
+ * The index is inlined rather than fetched: 32 articles is a few kilobytes, and doing
+ * it this way means search works with no request and no service.
+ */
+const index = [
+  ...(await resolved(lang)).map((a) => ({
+    kind: 'article' as const,
+    href: `/${lang}/p/${a.slug}`,
+    title: titleFor(a, lang),
+    sub: a.entry.data.subtitle ?? '',
+    date: dateISO(a.entry.data.date),
+    meta: category(a.entry.data.category).name[lang],
+    hay: [a.entry.data.title, a.entry.data.titleAlt ?? '', a.entry.data.subtitle ?? '', ...a.entry.data.tags].join(' ').toLowerCase(),
+  })),
+  ...(await allNotes(lang)).map((nt) => ({
+    kind: 'note' as const,
+    href: `/${lang}/posts#${nt.id}`,
+    title: (nt.body ?? '').slice(0, 90),
+    sub: '',
+    date: dateISO(nt.data.date),
+    meta: L.post,
+    hay: (nt.body ?? '').toLowerCase(),
+  })),
+]
+---
+<Base lang={lang} title={L.search} altPaths={{ en: '/en/search', zh: '/zh/search' }}>
+  <h1 class="big">{L.search}</h1>
+  <div class="sbox">
+    <span class="lbl">{L.search}</span>
+    <input id="q" type="search" autocomplete="off" placeholder={L.searchPlaceholder} aria-label={L.search} />
+  </div>
+  <p class="lbl" id="count" aria-live="polite"></p>
+  <div class="stream" id="results"></div>
+
+  <script is:inline define:vars={{ index, nothing: L.nothing }}>
+    const q = document.getElementById('q')
+    const out = document.getElementById('results')
+    const count = document.getElementById('count')
+    const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))
+
+    const render = () => {
+      const needle = q.value.trim().toLowerCase()
+      if (!needle) { out.innerHTML = ''; count.textContent = ''; return }
+      const hits = index.filter((r) => r.hay.includes(needle))
+      count.textContent = hits.length ? `${hits.length}` : nothing
+      out.innerHTML = hits.map((r) =>
+        '<div class="item"><div class="when">' + r.date + '</div><div>' +
+        '<a class="t" href="' + r.href + '">' + esc(r.title) + '</a>' +
+        (r.sub ? '<p class="sub">' + esc(r.sub) + '</p>' : '') +
+        '<div class="row"><span>' + esc(r.meta) + '</span></div></div></div>'
+      ).join('')
+    }
+    q.addEventListener('input', render)
+    const initial = new URLSearchParams(location.search).get('q')
+    if (initial) { q.value = initial; render() }
+    q.focus()
+  </script>
+</Base>

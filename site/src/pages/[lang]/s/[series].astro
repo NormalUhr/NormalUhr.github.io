@@ -1,0 +1,24 @@
+---
+import Base from '../../../layouts/Base.astro'
+import ArticleStream from '../../../components/ArticleStream.astro'
+import { LANGS, type Lang } from '../../../site.config'
+import { SERIES, t } from '../../../lib/taxonomy'
+import { seriesMembers } from '../../../lib/articles'
+
+export function getStaticPaths() {
+  return LANGS.flatMap((lang) => SERIES.map((s) => ({ params: { lang, series: s.id } })))
+}
+
+const lang = Astro.params.lang as Lang
+const id = Astro.params.series as string
+const L = t(lang)
+const s = SERIES.find((x) => x.id === id)!
+const articles = await seriesMembers(lang, id)
+---
+<Base lang={lang} title={s.name[lang]} section="articles"
+      altPaths={{ en: `/en/s/${id}`, zh: `/zh/s/${id}` }}>
+  <p class="lbl" style="margin:0 0 10px">{L.series}</p>
+  <h1 class="big">{s.name[lang]}</h1>
+  <div class="sechead" style="margin-top:26px"><h2 class="lbl">{L.readingOrder}</h2></div>
+  <ArticleStream lang={lang} articles={articles} />
+</Base>

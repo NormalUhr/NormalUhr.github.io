@@ -1,0 +1,12 @@
+---
+import Base from '../layouts/Base.astro'
+import { DEFAULT_LANG } from '../site.config'
+import { t } from '../lib/taxonomy'
+const L = t(DEFAULT_LANG)
+---
+<Base lang={DEFAULT_LANG} title={L.notFound}>
+  <h1 class="big">{L.notFound}</h1>
+  <p style="margin-top:22px">
+    <a class="mini" href={`/${DEFAULT_LANG}/articles`}>{L.articles}</a>
+  </p>
+</Base>

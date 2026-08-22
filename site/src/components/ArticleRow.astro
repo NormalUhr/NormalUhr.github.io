@@ -1,0 +1,39 @@
+---
+import type { Lang } from '../site.config'
+import { category, series as seriesById, t } from '../lib/taxonomy'
+import { dateISO } from '../lib/articles'
+
+interface Props {
+  lang: Lang
+  slug: string
+  title: string
+  subtitle?: string
+  date: Date
+  categoryId: string
+  seriesId?: string
+  part?: number | null
+  tags: string[]
+  langs: Lang[]
+  eqns: number
+}
+const { lang, slug, title, subtitle, date, categoryId, seriesId, part, tags, langs, eqns } = Astro.props
+const L = t(lang)
+const c = category(categoryId)
+const s = seriesId ? seriesById(seriesId) : undefined
+---
+<div class="item">
+  <div class="when"><time datetime={dateISO(date)}>{dateISO(date)}</time></div>
+  <div>
+    <a class="t" href={`/${lang}/p/${slug}`}>{title}</a>
+    {subtitle && <p class="sub">{subtitle}</p>}
+    <div class="row">
+      <span class="dot" style={`background:${c.accent}`}></span>
+      <a href={categoryId === 'archive' ? `/${lang}/archive` : `/${lang}/topics/${categoryId}`}>{c.name[lang]}</a>
+      <span class="sep">·</span>
+      <span>{langs.join(' / ')}</span>
+      {eqns > 0 && <><span class="sep">·</span><span class="eq">{eqns} {L.equations}</span></>}
+      {s && <a class="pill" href={`/${lang}/s/${s.id}`}>{s.name[lang]}{part ? ` ${part}` : ''}</a>}
+      {tags.map((tag) => <a class="tag" href={`/${lang}/tags/${encodeURIComponent(tag)}`}>{tag}</a>)}
+    </div>
+  </div>
+</div>

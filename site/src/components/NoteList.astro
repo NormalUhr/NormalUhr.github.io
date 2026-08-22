@@ -1,0 +1,23 @@
+---
+import { render } from 'astro:content'
+import type { Lang } from '../site.config'
+import { t } from '../lib/taxonomy'
+import { dateISO, type NoteEntry } from '../lib/articles'
+
+interface Props { lang: Lang; notes: NoteEntry[]; compact?: boolean }
+const { lang, notes, compact = false } = Astro.props
+const L = t(lang)
+const rendered = await Promise.all(notes.map(async (n) => ({ n, Content: (await render(n)).Content })))
+---
+{rendered.length === 0 ? (
+  <p class="empty">{L.noPosts}</p>
+) : (
+  <div class="notes">
+    {rendered.map(({ n, Content }) => (
+      <div class="note">
+        <div class="w"><time datetime={dateISO(n.data.date)}>{compact ? dateISO(n.data.date).slice(5) : dateISO(n.data.date)}</time></div>
+        <div class="bd" lang={n.data.lang}><Content /></div>
+      </div>
+    ))}
+  </div>
+)}

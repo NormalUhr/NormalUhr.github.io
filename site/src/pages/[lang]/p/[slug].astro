@@ -1,0 +1,168 @@
+---
+import { render } from 'astro:content'
+import Base from '../../../layouts/Base.astro'
+import Comments from '../../../components/Comments.astro'
+import LikeButton from '../../../components/LikeButton.astro'
+import LikeScript from '../../../components/LikeScript.astro'
+import Enhance from '../../../components/Enhance.astro'
+import { site, LANGS, type Lang } from '../../../site.config'
+import { category as cat, series as seriesById, t, fill } from '../../../lib/taxonomy'
+import { bySlug, seriesMembers, neighbours, dateISO, titleFor } from '../../../lib/articles'
+
+export async function getStaticPaths() {
+  const map = await bySlug()
+  const paths = []
+  for (const [slug] of map) {
+    for (const lang of LANGS) paths.push({ params: { lang, slug } })
+  }
+  return paths
+}
+
+const lang = Astro.params.lang as Lang
+const slug = Astro.params.slug as string
+const L = t(lang)
+
+const bucket = (await bySlug()).get(slug)!
+const langs = LANGS.filter((l) => bucket[l])
+// The fallback rule: this language if it exists, otherwise the one that does.
+const article = bucket[lang] ?? bucket[langs[0]]!
+const bodyLang = article.lang
+const data = article.entry.data
+const c = cat(data.category)
+const s = data.series ? seriesById(data.series) : undefined
+const partsCount = s ? (await seriesMembers(lang, s.id)).length : 0
+const { Content, remarkPluginFrontmatter } = await render(article.entry)
+const toc: Array<{ depth: number; slug: string; text: string }> = remarkPluginFrontmatter.toc ?? []
+const { newer, older } = await neighbours(lang, slug)
+const year = data.date.getFullYear()
+const name = titleFor(article, lang)
+// When the body is in the other language, show its own name underneath, so a reader
+// knows what the piece is actually called.
+const original = bodyLang !== lang ? data.title : data.subtitle
+const canonical = 'https://normaluhr.github.io/' + lang + '/p/' + slug
+const bib = [
+  '@misc{zhang' + year + slug.replace(/-/g, '') + ',',
+  '  author = {Zhang, Yihua},',
+  '  title  = {' + data.title.replace(/[{}]/g, '') + '},',
+  '  year   = {' + year + '},',
+  '  url    = {' + canonical + '}',
+  '}',
+].join('\n')
+---
+<Base
+  lang={lang}
+  title={name}
+  description={data.subtitle}
+  section="articles"
+  altPaths={{ en: `/en/p/${slug}`, zh: `/zh/p/${slug}` }}
+>
+  <div class="post">
+    <aside class="rail">
+      {toc.length > 0 && (
+        <section>
+          <h2>{L.contents}</h2>
+          <ol>
+            {toc.map((h) => (
+              <li class={`d${h.depth}`}><a href={`#${h.slug}`} data-toc={h.slug}>{h.text}</a></li>
+            ))}
+          </ol>
+        </section>
+      )}
+      {article.eqns > 0 && (
+        <section>
+          <h2>{L.equations} ({article.eqns})</h2>
+          <div class="eqlist" id="eqlist"></div>
+        </section>
+      )}
+    </aside>
+
+    <article>
+      <div class="ahead">
+        <div class="over">
+          <a class="lbl" style={`color:${c.accent}`}
+             href={data.category === 'archive' ? `/${lang}/archive` : `/${lang}/topics/${data.category}`}>
+            {c.name[lang]}
+          </a>
+          {s && (
+            <a class="pill" href={`/${lang}/s/${s.id}`}>
+              {s.name[lang]}{data.part ? ` · ${fill(L.partOf, { n: data.part, m: partsCount })}` : ''}
+            </a>
+          )}
+        </div>
+
+        <h1 lang={lang}>{name}</h1>
+        {original && <p class="st" lang={bodyLang}>{original}</p>}
+
+        <div class="ameta">
+          <div><b><time datetime={dateISO(data.date)}>{dateISO(data.date)}</time></b>{L.published}</div>
+          <div><b>{article.minutes}</b>{L.minRead}</div>
+          <div><b>{article.words.toLocaleString('en-US')}</b>{L.words}</div>
+          {article.eqns > 0 && (
+            <div><a href="#eq-1" data-scroll="eq-1"><b>{article.eqns}</b>{L.equations}</a></div>
+          )}
+          <div><b>{langs.join(' / ')}</b>{L.languages}</div>
+          {site.likes && <div class="metaact"><LikeButton lang={lang} /></div>}
+        </div>
+
+        {bodyLang !== lang && (
+          <p class="notice"><b>{fill(L.onlyIn, { lang: L.langName[bodyLang] })}</b></p>
+        )}
+      </div>
+
+      <div class="prose" id="prose" lang={bodyLang}><Content /></div>
+
+      {(data.tags.length > 0 || site.goatcounter || site.likes) && (
+        <div class="tally">
+          <LikeButton lang={lang} />
+          {data.tags.map((tag) => (
+            <a class="tag" href={`/${lang}/tags/${encodeURIComponent(tag)}`}>{tag}</a>
+          ))}
+          {site.goatcounter && <span style="margin-left:auto"><b id="read-count" class="tnum">—</b> {L.reads}</span>}
+        </div>
+      )}
+
+      <Comments lang={lang} />
+
+      <div class="cite">
+        <div class="h">{L.cite}<span style="flex:1"></span>
+          <button class="mini" type="button" id="copy-cite">{L.copy}</button>
+        </div>
+        <pre id="bib">{bib}</pre>
+      </div>
+
+      <nav class="pgr" aria-label={L.articles}>
+        {older
+          ? <a href={`/${lang}/p/${older.slug}`}><small>← {L.older}</small><span>{titleFor(older, lang)}</span></a>
+          : <div></div>}
+        {newer && (
+          <a href={`/${lang}/p/${newer.slug}`} style="text-align:right">
+            <small>{L.newer} →</small><span>{titleFor(newer, lang)}</span>
+          </a>
+        )}
+      </nav>
+    </article>
+
+  </div>
+
+  <div class="hcard" id="hcard"></div>
+  <Enhance />
+  <LikeScript lang={lang} key={slug} />
+
+  <script is:inline define:vars={{ labels: [L.copy, L.copied] }}>
+    document.getElementById('copy-cite').addEventListener('click', async (e) => {
+      const b = e.currentTarget
+      try { await navigator.clipboard.writeText(document.getElementById('bib').textContent) } catch (err) { return }
+      b.textContent = labels[1]
+      setTimeout(() => { b.textContent = labels[0] }, 1400)
+    })
+  </script>
+
+  {site.goatcounter && (
+    <script is:inline define:vars={{ code: site.goatcounter, path: `/${lang}/p/${slug}` }}>
+      fetch(`https://${code}.goatcounter.com/counter${path}.json`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => { if (d && d.count) document.getElementById('read-count').textContent = d.count })
+        .catch(() => {})
+    </script>
+  )}
+</Base>

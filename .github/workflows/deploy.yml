@@ -1,0 +1,54 @@
+# Builds site/ and publishes it to GitHub Pages.
+#
+# Inert until this branch is merged and Pages is switched to "GitHub Actions" as its
+# source (Settings -> Pages -> Build and deployment). Nothing here runs on its own.
+name: Deploy site
+
+on:
+  push:
+    branches: [master]
+    paths: ['site/**', 'img/**', 'videos/**', '.github/workflows/deploy.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+      - run: npm ci
+        working-directory: site
+      # Media lives at the repository root and is symlinked into site/public.
+      # Recreate the links after checkout so the build picks them up.
+      - name: Link media
+        run: |
+          ln -sfn ../../img site/public/img
+          ln -sfn ../../videos site/public/videos
+      - run: npm run build
+        working-directory: site
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4

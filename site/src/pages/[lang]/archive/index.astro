@@ -1,0 +1,28 @@
+---
+import Base from '../../../layouts/Base.astro'
+import ArticleStream from '../../../components/ArticleStream.astro'
+import TopicChips from '../../../components/TopicChips.astro'
+import SeriesCards from '../../../components/SeriesCards.astro'
+import { LANGS, type Lang } from '../../../site.config'
+import { ARCHIVE, SERIES, t } from '../../../lib/taxonomy'
+import { archiveArticles, liveArticles, categoryCounts, seriesCounts } from '../../../lib/articles'
+
+export function getStaticPaths() { return LANGS.map((lang) => ({ params: { lang } })) }
+
+const lang = Astro.params.lang as Lang
+const L = t(lang)
+const articles = await archiveArticles(lang)
+const counts = await categoryCounts(lang)
+const sCounts = await seriesCounts(lang)
+const here = SERIES.filter((s) => s.category === 'archive')
+const total = (await liveArticles(lang)).length
+---
+<Base lang={lang} title={ARCHIVE.name[lang]} section="articles"
+      altPaths={{ en: '/en/archive', zh: '/zh/archive' }}>
+  <h1 class="big">{ARCHIVE.name[lang]}</h1>
+  <TopicChips lang={lang} current="archive" counts={counts} total={total} />
+  <div class="sechead" style="margin-top:26px"><h2 class="lbl">{L.series}</h2></div>
+  <SeriesCards lang={lang} series={here} counts={sCounts} />
+  <div class="sechead" style="margin-top:26px"><h2 class="lbl">{articles.length} {L.articles_n}</h2></div>
+  <ArticleStream lang={lang} articles={articles} />
+</Base>

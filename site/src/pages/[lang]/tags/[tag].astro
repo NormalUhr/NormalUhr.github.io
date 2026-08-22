@@ -1,0 +1,27 @@
+---
+import Base from '../../../layouts/Base.astro'
+import ArticleStream from '../../../components/ArticleStream.astro'
+import { LANGS, type Lang } from '../../../site.config'
+import { t } from '../../../lib/taxonomy'
+import { resolved, tagCounts } from '../../../lib/articles'
+
+export async function getStaticPaths() {
+  const paths = []
+  for (const lang of LANGS) {
+    for (const tag of (await tagCounts(lang)).keys()) paths.push({ params: { lang, tag } })
+  }
+  return paths
+}
+
+const lang = Astro.params.lang as Lang
+const tag = Astro.params.tag as string
+const L = t(lang)
+const articles = (await resolved(lang)).filter((a) => a.entry.data.tags.includes(tag))
+---
+<Base lang={lang} title={tag} section="articles"
+      altPaths={{ en: `/en/tags/${encodeURIComponent(tag)}`, zh: `/zh/tags/${encodeURIComponent(tag)}` }}>
+  <p class="lbl" style="margin:0 0 10px">{L.all}</p>
+  <h1 class="big">{tag}</h1>
+  <div class="sechead" style="margin-top:22px"><h2 class="lbl">{articles.length} {articles.length === 1 ? L.article : L.articles_n}</h2></div>
+  <ArticleStream lang={lang} articles={articles} />
+</Base>

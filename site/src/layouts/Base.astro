@@ -1,0 +1,122 @@
+---
+import '../styles/global.css'
+import 'katex/dist/katex.min.css'
+import { getEntry } from 'astro:content'
+import { site, LANGS, type Lang } from '../site.config'
+import { t } from '../lib/taxonomy'
+
+interface Props {
+  lang: Lang
+  title: string
+  description?: string
+  /** Path within the other language, so the switcher lands on the same content. */
+  altPaths?: Partial<Record<Lang, string | null>>
+  section?: 'articles' | 'posts' | 'about' | null
+}
+
+const { lang, title, description, altPaths, section = null } = Astro.props
+const L = t(lang)
+const full = title ? `${title} · ${site.name[lang]}` : site.name[lang]
+// About is linked only once it has been written, so the site never shows a bare page.
+const about = await getEntry('pages', `${lang}/about`)
+const nav = [
+  { href: `/${lang}/articles`, label: L.articles, key: 'articles' },
+  { href: `/${lang}/posts`, label: L.posts, key: 'posts' },
+  ...(about?.body?.trim() ? [{ href: `/${lang}/about`, label: L.about, key: 'about' }] : []),
+]
+---
+<!doctype html>
+<html lang={lang === 'zh' ? 'zh-Hans' : 'en'}>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{full}</title>
+  {description && <meta name="description" content={description} />}
+  <link rel="canonical" href={new URL(Astro.url.pathname, site.name ? Astro.site : undefined)} />
+  {LANGS.map((l) => altPaths?.[l] && <link rel="alternate" hreflang={l} href={new URL(altPaths[l]!, Astro.site)} />)}
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap"
+    rel="stylesheet"
+  />
+  <link rel="alternate" type="application/rss+xml" title={site.name[lang]} href="/rss.xml" />
+  <link rel="icon" href={site.favicon ?? 'data:,'} />
+  <!-- Dark is the CSS default, so only an explicit light choice needs stamping, before first paint. -->
+  <script is:inline>
+    try {
+      if (localStorage.getItem('theme') === 'light') document.documentElement.dataset.theme = 'light'
+    } catch (e) {}
+  </script>
+  {site.goatcounter && (
+    <script
+      is:inline
+      async
+      data-goatcounter={`https://${site.goatcounter}.goatcounter.com/count`}
+      src="//gc.zgo.at/count.js"
+    ></script>
+  )}
+</head>
+<body>
+  <a class="skip" href="#main">{L.skipToContent}</a>
+  <header class="top"><div class="topin">
+    <div class="mark">
+      <a href={`/${lang}/`}>{site.name[lang]}</a>
+    </div>
+    <nav class="nav" aria-label={L.articles}>
+      {nav.map((n) => (
+        <a href={n.href} aria-current={section === n.key ? 'page' : undefined}>{n.label}</a>
+      ))}
+    </nav>
+    <div class="act">
+      <a class="mini" href={`/${lang}/search`} aria-label={L.search} title={L.search}>
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+          <circle cx="5" cy="5" r="3.6" stroke="currentColor" stroke-width="1.3" />
+          <path d="M7.8 7.8 L11 11" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" />
+        </svg>
+      </a>
+      <div class="lsw">
+        {LANGS.map((l) => (
+          <a href={altPaths?.[l] ?? `/${l}/`} aria-current={l === lang ? 'true' : undefined} hreflang={l}>
+            {l === 'en' ? 'EN' : '中'}
+          </a>
+        ))}
+      </div>
+      <button class="mini" id="themebtn" type="button" aria-label="Toggle light and dark">◐</button>
+    </div>
+  </div></header>
+
+  <main class="page" id="main"><slot /></main>
+
+  <footer class="foot"><div class="footin">
+    <div class="links">
+      {site.links.map((l) => <a href={l.href} rel="me noopener" target="_blank">{l.label}</a>)}
+      <a href="/rss.xml">RSS</a>
+    </div>
+    <div class="tot">
+      {site.goatcounter
+        ? <span><b id="site-visits" class="tnum">—</b> {L.visits} · {site.since}–</span>
+        : <span>{site.since}–</span>}
+    </div>
+  </div></footer>
+
+  <script is:inline>
+    document.getElementById('themebtn').addEventListener('click', () => {
+      const root = document.documentElement
+      const light = root.dataset.theme === 'light'
+      if (light) { delete root.dataset.theme; try { localStorage.setItem('theme', 'dark') } catch (e) {} }
+      else { root.dataset.theme = 'light'; try { localStorage.setItem('theme', 'light') } catch (e) {} }
+    })
+  </script>
+
+  {site.goatcounter && (
+    <script is:inline define:vars={{ code: site.goatcounter }}>
+      // Site total, read from GoatCounter's public counter endpoint.
+      fetch(`https://${code}.goatcounter.com/counter/TOTAL.json`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => { if (d && d.count) document.getElementById('site-visits').textContent = d.count })
+        .catch(() => {})
+    </script>
+  )}
+</body>
+</html>

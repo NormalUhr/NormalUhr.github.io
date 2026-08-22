@@ -1,0 +1,107 @@
+---
+// Progressive enhancement for an article page. Everything here is navigation or a
+// utility: nothing is added to the author's prose beyond linking an "Eq. (n)"
+// reference to the equation it names.
+---
+<script is:inline>
+  (() => {
+    const prose = document.getElementById('prose')
+    if (!prose) return
+
+    // Wide tables scroll inside their own box rather than the page.
+    prose.querySelectorAll(':scope > table').forEach((table) => {
+      const box = document.createElement('div')
+      box.className = 'tablewrap'
+      table.parentNode.insertBefore(box, table)
+      box.appendChild(table)
+    })
+
+    // Copy button on each code block.
+    const COPY = document.documentElement.lang.startsWith('zh') ? ['复制', '已复制'] : ['Copy', 'Copied']
+    prose.querySelectorAll('.code-block').forEach((pre) => {
+      const b = document.createElement('button')
+      b.type = 'button'
+      b.className = 'copybtn'
+      b.textContent = COPY[0]
+      b.addEventListener('click', async () => {
+        try { await navigator.clipboard.writeText(pre.dataset.source || pre.textContent) } catch (e) { return }
+        b.textContent = COPY[1]; b.classList.add('ok')
+        setTimeout(() => { b.textContent = COPY[0]; b.classList.remove('ok') }, 1400)
+      })
+      pre.appendChild(b)
+    })
+
+    // Sidebar index of every display equation.
+    const eqlist = document.getElementById('eqlist')
+    if (eqlist) {
+      eqlist.innerHTML = [...prose.querySelectorAll('.eqn')].map((eq) => {
+        const k = eq.querySelector('.katex-display')
+        return '<a href="#' + eq.id + '"><span class="n">(' + eq.dataset.eqn + ')</span>' +
+               '<span class="k">' + (k ? k.innerHTML : '') + '</span></a>'
+      }).join('')
+    }
+
+    const flash = (id) => {
+      const el = document.getElementById(id)
+      if (!el) return
+      el.scrollIntoView({ block: 'center' })
+      el.classList.add('flash')
+      setTimeout(() => el.classList.remove('flash'), 1100)
+    }
+    document.querySelectorAll('[data-scroll]').forEach((a) => {
+      a.addEventListener('click', (e) => { e.preventDefault(); flash(a.dataset.scroll) })
+    })
+
+    // Link the author's own "Eq. (n)" / "公式 (n)" references to the numbered equation.
+    const re = /(Eq\.?|Equation|公式)\s*\((\d+)\)/g
+    const walker = document.createTreeWalker(prose, NodeFilter.SHOW_TEXT)
+    const hits = []
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      if (node.parentElement.closest('a,.katex,pre')) continue
+      re.lastIndex = 0
+      if (re.test(node.nodeValue)) hits.push(node)
+    }
+    const escape = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))
+    hits.forEach((node) => {
+      const span = document.createElement('span')
+      span.innerHTML = escape(node.nodeValue).replace(re, (m, _w, k) =>
+        '<a class="xref" href="#eq-' + k + '" data-eq="' + k + '">' + m + '</a>')
+      node.parentNode.replaceChild(span, node)
+    })
+
+    // Hovercard so a reference can be checked without scrolling away.
+    const card = document.getElementById('hcard')
+    const label = document.documentElement.lang.startsWith('zh') ? '公式' : 'Equation'
+    prose.querySelectorAll('a.xref').forEach((a) => {
+      const show = () => {
+        const eq = document.getElementById('eq-' + a.dataset.eq)
+        const k = eq && eq.querySelector('.katex-display')
+        if (!k) return
+        card.innerHTML = '<div class="cl">' + label + ' (' + a.dataset.eq + ')</div><div>' + k.outerHTML + '</div>'
+        card.classList.add('on')
+        const r = a.getBoundingClientRect(), cr = card.getBoundingClientRect()
+        card.style.left = Math.max(10, Math.min(innerWidth - cr.width - 10, r.left)) + 'px'
+        card.style.top = (r.top > cr.height + 18 ? r.top - cr.height - 10 : r.bottom + 10) + 'px'
+      }
+      const hide = () => card.classList.remove('on')
+      a.addEventListener('mouseenter', show); a.addEventListener('focus', show)
+      a.addEventListener('mouseleave', hide); a.addEventListener('blur', hide)
+      a.addEventListener('click', (e) => { e.preventDefault(); hide(); flash('eq-' + a.dataset.eq) })
+    })
+
+    // Highlight the section currently being read in the table of contents.
+    const links = [...document.querySelectorAll('[data-toc]')]
+    if (links.length) {
+      const onScroll = () => {
+        let cur = links[0]
+        for (const a of links) {
+          const el = document.getElementById(a.dataset.toc)
+          if (el && el.getBoundingClientRect().top < 150) cur = a
+        }
+        links.forEach((a) => a.classList.toggle('cur', a === cur))
+      }
+      addEventListener('scroll', onScroll, { passive: true })
+      onScroll()
+    }
+  })()
+</script>

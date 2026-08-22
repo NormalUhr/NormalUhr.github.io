@@ -1,0 +1,11 @@
+{
+  "name": "blog-redesign",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "dev": "node serve.mjs",
+    "check": "node build.mjs && node audit.mjs",
+    "shot": "node shot.mjs"
+  }
+}

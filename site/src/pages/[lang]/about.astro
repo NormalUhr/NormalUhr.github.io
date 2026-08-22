@@ -1,0 +1,18 @@
+---
+import { getEntry, render } from 'astro:content'
+import Base from '../../layouts/Base.astro'
+import { LANGS, type Lang } from '../../site.config'
+import { t } from '../../lib/taxonomy'
+
+export function getStaticPaths() { return LANGS.map((lang) => ({ params: { lang } })) }
+
+const lang = Astro.params.lang as Lang
+const L = t(lang)
+// Body lives in src/content/pages/<lang>/about.md so it is edited as prose, not code.
+const entry = await getEntry('pages', `${lang}/about`)
+const Content = entry && entry.body?.trim() ? (await render(entry)).Content : null
+---
+<Base lang={lang} title={L.about} section="about" altPaths={{ en: '/en/about', zh: '/zh/about' }}>
+  <h1 class="big">{L.about}</h1>
+  {Content && <div class="doc2"><div class="prose" lang={lang}><Content /></div></div>}
+</Base>

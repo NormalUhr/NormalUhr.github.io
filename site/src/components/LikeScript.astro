@@ -1,0 +1,60 @@
+---
+import { site, type Lang } from '../site.config'
+import { t } from '../lib/taxonomy'
+const { lang, key } = Astro.props as { lang: Lang; key: string }
+const L = t(lang)
+---
+{site.likes && (
+  <script
+    is:inline
+    define:vars={{ base: site.likes, key, labels: { like: L.like, liked: L.liked, one: L.likeOne, many: L.likes } }}
+  >
+    (() => {
+      const buttons = [...document.querySelectorAll('[data-like]')]
+      if (!buttons.length) return
+      const url = base.replace(/\/+$/, '') + '/v1/' + encodeURIComponent(key)
+      const memory = 'liked:' + key
+      let count = null
+      let liked = false
+      try { liked = localStorage.getItem(memory) === '1' } catch (e) {}
+
+      const paint = () => {
+        for (const b of buttons) {
+          b.querySelector('[data-like-count]').textContent = count === null ? '—' : String(count)
+          b.setAttribute('aria-pressed', String(liked))
+          b.classList.toggle('on', liked)
+          const label = liked ? labels.liked : labels.like
+          const unit = count === 1 ? labels.one : labels.many
+          b.setAttribute('aria-label', count === null ? label : label + ' · ' + count + ' ' + unit)
+          b.title = label
+        }
+      }
+      paint()
+
+      fetch(url, { headers: { accept: 'application/json' } })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => { if (d && typeof d.count === 'number') { count = d.count; paint() } })
+        .catch(() => {})
+
+      const send = () => {
+        if (liked) return
+        const before = count
+        liked = true
+        count = (count ?? 0) + 1
+        paint()
+        try { localStorage.setItem(memory, '1') } catch (e) {}
+        fetch(url, { method: 'POST', headers: { accept: 'application/json' } })
+          .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+          .then((d) => { if (typeof d.count === 'number') { count = d.count; paint() } })
+          .catch(() => {
+            // Put it back rather than leave a number the server never saw.
+            liked = false
+            count = before
+            try { localStorage.removeItem(memory) } catch (e) {}
+            paint()
+          })
+      }
+      for (const b of buttons) b.addEventListener('click', send)
+    })()
+  </script>
+)}

@@ -1,0 +1,18 @@
+---
+import type { Lang } from '../site.config'
+import { CATEGORIES, ARCHIVE, t } from '../lib/taxonomy'
+const { lang, current, counts, total } = Astro.props as
+  { lang: Lang; current: string | null; counts: Map<string, number>; total: number }
+const L = t(lang)
+---
+<div class="filters">
+  <a class="chip" href={`/${lang}/articles`} aria-current={current === null ? 'page' : undefined}>{L.all}<b>{total}</b></a>
+  {CATEGORIES.map((c) => (
+    <a class="chip" href={`/${lang}/topics/${c.id}`} aria-current={current === c.id ? 'page' : undefined}>
+      <i style={`background:${c.accent}`}></i>{c.name[lang]}<b>{counts.get(c.id) ?? 0}</b>
+    </a>
+  ))}
+  <a class="chip" href={`/${lang}/archive`} aria-current={current === 'archive' ? 'page' : undefined}>
+    <i style={`background:${ARCHIVE.accent}`}></i>{ARCHIVE.name[lang]}<b>{counts.get('archive') ?? 0}</b>
+  </a>
+</div>

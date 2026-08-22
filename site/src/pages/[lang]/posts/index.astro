@@ -1,0 +1,20 @@
+---
+import Base from '../../../layouts/Base.astro'
+import NoteList from '../../../components/NoteList.astro'
+import { LANGS, type Lang } from '../../../site.config'
+import { t } from '../../../lib/taxonomy'
+import { allNotes } from '../../../lib/articles'
+
+export function getStaticPaths() { return LANGS.map((lang) => ({ params: { lang } })) }
+
+const lang = Astro.params.lang as Lang
+const L = t(lang)
+const notes = await allNotes(lang)
+---
+<Base lang={lang} title={L.posts} section="posts"
+      altPaths={{ en: '/en/posts', zh: '/zh/posts' }}>
+  <h1 class="big">{L.posts}</h1>
+  <div style="max-width:62ch;margin-top:24px">
+    <NoteList lang={lang} notes={notes} />
+  </div>
+</Base>

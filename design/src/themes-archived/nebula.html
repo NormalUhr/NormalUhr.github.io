@@ -1,0 +1,1059 @@
+<meta charset="utf-8">
+<title>Star Chart</title>
+<meta name="description" content="Redesign direction C: the blog as a navigable map of its own ideas.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<style>__KATEX_CSS__</style>
+
+<style>
+/* ============================================================
+   nebula — Observatory.  Dark-first; light is a "blueprint"
+   inversion that the canvas renderer reads from these tokens.
+   ============================================================ */
+:root {
+  --void:#05070d; --void-2:#080b13; --panel:#0d111b; --panel-2:#121724;
+  --edge:#1b2233; --edge-soft:#141a28;
+  --fg:#dee5f0; --fg-strong:#f4f7fc; --dim:#8792a8; --dimmer:#5a6478;
+  --glow:#7cf2c0; --accent:#7cf2c0;
+  --star:#8fa0bd; --grid:#101623;
+  --disp:"Instrument Serif",Georgia,"Songti SC",serif;
+  --sans:"Instrument Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --cjk:"PingFang SC","Hiragino Sans GB","Noto Sans CJK SC","Microsoft YaHei";
+  --topbar:58px;
+  color-scheme:dark;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --void:#f7f8fb; --void-2:#eef1f7; --panel:#ffffff; --panel-2:#f3f5fa;
+    --edge:#d8dee9; --edge-soft:#e6eaf2;
+    --fg:#2b3242; --fg-strong:#0d1220; --dim:#5f6b80; --dimmer:#98a2b4;
+    --glow:#0f7f5c; --accent:#0f7f5c; --star:#aab4c6; --grid:#e7ebf3; color-scheme:light;
+  }
+}
+:root[data-theme="light"] {
+  --void:#f7f8fb; --void-2:#eef1f7; --panel:#ffffff; --panel-2:#f3f5fa;
+  --edge:#d8dee9; --edge-soft:#e6eaf2;
+  --fg:#2b3242; --fg-strong:#0d1220; --dim:#5f6b80; --dimmer:#98a2b4;
+  --glow:#0f7f5c; --accent:#0f7f5c; --star:#aab4c6; --grid:#e7ebf3; color-scheme:light;
+}
+
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;background:var(--void);color:var(--fg);
+  font-family:var(--sans);font-size:15px;line-height:1.62;
+  -webkit-font-smoothing:antialiased;
+}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+::selection{background:color-mix(in srgb,var(--accent) 30%,transparent)}
+:focus-visible{outline:1.5px solid var(--accent);outline-offset:2px}
+.mono{font-family:var(--mono)}
+.lbl{font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--dimmer)}
+
+/* ---------- top bar ---------- */
+.bar{
+  position:fixed;top:0;left:0;right:0;height:var(--topbar);z-index:50;
+  display:flex;align-items:center;gap:18px;padding:0 20px;
+  background:color-mix(in srgb,var(--void) 86%,transparent);
+  backdrop-filter:blur(10px);border-bottom:1px solid var(--edge);
+}
+.brand{display:flex;align-items:center;gap:10px;flex:none}
+.brand .orb{
+  width:22px;height:22px;border-radius:50%;flex:none;
+  background:radial-gradient(circle at 32% 30%,var(--accent),transparent 68%),var(--panel-2);
+  box-shadow:0 0 16px -2px color-mix(in srgb,var(--accent) 60%,transparent);
+}
+.brand a{font-family:var(--disp);font-size:20px;font-weight:400;color:var(--fg-strong);letter-spacing:-.01em}
+.nav{display:flex;gap:2px;flex:1;flex-wrap:wrap;min-width:0}
+.nav a{font-size:13px;color:var(--dim);padding:5px 10px;border-radius:6px;font-weight:500}
+.nav a:hover{background:var(--panel-2);color:var(--fg-strong);text-decoration:none}
+.nav a.on{color:var(--fg-strong);background:var(--panel-2)}
+.act{display:flex;align-items:center;gap:7px;flex:none}
+.btn{
+  font-size:12px;color:var(--dim);border:1px solid var(--edge);border-radius:7px;
+  padding:4px 10px;background:var(--panel);
+}
+.btn:hover{color:var(--fg-strong);border-color:var(--dimmer)}
+.btn.on{color:var(--void);background:var(--accent);border-color:var(--accent);font-weight:600}
+.seg{display:flex;border:1px solid var(--edge);border-radius:7px;overflow:hidden;background:var(--panel)}
+.seg button{font-size:12px;padding:4px 10px;color:var(--dim)}
+.seg button.on{background:var(--accent);color:var(--void);font-weight:600}
+
+/* ---------- graph stage ---------- */
+.stage{position:fixed;inset:var(--topbar) 0 0 0;overflow:hidden}
+.stage canvas{display:block;width:100%;height:100%;cursor:grab}
+.stage canvas.drag{cursor:grabbing}
+.stage.hide{display:none}
+.hud{position:absolute;left:20px;top:18px;max-width:330px;pointer-events:none}
+.hud h1{
+  font-family:var(--disp);font-size:38px;line-height:1.04;letter-spacing:-.02em;
+  margin:0 0 10px;color:var(--fg-strong);font-weight:400;
+}
+.hud p{margin:0;font-size:13.5px;color:var(--dim);line-height:1.6}
+.hud .stats{display:flex;gap:16px;margin-top:14px;font-family:var(--mono);font-size:11px;color:var(--dimmer)}
+.hud .stats b{display:block;font-size:17px;color:var(--fg-strong);font-weight:500}
+.filters{
+  position:absolute;left:20px;bottom:20px;display:flex;gap:6px;flex-wrap:wrap;max-width:min(560px,72vw);
+}
+.chip{
+  font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;
+  border:1px solid var(--edge);border-radius:99px;padding:3px 10px;background:var(--panel);color:var(--dim);
+  display:flex;align-items:center;gap:6px;
+}
+.chip i{width:7px;height:7px;border-radius:50%;display:block}
+.chip.off{opacity:.34}
+.chip:hover{border-color:var(--dimmer)}
+.legendbox{
+  position:absolute;right:20px;bottom:20px;font-family:var(--mono);font-size:10.5px;color:var(--dimmer);
+  text-align:right;line-height:1.9;pointer-events:none;
+}
+.legendbox b{color:var(--dim);font-weight:400}
+.tip{
+  position:fixed;z-index:60;max-width:320px;padding:10px 13px;border:1px solid var(--edge);
+  border-radius:9px;background:var(--panel);box-shadow:0 16px 40px -14px #000a;display:none;
+  pointer-events:none;
+}
+.tip.on{display:block}
+.tip .k{font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;margin-bottom:5px}
+.tip .t{font-family:var(--disp);font-size:17px;color:var(--fg-strong);line-height:1.24;font-weight:400}
+.tip .m{font-family:var(--mono);font-size:10.5px;color:var(--dimmer);margin-top:5px}
+.tip .x{font-size:12.5px;color:var(--dim);margin-top:6px;line-height:1.5}
+
+/* ---------- document surface ---------- */
+.doc{display:none;padding:calc(var(--topbar) + 30px) 22px 100px;max-width:1180px;margin:0 auto}
+.doc.on{display:block}
+h1.view{font-family:var(--disp);font-size:40px;line-height:1.06;letter-spacing:-.02em;margin:0 0 12px;color:var(--fg-strong);font-weight:400;max-width:26ch}
+p.lede{margin:0 0 28px;font-size:16px;color:var(--dim);line-height:1.65;max-width:60ch}
+.sec{display:flex;align-items:center;gap:12px;margin:36px 0 16px}
+.sec::after{content:"";flex:1;height:1px;background:var(--edge-soft)}
+
+.cards{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(280px,1fr))}
+.c{
+  border:1px solid color-mix(in srgb,var(--acc,var(--accent)) 26%,var(--edge));
+  border-radius:12px;padding:15px 17px;background:var(--panel);
+  color:inherit;display:block;transition:.18s;position:relative;
+}
+.c:hover{border-color:var(--acc,var(--accent));text-decoration:none;transform:translateY(-2px);background:var(--panel-2)}
+.c .g{font-family:var(--mono);font-size:11px;color:var(--acc,var(--accent));letter-spacing:.1em;text-transform:uppercase}
+.c h3{font-family:var(--disp);margin:9px 0 5px;font-size:21px;color:var(--fg-strong);font-weight:400;letter-spacing:-.01em;line-height:1.18}
+.c p{margin:0;font-size:13px;color:var(--dim);line-height:1.58}
+.c .n{position:absolute;top:14px;right:16px;font-family:var(--mono);font-size:10.5px;color:var(--dimmer)}
+
+.rows{border-top:1px solid var(--edge)}
+.row{
+  display:grid;grid-template-columns:92px minmax(0,1fr) auto;gap:18px;align-items:baseline;
+  padding:14px 6px;border-bottom:1px solid var(--edge-soft);
+}
+.row:hover{background:var(--panel-2)}
+.row .d{font-family:var(--mono);font-size:11px;color:var(--dimmer)}
+.row a.t{font-family:var(--disp);font-size:20px;font-weight:400;color:var(--fg-strong);line-height:1.24;letter-spacing:-.008em;display:block}
+.row a.t:hover{color:var(--accent);text-decoration:none}
+.row .s{margin:3px 0 0;font-size:13.5px;color:var(--dim);line-height:1.5;max-width:70ch}
+.row .meta{display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin-top:7px}
+.row .dot{width:7px;height:7px;border-radius:50%;display:inline-block;flex:none}
+.pill{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;padding:1.5px 6px;border-radius:4px;font-weight:500}
+.tg{font-size:11.5px;color:var(--dimmer);border-bottom:1px dotted var(--edge)}
+.tg:hover{color:var(--fg-strong);text-decoration:none}
+
+/* ---------- post ---------- */
+.prog{position:fixed;top:var(--topbar);left:0;height:2px;background:var(--accent);z-index:55;transition:width .1s linear}
+.wrap{display:grid;grid-template-columns:minmax(0,1fr) 216px;gap:44px;align-items:start}
+@media (max-width:1080px){.wrap{grid-template-columns:1fr}.toc{display:none}}
+.phead{margin-bottom:30px}
+.phead .over{display:flex;gap:11px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+.phead h1{font-family:var(--disp);font-size:44px;line-height:1.06;letter-spacing:-.02em;margin:0 0 13px;color:var(--fg-strong);font-weight:400;max-width:28ch;text-wrap:balance}
+.phead .st{margin:0 0 18px;font-size:17px;color:var(--dim);line-height:1.5;max-width:56ch}
+.pmeta{display:flex;gap:22px;flex-wrap:wrap;padding:13px 0;border-top:1px solid var(--edge);border-bottom:1px solid var(--edge);font-family:var(--mono);font-size:11px;color:var(--dimmer)}
+.pmeta b{display:block;font-size:19px;color:var(--fg-strong);font-weight:400;font-family:var(--disp);font-variant-numeric:tabular-nums}
+.notice{margin:18px 0 0;border:1px solid color-mix(in srgb,#ffab5e 45%,transparent);border-radius:9px;padding:10px 14px;font-size:13px;background:color-mix(in srgb,#ffab5e 9%,transparent)}
+.notice b{color:#ffab5e}
+.modes{display:flex;align-items:center;gap:10px;margin:20px 0 0;flex-wrap:wrap}
+
+.prose{font-size:16.5px;line-height:1.76;color:var(--fg);max-width:none}
+.prose[lang="zh"]{font-family:var(--sans),var(--cjk);line-height:1.86}
+.prose>*{max-width:70ch}
+.prose h1{font-family:var(--disp);font-size:32px;margin:2.1em 0 .5em;color:var(--fg-strong);letter-spacing:-.018em;font-weight:400}
+.prose h2{font-family:var(--disp);font-size:27px;margin:2.3em 0 .55em;color:var(--fg-strong);letter-spacing:-.016em;font-weight:400;display:flex;gap:12px;align-items:baseline}
+.prose h2::before{content:"◆";font-size:9px;color:var(--accent);flex:none;font-family:var(--sans)}
+.prose h3{font-family:var(--sans);font-size:15.5px;margin:1.9em 0 .5em;color:var(--fg-strong);font-weight:600;letter-spacing:.005em}
+.prose h4{font-family:var(--mono);font-size:12px;letter-spacing:.1em;text-transform:uppercase;margin:1.7em 0 .4em;color:var(--dim)}
+.prose p{margin:0 0 1.05em}
+.prose strong{color:var(--fg-strong);font-weight:600}
+.prose ul,.prose ol{margin:0 0 1.15em;padding-left:1.35em}
+.prose li{margin:.34em 0}
+.prose li::marker{color:var(--accent)}
+.prose hr{border:0;border-top:1px solid var(--edge);margin:2.3em 0}
+.prose blockquote{margin:1.4em 0;padding-left:17px;border-left:2px solid var(--accent);color:var(--dim)}
+.prose :not(pre)>code{font-family:var(--mono);font-size:.84em;background:var(--panel-2);border:1px solid var(--edge-soft);padding:1px 5px;border-radius:5px;color:#ffab5e}
+.prose .tablewrap{overflow-x:auto;border:1px solid var(--edge);border-radius:11px;margin:1.7em 0}
+.prose table{border-collapse:collapse;font-size:13px;min-width:100%}
+.prose th{text-align:left;padding:11px 15px;background:var(--panel-2);color:var(--fg-strong);font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;border-bottom:1px solid var(--edge)}
+.prose td{padding:11px 15px;border-bottom:1px solid var(--edge-soft);vertical-align:top;line-height:1.58}
+.prose tr:last-child td{border-bottom:0}
+.prose img,.prose video{max-width:100%;border-radius:11px;border:1px solid var(--edge)}
+.prose audio{width:100%;max-width:500px}
+
+.eqn{display:grid;grid-template-columns:minmax(0,1fr) 44px;align-items:center;margin:1.6em 0;max-width:100%}
+.eqn>.katex-display{margin:0;grid-column:1;overflow-x:auto;overflow-y:hidden;min-width:0;padding:3px 0}
+.eqn>.texsrc{grid-column:1/-1}
+.eqn-tag{grid-column:2;text-align:right;font-family:var(--mono);font-size:11px;color:var(--dimmer);text-decoration:none}
+.eqn-tag:hover{color:var(--accent);text-decoration:none}
+.eqn.flash>.katex-display,.eqn:target>.katex-display{background:color-mix(in srgb,var(--accent) 14%,transparent);border-radius:7px}
+.texsrc{margin:8px 0 0;padding:8px 11px;border:1px dashed var(--edge);border-radius:7px;font-family:var(--mono);font-size:11.5px;color:var(--dim);background:var(--panel-2);white-space:pre-wrap;word-break:break-word;user-select:all}
+.katex{font-size:1.02em}
+
+.code-block{
+  position:relative;margin:1.5em 0;padding:15px 17px;border-radius:11px;overflow-x:auto;
+  border:1px solid var(--edge);font-family:var(--mono);font-size:12.8px;line-height:1.62;
+  background:var(--panel-2)!important;color:var(--fg)!important;
+}
+.prose>.code-block{max-width:min(100%,84ch)}
+.code-block code{font-family:inherit}
+.code-block::before{content:attr(data-lang);position:absolute;top:0;right:0;padding:2px 9px;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--dimmer);border-left:1px solid var(--edge);border-bottom:1px solid var(--edge);border-radius:0 10px 0 8px}
+.copybtn{position:absolute;top:6px;right:58px;font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);border:1px solid var(--edge);border-radius:5px;padding:1px 7px;background:var(--panel);opacity:0;transition:.15s}
+.code-block:hover .copybtn,.copybtn:focus{opacity:1}
+.copybtn.ok{color:var(--accent);border-color:var(--accent)}
+.code-block span{color:var(--sh-dark)}
+:root[data-theme="light"] .code-block span{color:var(--sh-light)}
+@media (prefers-color-scheme: light){:root:not([data-theme="dark"]) .code-block span{color:var(--sh-light)}}
+
+details.deeper{margin:1.6em 0;border:1px solid var(--edge);border-radius:11px;background:var(--panel);overflow:hidden;max-width:70ch}
+details.deeper>summary{cursor:pointer;list-style:none;padding:10px 15px;font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);background:var(--panel-2);display:flex;align-items:center;gap:9px}
+details.deeper>summary::-webkit-details-marker{display:none}
+details.deeper>summary::before{content:"◇";color:var(--dimmer)}
+details.deeper[open]>summary::before{content:"◈";color:var(--accent)}
+details.deeper>*:not(summary){padding-left:15px;padding-right:15px}
+details.deeper>*:not(summary):first-of-type{margin-top:13px}
+details.deeper>*:last-child{margin-bottom:13px}
+
+.toc{position:sticky;top:calc(var(--topbar) + 22px);max-height:calc(100vh - var(--topbar) - 50px);overflow:auto;font-size:12px}
+.toc h6{margin:0 0 10px}
+.toc ol{list-style:none;margin:0;padding:0;border-left:1px solid var(--edge)}
+.toc li a{display:block;padding:3px 0 3px 12px;color:var(--dim);border-left:2px solid transparent;margin-left:-1px;line-height:1.45}
+.toc li a:hover{color:var(--fg-strong);text-decoration:none}
+.toc li a.cur{color:var(--accent);border-left-color:var(--accent)}
+.toc li.d3 a{padding-left:24px;font-size:11.5px}
+
+/* interactive figure */
+.figure{margin:2.1em 0;border:1px solid var(--edge);border-radius:13px;background:var(--panel);overflow:hidden;max-width:100%}
+.figure .fh{display:flex;align-items:center;gap:10px;padding:10px 15px;border-bottom:1px solid var(--edge);background:var(--panel-2);font-family:var(--mono);font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:var(--dim)}
+.figure .fh .sp{flex:1}
+.figure .fh em{font-style:normal;color:var(--accent)}
+.figure .fb{padding:15px}
+.figure svg{display:block;width:100%;height:auto;overflow:visible}
+.ctrls{display:flex;gap:22px;flex-wrap:wrap;padding:0 15px 14px;font-family:var(--mono);font-size:11px}
+.ctrl{display:flex;flex-direction:column;gap:5px;min-width:165px;flex:1}
+.ctrl label{color:var(--dim);display:flex;justify-content:space-between;gap:10px}
+.ctrl label b{color:var(--accent);font-weight:500}
+.ctrl input[type=range]{width:100%;accent-color:var(--accent);height:16px}
+.legend{display:flex;gap:15px;flex-wrap:wrap;padding:0 15px 14px;font-family:var(--mono);font-size:10.5px}
+.legend button{display:flex;align-items:center;gap:6px;color:var(--dim)}
+.legend button.off{opacity:.34;text-decoration:line-through}
+.legend i{width:16px;height:3px;border-radius:2px;display:block}
+.figcap{padding:12px 15px;border-top:1px solid var(--edge-soft);font-size:13.5px;color:var(--dim);line-height:1.6;background:var(--panel-2)}
+.figcap b{color:var(--fg-strong);font-weight:600}
+
+/* related constellation */
+.constel{margin:38px 0 0;border:1px solid var(--edge);border-radius:13px;background:var(--panel);overflow:hidden}
+.constel .h{padding:10px 15px;border-bottom:1px solid var(--edge);background:var(--panel-2)}
+.constel svg{display:block;width:100%;height:auto}
+
+/* timeline (microblog) */
+.tl{position:relative;padding-left:26px}
+.tl::before{content:"";position:absolute;left:5px;top:6px;bottom:6px;width:2px;background:linear-gradient(to bottom,var(--accent),color-mix(in srgb,var(--accent) 18%,transparent),transparent)}
+.tl .n{position:relative;padding:0 0 26px}
+.tl .n::before{content:"";position:absolute;left:-25px;top:8px;width:9px;height:9px;border-radius:50%;background:var(--void);border:2px solid var(--accent)}
+.tl .n .w{font-family:var(--mono);font-size:11px;color:var(--dimmer);display:flex;gap:10px;flex-wrap:wrap}
+.tl .n .w span{color:var(--accent)}
+.tl .n .bd{max-width:66ch;margin-top:6px}
+.tl .n .bd p{margin:0 0 .6em;font-size:15.5px;line-height:1.68}
+.tl .n .bd p:last-child{margin-bottom:0}
+.tl .n .bd[lang="zh"]{font-family:var(--sans),var(--cjk)}
+.tl .n .bd :not(pre)>code{font-family:var(--mono);font-size:.84em;background:var(--panel-2);padding:1px 5px;border-radius:5px;color:#ffab5e}
+.tl .n .code-block{max-width:min(100%,78ch)}
+
+.cite{margin:36px 0 0;border:1px solid var(--edge);border-radius:11px;background:var(--panel)}
+.cite .h{padding:9px 14px;border-bottom:1px solid var(--edge);background:var(--panel-2);display:flex;align-items:center}
+.cite pre{margin:0;padding:14px;font-family:var(--mono);font-size:11.5px;color:var(--dim);overflow-x:auto;line-height:1.65}
+.pgr{display:grid;gap:13px;grid-template-columns:1fr 1fr;margin-top:32px}
+@media (max-width:700px){.pgr{grid-template-columns:1fr}}
+.pgr a{border:1px solid var(--edge);border-radius:11px;padding:12px 15px;background:var(--panel);color:var(--fg)}
+.pgr a:hover{border-color:var(--accent);text-decoration:none;background:var(--panel-2)}
+.pgr small{display:block;font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--dimmer);margin-bottom:4px}
+.pgr span{font-family:var(--disp);font-size:18px;color:var(--fg-strong);line-height:1.22;display:block}
+
+.sbox{display:flex;align-items:center;gap:12px;border:1px solid var(--edge);border-radius:11px;padding:12px 16px;background:var(--panel);margin-bottom:26px}
+.sbox input{flex:1;border:0;outline:0;background:none;font-family:var(--disp);font-size:24px;color:var(--fg-strong)}
+.sbox input::placeholder{color:var(--dimmer)}
+@media (max-width:900px){
+  .doc{padding-left:16px;padding-right:16px}
+  .phead h1{font-size:26px}h1.view{font-size:25px}
+  .hud{max-width:min(320px,84vw)}.hud h1{font-size:24px}
+  .prose h2::before{display:none}
+}
+</style>
+
+<div class="bar">
+  <div class="brand"><span class="orb"></span><a href="#/" id="brand"></a></div>
+  <nav class="nav" id="nav"></nav>
+  <div class="act">
+    <button class="btn" id="shuffle" title="Jump somewhere at random">✦</button>
+    <button class="btn" id="searchbtn">/</button>
+    <div class="seg" id="lsw"><button data-l="en">EN</button><button data-l="zh">中</button></div>
+    <button class="btn" id="themebtn">◐</button>
+  </div>
+</div>
+
+<div class="stage hide" id="stage">
+  <canvas id="cv"></canvas>
+  <div class="hud">
+    <h1 id="hudTitle"></h1>
+    <p id="hudText"></p>
+    <div class="stats" id="hudStats"></div>
+  </div>
+  <div class="filters" id="filters"></div>
+  <div class="legendbox" id="legendbox"></div>
+</div>
+
+<div class="prog" id="prog" style="width:0"></div>
+<main class="doc" id="doc"></main>
+<div class="tip" id="tip"></div>
+
+<script id="payload" type="application/json">__PAYLOAD__</script>
+<script>
+"use strict";
+const D = JSON.parse(document.getElementById('payload').textContent);
+const S = { lang:'en', theme: localStorage.getItem('nebula-theme') || '', mode:'read', off:new Set() };
+const T = () => D.ui[S.lang];
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const byId = id => document.getElementById(id);
+const cat = id => D.categories.find(c => c.id === id);
+const ser = id => D.series.find(s => s.id === id);
+const post = slug => D.posts.find(p => p.slug === slug);
+const inSeries = id => D.posts.filter(p => p.series.some(s => s.id === id))
+  .sort((a,b) => (a.series.find(s=>s.id===id).part ?? 99) - (b.series.find(s=>s.id===id).part ?? 99));
+const nPosts = n => n + ' ' + (n === 1 ? T().post : T().posts);
+const fmt = (s,o) => Object.entries(o).reduce((a,[k,v]) => a.replace('{'+k+'}', v), s);
+const shown = p => p.langs.includes(S.lang) ? S.lang : p.langs[0];
+const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+function applyTheme(){ if (S.theme) document.documentElement.dataset.theme = S.theme; else delete document.documentElement.dataset.theme; }
+byId('themebtn').onclick = () => {
+  const dark = S.theme ? S.theme === 'dark' : !matchMedia('(prefers-color-scheme: light)').matches;
+  S.theme = dark ? 'light' : 'dark'; localStorage.setItem('nebula-theme', S.theme); applyTheme(); paint();
+};
+applyTheme();
+byId('lsw').onclick = e => { const b = e.target.closest('[data-l]'); if (b) { S.lang = b.dataset.l; render(); } };
+byId('searchbtn').onclick = () => { location.hash = '#/search'; };
+byId('shuffle').onclick = () => {
+  const p = D.posts[Math.floor(Math.random()*D.posts.length)];
+  location.hash = '#/p/' + p.slug;
+};
+
+function route(){
+  const [p,q] = location.hash.replace(/^#\/?/, '').split('?');
+  const seg = p.split('/').filter(Boolean).map(decodeURIComponent);
+  return { seg, q:new URLSearchParams(q||''), kind: seg[0] || 'map' };
+}
+addEventListener('hashchange', () => { render(); scrollTo(0,0); });
+
+/* =====================================================================
+   The map. A small force layout: repulsion between every pair, springs
+   along the edges, and a weak pull to centre. ~65 nodes, so the naive
+   O(n^2) pass is cheaper than any acceleration structure would be.
+   ===================================================================== */
+const G = { nodes: [], edges: [], byId: new Map(), view: { k: 1, x: 0, y: 0 }, hover: null, dragging: null, panning: null };
+
+function buildGraph(){
+  G.nodes = []; G.edges = []; G.byId = new Map();
+  const add = n => { G.nodes.push(n); G.byId.set(n.id, n); return n; };
+  const link = (a, b, len) => G.edges.push({ a, b, len });
+
+  D.categories.forEach((c, i) => {
+    const a = (i / D.categories.length) * Math.PI * 2;
+    add({ id:'c:'+c.id, kind:'cat', label:c.name[S.lang], color:c.accent, r:19, cat:c.id,
+          x: Math.cos(a)*330, y: Math.sin(a)*150, vx:0, vy:0, href:'#/c/'+c.id, mass:9 });
+  });
+  D.series.forEach(s => {
+    const c = cat(s.category);
+    add({ id:'s:'+s.id, kind:'series', label:s.name[S.lang], color:c.accent, r:10, cat:s.category,
+          x:(Math.random()-.5)*260, y:(Math.random()-.5)*220, vx:0, vy:0, href:'#/s/'+s.id, mass:4 });
+    link('s:'+s.id, 'c:'+s.category, 92);
+  });
+  D.posts.forEach(p => {
+    const c = cat(p.category);
+    add({ id:'p:'+p.slug, kind:'post', label:p.title, color:c.accent, r:5.2, cat:p.category, post:p,
+          x:(Math.random()-.5)*520, y:(Math.random()-.5)*420, vx:0, vy:0, href:'#/p/'+p.slug, mass:1.1 });
+    if (p.series.length) p.series.forEach(s => link('p:'+p.slug, 's:'+s.id, 46));
+    else link('p:'+p.slug, 'c:'+p.category, 116);
+  });
+  add({ id:'hub:log', kind:'hub', label: S.lang==='zh' ? '随记' : 'Log', color: cssVar('--dim') || '#8792a8',
+        r:13, x:0, y:230, vx:0, vy:0, href:'#/log', mass:6 });
+  D.notes.forEach(n => {
+    add({ id:'n:'+n.id, kind:'note', label:n.body.slice(0,60), color: cssVar('--dim') || '#8792a8', r:3,
+          x:(Math.random()-.5)*180, y:250+(Math.random()-.5)*160, vx:0, vy:0, href:'#/log', mass:.7, note:n });
+    link('n:'+n.id, 'hub:log', 52);
+  });
+  for (let i = 0; i < 260; i++) step(1);
+}
+
+const visible = n => !(n.cat && S.off.has(n.cat));
+
+function step(dt){
+  const N = G.nodes;
+  for (let i = 0; i < N.length; i++) {
+    const a = N[i];
+    for (let j = i+1; j < N.length; j++) {
+      const b = N[j];
+      let dx = b.x - a.x, dy = b.y - a.y;
+      let d2 = dx*dx + dy*dy;
+      if (d2 < 1) { d2 = 1; dx = (Math.random()-.5); dy = (Math.random()-.5); }
+      const d = Math.sqrt(d2);
+      const f = 3100 * (a.mass + b.mass) / 6 / d2;
+      const fx = f * dx / d, fy = f * dy / d;
+      a.vx -= fx / a.mass; a.vy -= fy / a.mass;
+      b.vx += fx / b.mass; b.vy += fy / b.mass;
+    }
+  }
+  for (const e of G.edges) {
+    const a = G.byId.get(e.a), b = G.byId.get(e.b);
+    if (!a || !b) continue;
+    const dx = b.x - a.x, dy = b.y - a.y;
+    const d = Math.max(1, Math.hypot(dx, dy));
+    const f = (d - e.len) * 0.035;
+    const fx = f * dx / d, fy = f * dy / d;
+    a.vx += fx / a.mass * 3; a.vy += fy / a.mass * 3;
+    b.vx -= fx / b.mass * 3; b.vy -= fy / b.mass * 3;
+  }
+  for (const n of G.nodes) {
+    if (n === G.dragging) { n.vx = n.vy = 0; continue; }
+    n.vx -= n.x * 0.0014; n.vy -= n.y * 0.0042;
+    n.vx *= 0.82; n.vy *= 0.82;
+    n.x += n.vx * dt; n.y += n.vy * dt;
+  }
+}
+
+const cv = byId('cv');
+const ctx = cv.getContext('2d');
+let stars = [];
+function sizeCanvas(){
+  const dpr = Math.min(2, devicePixelRatio || 1);
+  const r = cv.getBoundingClientRect();
+  cv.width = Math.max(1, Math.round(r.width * dpr));
+  cv.height = Math.max(1, Math.round(r.height * dpr));
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  if (!stars.length) {
+    for (let i = 0; i < 150; i++) stars.push({ x: Math.random(), y: Math.random(), a: .1 + Math.random()*.5, s: Math.random()*1.3 + .3 });
+  }
+}
+
+function toScreen(n){
+  const r = cv.getBoundingClientRect();
+  return { x: r.width/2 + (n.x + G.view.x) * G.view.k, y: r.height/2 + (n.y + G.view.y) * G.view.k };
+}
+
+function paint(){
+  if (!cv.getBoundingClientRect().width) return;
+  const r = cv.getBoundingClientRect();
+  const C = {
+    void: cssVar('--void'), star: cssVar('--star'), edge: cssVar('--edge'),
+    fg: cssVar('--fg-strong'), dim: cssVar('--dim'), dimmer: cssVar('--dimmer'), panel: cssVar('--panel'),
+  };
+  ctx.clearRect(0, 0, r.width, r.height);
+  ctx.fillStyle = C.void; ctx.fillRect(0, 0, r.width, r.height);
+  ctx.save();
+  stars.forEach(s => { ctx.globalAlpha = s.a * .55; ctx.fillStyle = C.star; ctx.beginPath(); ctx.arc(s.x*r.width, s.y*r.height, s.s, 0, 7); ctx.fill(); });
+  ctx.restore();
+
+  const hov = G.hover;
+  const near = new Set();
+  if (hov) { near.add(hov.id); G.edges.forEach(e => { if (e.a === hov.id) near.add(e.b); if (e.b === hov.id) near.add(e.a); }); }
+
+  ctx.lineWidth = 1;
+  for (const e of G.edges) {
+    const a = G.byId.get(e.a), b = G.byId.get(e.b);
+    if (!a || !b || !visible(a) || !visible(b)) continue;
+    const pa = toScreen(a), pb = toScreen(b);
+    const lit = hov && (near.has(a.id) && near.has(b.id));
+    ctx.strokeStyle = lit ? (a.kind === 'note' || b.kind === 'note' ? C.dim : a.color) : C.edge;
+    ctx.globalAlpha = lit ? .8 : (hov ? .16 : .42);
+    ctx.beginPath(); ctx.moveTo(pa.x, pa.y); ctx.lineTo(pb.x, pb.y); ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+
+  const order = ['note','post','series','hub','cat'];
+  const drawn = [];
+  const fits = (x, y, w, h) => !drawn.some(r => Math.abs(r.x - x) < (r.w + w)/2 && Math.abs(r.y - y) < (r.h + h)/2);
+  [...G.nodes].sort((a,b) => order.indexOf(b.kind) - order.indexOf(a.kind)).forEach(n => {
+    if (!visible(n)) return;
+    const p = toScreen(n), rad = n.r * Math.max(.6, Math.min(1.6, G.view.k));
+    const dimmed = hov && !near.has(n.id);
+    ctx.globalAlpha = dimmed ? .22 : 1;
+    if (n.kind === 'cat' || n.kind === 'hub') {
+      const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, rad * 3.1);
+      g.addColorStop(0, n.color); g.addColorStop(.34, n.color + '55'); g.addColorStop(1, n.color + '00');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x, p.y, rad*3.1, 0, 7); ctx.fill();
+    }
+    ctx.fillStyle = n.color;
+    ctx.beginPath(); ctx.arc(p.x, p.y, rad, 0, 7); ctx.fill();
+    if (n.kind === 'cat' || n.kind === 'hub') {
+      // luminous core plus a thin containing ring
+      const core = ctx.createRadialGradient(p.x - rad*.3, p.y - rad*.35, 0, p.x, p.y, rad);
+      core.addColorStop(0, '#ffffff80'); core.addColorStop(1, n.color + '00');
+      ctx.fillStyle = core; ctx.beginPath(); ctx.arc(p.x, p.y, rad, 0, 7); ctx.fill();
+      ctx.strokeStyle = n.color; ctx.lineWidth = 1.2;
+      ctx.beginPath(); ctx.arc(p.x, p.y, rad + 4.5, 0, 7); ctx.stroke();
+    }
+    if (n === hov) { ctx.strokeStyle = C.fg; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(p.x, p.y, rad + 5, 0, 7); ctx.stroke(); }
+
+    const wants = n.kind === 'cat' || n.kind === 'hub' || (n.kind === 'series' && G.view.k > .78) || n === hov;
+    if (wants) {
+      const big = n.kind === 'cat' || n.kind === 'hub';
+      ctx.font = (big ? '600 13px ' : '500 11.5px ') + '"Instrument Sans", system-ui, sans-serif';
+      const text = n.label.length > 34 ? n.label.slice(0, 33) + '…' : n.label;
+      const w = ctx.measureText(text).width + 10;
+      const ly = p.y + rad + (big ? 19 : 15);
+      // topics and the hovered node always claim their space; series labels yield
+      if (big || n === hov || fits(p.x, ly, w, 15)) {
+        drawn.push({ x: p.x, y: ly, w, h: 15 });
+        ctx.globalAlpha = dimmed ? .3 : 1;
+        ctx.fillStyle = big ? C.fg : C.dim;
+        ctx.textAlign = 'center';
+        ctx.fillText(text, p.x, ly);
+      }
+    }
+    ctx.globalAlpha = 1;
+  });
+}
+
+let raf = null, settled = 0;
+const STILL = matchMedia('(prefers-reduced-motion: reduce)').matches;
+function loop(){
+  if (byId('stage').classList.contains('hide')) { raf = null; return; }
+  if (settled < 900 || G.dragging) { step(1); settled++; }
+  paint();
+  if (STILL && !G.dragging) { raf = null; return; }
+  raf = requestAnimationFrame(loop);
+}
+function startLoop(){
+  if (raf) return;
+  sizeCanvas();
+  if (STILL) { for (let i = 0; i < 400; i++) step(1); settled = 900; }
+  raf = requestAnimationFrame(loop);
+}
+addEventListener('resize', () => { sizeCanvas(); paint(); });
+
+function pick(ev){
+  const r = cv.getBoundingClientRect();
+  const mx = ev.clientX - r.left, my = ev.clientY - r.top;
+  let best = null, bd = 1e9;
+  for (const n of G.nodes) {
+    if (!visible(n)) continue;
+    const p = toScreen(n);
+    const d = Math.hypot(p.x - mx, p.y - my);
+    const rad = n.r * Math.max(.6, Math.min(1.6, G.view.k)) + 7;
+    if (d < rad && d < bd) { best = n; bd = d; }
+  }
+  return best;
+}
+
+const tip = byId('tip');
+function showTip(n, ev){
+  const t = T();
+  if (n.kind === 'post') {
+    const p = n.post, c = cat(p.category);
+    tip.innerHTML = '<div class="k" style="color:'+c.accent+'">'+esc(c.name[S.lang])+' · '+p.date+'</div>'+
+      '<div class="t">'+esc(p.title)+'</div>'+
+      '<div class="m">'+p.langs.join(' / ')+' · '+esc(t.kind[p.kind])+
+      (p.series.length ? ' · '+esc(ser(p.series[0].id).name[S.lang]) : '')+'</div>'+
+      '<div class="x">'+esc(p.excerpt.slice(0,150))+'…</div>';
+  } else if (n.kind === 'note') {
+    tip.innerHTML = '<div class="k">'+esc(t.note)+' · '+n.note.at+'</div><div class="x" style="margin-top:0">'+esc(n.note.body.slice(0,160))+'…</div>';
+  } else if (n.kind === 'cat') {
+    const c = cat(n.cat);
+    tip.innerHTML = '<div class="k" style="color:'+c.accent+'">'+esc(t.categories)+'</div><div class="t">'+esc(c.name[S.lang])+'</div>'+
+      '<div class="x">'+esc(c.blurb[S.lang])+'</div>'+
+      '<div class="m">'+nPosts(D.posts.filter(p=>p.category===n.cat).length)+'</div>';
+  } else if (n.kind === 'series') {
+    const s = ser(n.id.slice(2));
+    tip.innerHTML = '<div class="k">'+esc(t.series)+'</div><div class="t">'+esc(s.name[S.lang])+'</div>'+
+      '<div class="x">'+esc(s.blurb[S.lang])+'</div><div class="m">'+nPosts(inSeries(s.id).length)+'</div>';
+  } else {
+    tip.innerHTML = '<div class="k">'+esc(t.log)+'</div><div class="x" style="margin-top:0">'+D.notes.length+' '+t.notes+'</div>';
+  }
+  tip.classList.add('on');
+  const r = tip.getBoundingClientRect();
+  tip.style.left = Math.min(innerWidth - r.width - 12, ev.clientX + 16) + 'px';
+  tip.style.top = Math.min(innerHeight - r.height - 12, ev.clientY + 16) + 'px';
+}
+
+cv.addEventListener('mousemove', ev => {
+  if (G.dragging) {
+    const n = G.dragging, r = cv.getBoundingClientRect();
+    n.x = (ev.clientX - r.left - r.width/2) / G.view.k - G.view.x;
+    n.y = (ev.clientY - r.top - r.height/2) / G.view.k - G.view.y;
+    settled = 0; return;
+  }
+  if (G.panning) {
+    G.view.x += (ev.clientX - G.panning.x) / G.view.k;
+    G.view.y += (ev.clientY - G.panning.y) / G.view.k;
+    G.panning = { x: ev.clientX, y: ev.clientY };
+    paint(); return;
+  }
+  const n = pick(ev);
+  if (n !== G.hover) { G.hover = n; paint(); }
+  if (n) { showTip(n, ev); cv.style.cursor = 'pointer'; } else { tip.classList.remove('on'); cv.style.cursor = ''; }
+});
+cv.addEventListener('mouseleave', () => { tip.classList.remove('on'); G.hover = null; paint(); });
+cv.addEventListener('mousedown', ev => {
+  const n = pick(ev);
+  if (n) { G.dragging = n; settled = 0; startLoop(); }
+  else { G.panning = { x: ev.clientX, y: ev.clientY }; cv.classList.add('drag'); }
+});
+addEventListener('mouseup', () => {
+  if (G.dragging) { G.dragging = null; settled = Math.min(settled, 780); startLoop(); }
+  G.panning = null; cv.classList.remove('drag');
+});
+cv.addEventListener('click', ev => {
+  const n = pick(ev);
+  if (n && n.href) location.hash = n.href;
+});
+cv.addEventListener('wheel', ev => {
+  ev.preventDefault();
+  G.view.k = Math.max(.4, Math.min(3, G.view.k * (ev.deltaY < 0 ? 1.11 : 0.9)));
+  paint();
+}, { passive: false });
+
+/* ---------------- chrome ---------------- */
+function chrome(){
+  const t = T(), r = route();
+  byId('brand').textContent = D.site.name[S.lang];
+  const items = [
+    ['#/', S.lang==='zh' ? '星图' : 'Map', 'map'],
+    ['#/all', t.allPosts, 'all'],
+    ...D.categories.map(c => ['#/c/'+c.id, c.short[S.lang], 'c:'+c.id]),
+    ['#/log', t.log, 'log'],
+    ['#/about', t.about, 'about'],
+  ];
+  const active = r.kind === 'c' ? 'c:'+r.seg[1] : r.kind;
+  byId('nav').innerHTML = items.map(([h,l,k]) => '<a href="'+h+'"'+(k===active?' class="on"':'')+'>'+esc(l)+'</a>').join('');
+  byId('lsw').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.l === S.lang));
+  document.documentElement.lang = S.lang;
+}
+
+function hud(){
+  const t = T();
+  byId('hudTitle').textContent = S.lang === 'zh' ? '这里写了些什么' : 'What is in here';
+  byId('hudText').textContent = S.lang === 'zh'
+    ? '每一个亮点是一篇文章，大的光球是一个主题，中间那些是系列。拖动、缩放、点开任何一个。'
+    : 'Every point is a post. The bright orbs are topics, the mid-sized ones are series. Drag it, zoom it, open anything.';
+  byId('hudStats').innerHTML =
+    '<div><b>'+D.stats.posts+'</b>'+t.posts+'</div>'+
+    '<div><b>'+D.stats.series+'</b>'+t.series+'</div>'+
+    '<div><b>'+D.stats.notes+'</b>'+t.notes+'</div>'+
+    '<div><b>'+D.stats.bilingual+'</b>'+(S.lang==='zh'?'双语':'bilingual')+'</div>';
+  byId('filters').innerHTML = D.categories.map(c =>
+    '<button class="chip'+(S.off.has(c.id)?' off':'')+'" data-cat="'+c.id+'"><i style="background:'+c.accent+'"></i>'+
+    esc(c.short[S.lang])+' '+D.posts.filter(p=>p.category===c.id).length+'</button>').join('');
+  byId('filters').onclick = e => {
+    const b = e.target.closest('[data-cat]'); if (!b) return;
+    const id = b.dataset.cat;
+    if (S.off.has(id)) S.off.delete(id); else S.off.add(id);
+    b.classList.toggle('off', S.off.has(id));
+    paint();
+  };
+  byId('legendbox').innerHTML =
+    '<b>drag</b> a node · <b>scroll</b> to zoom<br>'+
+    '<b>click</b> to open · <b>✦</b> for a random post<br>'+
+    '<b>'+(S.lang==='zh'?'点击左下角的主题可以过滤':'toggle a topic bottom-left to filter')+'</b>';
+}
+
+/* ---------------- document views ---------------- */
+function rowHTML(p){
+  const c = cat(p.category), sr = p.series[0] ? ser(p.series[0].id) : null;
+  return '<div class="row"><div class="d">'+p.date+'</div><div>'+
+    '<a class="t" href="#/p/'+p.slug+'">'+esc(p.title)+'</a>'+
+    (p.subtitle ? '<p class="s">'+esc(p.subtitle)+'</p>' : '')+
+    '<div class="meta"><span class="dot" style="background:'+c.accent+'"></span>'+
+    '<span class="lbl" style="letter-spacing:.1em">'+esc(c.name[S.lang])+'</span>'+
+    p.langs.map(l => '<span class="pill" style="color:'+(l==='en'?'var(--accent)':'#ffab5e')+';background:color-mix(in srgb,'+(l==='en'?'var(--accent)':'#ffab5e')+' 14%,transparent)">'+l+'</span>').join('')+
+    (sr ? '<a class="pill" style="color:#c39bff;background:color-mix(in srgb,#c39bff 14%,transparent)" href="#/s/'+sr.id+'">'+esc(sr.name[S.lang])+(p.series[0].part?' · '+p.series[0].part:'')+'</a>' : '')+
+    p.tags.slice(0,3).map(x => '<a class="tg" href="#/t/'+encodeURIComponent(x)+'">'+esc(x)+'</a>').join('')+
+    '</div></div><div class="d">'+(p.langs.length>1?'2':'1')+' '+(S.lang==='zh'?'语言':'lang')+'</div></div>';
+}
+const rows = ps => ps.length ? '<div class="rows">'+ps.map(rowHTML).join('')+'</div>'
+  : '<p style="color:var(--dim)">'+T().noResults+'</p>';
+
+function viewAll(){
+  const t = T();
+  let h = '<h1 class="view">'+t.allPosts+'</h1><p class="lede">'+
+    (S.lang==='zh' ? '同样的内容，换成一份列表。' : 'The same content, as a list, for when you already know what you want.')+'</p>';
+  h += '<div class="sec"><span class="lbl">'+t.categories+'</span></div><div class="cards">';
+  D.categories.forEach(c => h += '<a class="c" href="#/c/'+c.id+'" style="--acc:'+c.accent+'">'+
+    '<span class="n">'+D.posts.filter(p=>p.category===c.id).length+'</span>'+
+    '<div class="g">'+c.glyph+' '+esc(c.short[S.lang])+'</div><h3>'+esc(c.name[S.lang])+'</h3><p>'+esc(c.blurb[S.lang])+'</p></a>');
+  h += '</div>';
+  h += '<div class="sec"><span class="lbl">'+t.series+'</span></div><div class="cards">';
+  D.series.forEach(s => { const c = cat(s.category);
+    h += '<a class="c" href="#/s/'+s.id+'" style="--acc:'+c.accent+'"><span class="n">'+inSeries(s.id).length+'</span>'+
+      '<div class="g">'+esc(t.series)+'</div><h3>'+esc(s.name[S.lang])+'</h3><p>'+esc(s.blurb[S.lang])+'</p></a>'; });
+  h += '</div>';
+  h += '<div class="sec"><span class="lbl">'+t.allPosts+'</span></div>' + rows(D.posts);
+  return h;
+}
+
+function viewCategory(id){
+  const c = cat(id); if (!c) return viewAll();
+  const t = T(), sHere = D.series.filter(s => s.category === id);
+  let h = '<div class="lbl" style="color:'+c.accent+';margin-bottom:10px">'+c.glyph+' '+esc(t.categories)+'</div>'+
+    '<h1 class="view">'+esc(c.name[S.lang])+'</h1><p class="lede">'+esc(c.blurb[S.lang])+'</p>';
+  if (sHere.length) {
+    h += '<div class="sec"><span class="lbl">'+t.series+'</span></div><div class="cards">'+
+      sHere.map(s => '<a class="c" href="#/s/'+s.id+'" style="--acc:'+c.accent+'"><span class="n">'+inSeries(s.id).length+'</span>'+
+        '<div class="g">'+esc(t.series)+'</div><h3>'+esc(s.name[S.lang])+'</h3><p>'+esc(s.blurb[S.lang])+'</p></a>').join('')+'</div>';
+  }
+  h += '<div class="sec"><span class="lbl">'+t.allPosts+'</span></div>' + rows(D.posts.filter(p => p.category === id));
+  return h;
+}
+
+function viewSeries(id){
+  const s = ser(id); if (!s) return viewAll();
+  const items = inSeries(id), c = cat(s.category), t = T();
+  let h = '<div class="lbl" style="color:'+c.accent+';margin-bottom:10px">'+esc(t.series)+'</div>'+
+    '<h1 class="view">'+esc(s.name[S.lang])+'</h1><p class="lede">'+esc(s.blurb[S.lang])+'</p>';
+  h += '<div class="sec"><span class="lbl">'+(S.lang==='zh'?'阅读顺序':'Reading order')+'</span></div><div class="cards">'+
+    items.map((p,i) => '<a class="c" href="#/p/'+p.slug+'" style="--acc:'+c.accent+'">'+
+      '<div class="g">'+String(i+1).padStart(2,'0')+' / '+String(items.length).padStart(2,'0')+'</div>'+
+      '<h3>'+esc(p.title)+'</h3><p>'+esc(p.excerpt.slice(0,130))+'…</p></a>').join('')+'</div>';
+  return h;
+}
+
+const viewTag = tag => '<div class="lbl" style="margin-bottom:10px">'+T().tags+'</div><h1 class="view">'+esc(tag)+'</h1>' +
+  rows(D.posts.filter(p => p.tags.includes(tag)));
+
+function noteHTML(n){
+  return '<div class="n"><div class="w">'+n.at+' <span>'+n.tags.map(x=>'#'+x).join(' ')+'</span> <span style="color:var(--dimmer)">'+n.lang+'</span></div>'+
+    '<div class="bd" lang="'+n.lang+'">'+n.html+
+    (n.code ? '<pre class="code-block" data-lang="'+n.code.lang+'" data-source="'+esc(n.code.source)+'"><code>'+esc(n.code.source)+'</code></pre>' : '')+
+    (n.link ? '<p style="margin-top:.55em"><a href="'+n.link.href+'" style="font-size:13px">↗ '+esc(n.link.label)+'</a></p>' : '')+
+    '</div></div>';
+}
+const viewLog = () => '<h1 class="view">'+T().log+'</h1><p class="lede">'+(S.lang === 'zh'
+    ? '短的东西放在这里，一个想法、一个坑、一段值得留着的代码。它们在星图上是那些最小的暗点。'
+    : 'The short things live here: a half-thought, a bug that cost a day, a snippet worth keeping. On the map they are the small dim points.')+'</p>'+
+  '<div class="tl">'+D.notes.map(noteHTML).join('')+'</div>';
+
+function searchAll(q){
+  const n = q.toLowerCase().trim();
+  if (!n) return { posts: [], notes: [] };
+  const hit = s => String(s).toLowerCase().includes(n);
+  return { posts: D.posts.filter(p => hit(p.title) || hit(p.subtitle) || hit(p.excerpt) || p.tags.some(hit)),
+           notes: D.notes.filter(x => hit(x.body) || x.tags.some(hit)) };
+}
+function viewSearch(q){
+  const t = T(), r = searchAll(q);
+  return '<div class="sbox"><span class="lbl">'+t.search+'</span>'+
+    '<input id="q" value="'+esc(q)+'" placeholder="'+esc(t.searchPlaceholder)+'" autocomplete="off"></div>'+
+    (q ? '<p class="lbl" style="margin-bottom:16px">'+nPosts(r.posts.length)+' · '+r.notes.length+' '+t.notes+'</p>'+
+      rows(r.posts) + (r.notes.length ? '<div class="sec"><span class="lbl">'+t.log+'</span></div><div class="tl">'+r.notes.map(noteHTML).join('')+'</div>' : '')
+     : '<p class="lede">'+(S.lang==='zh'?'搜索会覆盖全部文章、随记和标签。':'Search covers every post, every note, and every tag.')+'</p>');
+}
+
+function viewAbout(){
+  const zh = S.lang === 'zh';
+  return '<h1 class="view">'+T().about+'</h1><div class="prose" lang="'+S.lang+'">'+
+    '<p>'+(zh
+      ? '我是张逸骅，在 Together AI 做强化学习的基础设施。这个博客上大部分内容最初是我写给自己的笔记，用来确认自己真的弄懂了某样东西。'
+      : 'I am Yihua Zhang, and I work on reinforcement-learning infrastructure at Together AI. Most of what is here started as a note to myself, written to check that I had actually understood something.')+'</p>'+
+    '<p>'+(zh
+      ? '写得最多的是强化学习和模型效率。偶尔也写音乐，把一首曲子拿到谱面上逐小节拆开看。'
+      : 'Mostly that means RL and model efficiency. Occasionally it means taking a piece of music apart bar by bar.')+'</p>'+
+    '<h2>'+(zh?'为什么首页是一张图':'Why the front page is a map')+'</h2>'+
+    '<p>'+(zh
+      ? '按时间排的列表只能回答一个问题，就是「最近写了什么」。但是这里大部分文章其实是有先后顺序的：想读懂 GRPO，最好先读 PPO；想读懂 MLA，最好先知道 KV-cache 为什么是瓶颈。星图把这层关系直接画出来了，列表视图随时可以切回去。'
+      : 'A reverse-chronological list answers exactly one question: what did he write last. But most of what is here has a reading order. GRPO makes more sense after PPO; MLA makes more sense once you know why the KV-cache is the bottleneck. The map draws that structure directly, and the list view is always one click away.')+'</p>'+
+    '<h2>'+(zh?'这个站是怎么搭的':'How it is built')+'</h2><ul>'+
+    '<li>'+(zh?'公式在构建时就被 KaTeX 渲染成静态 HTML，浏览器一个字节的数学脚本都不用下载。':'Equations are rendered to static HTML by KaTeX at build time. The browser downloads no math JavaScript at all.')+'</li>'+
+    '<li>'+(zh?'代码高亮同样在构建时完成，深色和浅色两套配色写进同一份产物。':'Highlighting happens at build time too, with both colour schemes baked into one artifact.')+'</li>'+
+    '<li>'+(zh?'每篇文章的每种语言都有独立地址，因此深层链接和搜索引擎都不会出问题。':'Every language of every post has its own URL, so deep links and search engines both behave.')+'</li>'+
+    '<li>'+(zh?'星图是一个大约 65 个节点的力导向布局，直接画在 canvas 上，没有引入任何图形库。':'The map is a ~65-node force layout drawn straight onto a canvas, with no graph library involved.')+'</li>'+
+    '</ul></div>';
+}
+
+/* ---------------- post ---------------- */
+function bodyFor(p){
+  const key = p.slug === 'grpo' ? 'grpo' : (p.slug === 'decorators' ? 'decorators' : null);
+  if (!key) return null;
+  const b = D.bodies[key];
+  return b[shown(p)] || b[p.langs[0]] || null;
+}
+
+/** Static mini-map of this post's immediate neighbourhood. */
+function constellation(p){
+  const c = cat(p.category), t = T();
+  const near = [];
+  p.series.forEach(s => inSeries(s.id).forEach(x => { if (x !== p && !near.includes(x)) near.push(x); }));
+  D.posts.forEach(x => { if (x !== p && x.category === p.category && !near.includes(x) && near.length < 7) near.push(x); });
+  const list = near.slice(0, 7);
+  const W = 700, H = 210, cx = W/2, cy = H/2;
+  let s = '<circle cx="'+cx+'" cy="'+cy+'" r="9" fill="'+c.accent+'"/>'+
+    '<circle cx="'+cx+'" cy="'+cy+'" r="17" fill="none" stroke="'+c.accent+'" stroke-opacity=".4"/>';
+  list.forEach((x,i) => {
+    const a = (i / list.length) * Math.PI * 2 - Math.PI/2;
+    const R = 78, px = cx + Math.cos(a)*R*1.9, py = cy + Math.sin(a)*R;
+    const cc = cat(x.category);
+    s += '<line x1="'+cx+'" y1="'+cy+'" x2="'+px+'" y2="'+py+'" stroke="var(--edge)"/>'+
+      '<a href="#/p/'+x.slug+'"><circle cx="'+px+'" cy="'+py+'" r="5" fill="'+cc.accent+'"/>'+
+      '<text x="'+px+'" y="'+(py + (Math.sin(a) >= 0 ? 19 : -11))+'" text-anchor="middle" fill="var(--dim)" '+
+      'font-size="10.5" font-family="Instrument Sans, sans-serif">'+esc(x.title.length > 34 ? x.title.slice(0,33)+'…' : x.title)+'</text></a>';
+  });
+  return '<div class="constel"><div class="h"><span class="lbl">'+esc(t.related)+'</span></div>'+
+    '<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc(t.related)+'">'+s+'</svg></div>';
+}
+
+function viewPost(slug){
+  const p = post(slug); if (!p) return viewAll();
+  const t = T(), c = cat(p.category), lang = shown(p), body = bodyFor(p);
+  const idx = D.posts.indexOf(p), prev = D.posts[idx+1], next = D.posts[idx-1];
+
+  let h = '<div class="wrap"><div><div class="phead">'+
+    '<div class="over"><a class="lbl" style="color:'+c.accent+';letter-spacing:.12em" href="#/c/'+c.id+'">'+c.glyph+' '+esc(c.name[S.lang])+'</a>'+
+    '<span class="lbl">'+esc(t.kind[p.kind])+'</span>'+
+    p.series.map(s => '<a class="pill" style="color:#c39bff;background:color-mix(in srgb,#c39bff 14%,transparent)" href="#/s/'+s.id+'">'+
+      esc(ser(s.id).name[S.lang])+(s.part ? ' · '+fmt(t.partOf,{n:s.part,m:inSeries(s.id).length}) : '')+'</a>').join('')+
+    '</div><h1 lang="'+lang+'">'+esc(p.title)+'</h1>'+
+    (p.subtitle ? '<p class="st" lang="'+lang+'">'+esc(p.subtitle)+'</p>' : '')+
+    '<div class="pmeta"><div><b>'+p.date+'</b>'+t.published+'</div>'+
+    (body ? '<div><b>'+body.minutes+'</b>'+t.readingTime+'</div><div><b>'+body.words.toLocaleString()+'</b>'+t.words+'</div>'+
+      (body.eqnCount ? '<div><b>'+body.eqnCount+'</b>'+t.equations+'</div>' : '') : '')+
+    '<div><b>'+p.langs.join('/')+'</b>'+(S.lang==='zh'?'语言':'languages')+'</div></div>'+
+    (lang !== S.lang ? '<p class="notice"><b>'+fmt(t.onlyIn,{lang:t.langName[lang]})+'.</b> '+
+      (S.lang==='zh'?'界面仍然是中文，正文按照原文显示。':'The chrome stays in your language; the article is served in the one it exists in.')+'</p>' : '')+
+    (body ? '<div class="modes"><span class="lbl">'+(S.lang==='zh'?'读法':'Read as')+'</span><div class="seg">'+
+      ['skim','read','derive'].map(m => '<button data-mode="'+m+'"'+(S.mode===m?' class="on"':'')+'>'+t[m]+'</button>').join('')+'</div></div>' : '')+
+    '</div>';
+
+  h += body
+    ? '<div class="prose" id="prose" lang="'+lang+'" data-mode="'+S.mode+'">'+body.html+'</div>'
+    : '<div class="prose"><p>'+esc(p.excerpt)+'</p><p style="color:var(--dimmer);font-size:13.5px">'+
+      (S.lang==='zh'?'这是一份设计演示，为了控制体积只有两篇文章被完整渲染。请打开那篇讲 PPO 与 GRPO 的文章，或者那篇讲装饰器的文章。'
+                    :'This is a design demo; only two posts are rendered in full to keep the file small. Open the PPO/GRPO piece or the decorators piece for the full reading view.')+'</p></div>';
+
+  h += constellation(p);
+  h += '<div class="cite"><div class="h"><span class="lbl">'+t.cite+'</span><span style="flex:1"></span><button class="btn" data-copy-cite>'+t.copy+'</button></div>'+
+    '<pre id="bib">@misc{zhang'+p.date.slice(0,4)+p.slug.replace(/-/g,'')+',\n  author = {Zhang, Yihua},\n  title  = {'+p.title.replace(/[{}]/g,'')+'},\n  year   = {'+p.date.slice(0,4)+'},\n  url    = {https://normaluhr.github.io/'+lang+'/p/'+p.slug+'}\n}</pre></div>';
+  h += '<div class="pgr">'+
+    (prev ? '<a href="#/p/'+prev.slug+'"><small>← '+(S.lang==='zh'?'更早':'older')+'</small><span>'+esc(prev.title)+'</span></a>' : '<div></div>')+
+    (next ? '<a href="#/p/'+next.slug+'" style="text-align:right"><small>'+(S.lang==='zh'?'更新':'newer')+' →</small><span>'+esc(next.title)+'</span></a>' : '')+
+    '</div></div>';
+
+  h += body ? '<aside class="toc"><h6 class="lbl">'+t.contents+'</h6><ol>'+
+    body.toc.map(x => '<li class="d'+x.depth+'"><a href="#'+x.id+'" data-toc="'+x.id+'">'+esc(x.text)+'</a></li>').join('')+
+    '</ol></aside>' : '<aside class="toc"></aside>';
+  return h + '</div>';
+}
+
+/* ---------------- figure ---------------- */
+function clipFigure(){
+  const zh = S.lang === 'zh';
+  return '<figure class="figure" id="fig-clip">'+
+    '<div class="fh"><span>'+(zh?'图 1':'Figure 1')+'</span><span class="sp"></span><em>'+(zh?'可交互':'interactive')+'</em></div>'+
+    '<div class="fb"><svg viewBox="0 0 660 320" role="img" aria-label="PPO clipped surrogate objective against the probability ratio"><g id="clip-g"></g></svg></div>'+
+    '<div class="ctrls">'+
+      '<div class="ctrl"><label>ε <b id="clip-eps">0.20</b></label><input type="range" id="clip-eps-i" min="2" max="60" value="20"></div>'+
+      '<div class="ctrl"><label>'+(zh?'优势 A':'advantage A')+' <b id="clip-a">+1.0</b></label><input type="range" id="clip-a-i" min="-20" max="20" value="10"></div>'+
+    '</div><div class="legend">'+
+      '<button data-series="unclipped" aria-pressed="true"><i style="background:var(--dimmer)"></i>r·A '+(zh?'未裁剪':'unclipped')+'</button>'+
+      '<button data-series="clipped" aria-pressed="true"><i style="background:var(--accent)"></i>'+(zh?'PPO 目标':'PPO objective')+'</button>'+
+      '<button data-series="band" aria-pressed="true"><i style="background:#ffab5e"></i>'+(zh?'信任区间':'trust band')+'</button>'+
+    '</div><figcaption class="figcap">'+(zh
+      ? '<b>把 A 拖到负数看一眼。</b>裁剪并不对称。优势为正时，PPO 给上涨的一侧封了顶，一次更新就没办法把策略推得太远；优势为负时，被封住的换成了下跌的一侧。这正是 <a href="#eq-4" data-eq="4">公式 (4)</a> 要取 min 而不是直接裁剪的原因。'
+      : '<b>Drag A negative.</b> The clip is not symmetric. With positive advantage PPO caps the upside, so one update cannot push the policy far; with negative advantage it caps the downside instead. That is why <a href="#eq-4" data-eq="4">Eq. (4)</a> takes a min rather than simply clipping.')+
+    '</figcaption></figure>';
+}
+function drawClip(){
+  const g = byId('clip-g'); if (!g) return;
+  const W = 660, H = 320, P = { l: 46, r: 34, t: 24, b: 38 };
+  const eps = Number(byId('clip-eps-i').value)/100, A = Number(byId('clip-a-i').value)/10;
+  byId('clip-eps').textContent = eps.toFixed(2);
+  byId('clip-a').textContent = (A>=0?'+':'')+A.toFixed(1);
+  const on = k => document.querySelector('#fig-clip [data-series="'+k+'"]').getAttribute('aria-pressed') === 'true';
+  const yMax = 2.6, x1 = 2.2;
+  const X = r => P.l + r/x1*(W-P.l-P.r), Y = v => P.t + (yMax-v)/(2*yMax)*(H-P.t-P.b);
+  const obj = r => Math.min(r*A, Math.min(Math.max(r,1-eps),1+eps)*A);
+  const pathOf = f => { let d=''; for (let i=0;i<=200;i++){ const r=x1*i/200, v=Math.max(-yMax,Math.min(yMax,f(r))); d+=(i?'L':'M')+X(r).toFixed(1)+' '+Y(v).toFixed(1);} return d; };
+  const F = 'font-family="JetBrains Mono, monospace" font-size="10"';
+  let s = '';
+  for (let v=-2;v<=2;v++) s += '<line x1="'+P.l+'" y1="'+Y(v)+'" x2="'+(W-P.r)+'" y2="'+Y(v)+'" stroke="var(--edge-soft)"/>'+
+    '<text x="'+(P.l-7)+'" y="'+(Y(v)+3.5)+'" text-anchor="end" fill="var(--dimmer)" '+F+'>'+v+'</text>';
+  for (let r=0;r<=2;r+=0.5) s += '<text x="'+X(r)+'" y="'+(H-P.b+15)+'" text-anchor="middle" fill="var(--dimmer)" '+F+'>'+r.toFixed(1)+'</text>';
+  s += '<line x1="'+P.l+'" y1="'+Y(0)+'" x2="'+(W-P.r)+'" y2="'+Y(0)+'" stroke="var(--dim)"/>'+
+    '<text x="'+(W-P.r)+'" y="'+(H-P.b+30)+'" text-anchor="end" fill="var(--dim)" '+F+'>ratio  r = π_θ / π_old</text>';
+  if (on('band')) s += '<rect x="'+X(1-eps)+'" y="'+P.t+'" width="'+(X(1+eps)-X(1-eps))+'" height="'+(H-P.t-P.b)+'" fill="#ffab5e" opacity=".1"/>'+
+    '<line x1="'+X(1-eps)+'" y1="'+P.t+'" x2="'+X(1-eps)+'" y2="'+(H-P.b)+'" stroke="#ffab5e" stroke-dasharray="3 3"/>'+
+    '<line x1="'+X(1+eps)+'" y1="'+P.t+'" x2="'+X(1+eps)+'" y2="'+(H-P.b)+'" stroke="#ffab5e" stroke-dasharray="3 3"/>'+
+    '<text x="'+(X(1-eps)-4)+'" y="'+(P.t-5)+'" text-anchor="end" fill="#ffab5e" '+F+'>1−ε</text>'+
+    '<text x="'+(X(1+eps)+4)+'" y="'+(P.t-5)+'" fill="#ffab5e" '+F+'>1+ε</text>';
+  if (on('unclipped')) s += '<path d="'+pathOf(r=>r*A)+'" fill="none" stroke="var(--dimmer)" stroke-width="1.4" stroke-dasharray="5 4"/>';
+  if (on('clipped')) s += '<path d="'+pathOf(obj)+'" fill="none" stroke="var(--accent)" stroke-width="2.6" stroke-linejoin="round"/>';
+  s += '<circle cx="'+X(1)+'" cy="'+Y(A)+'" r="3.4" fill="#ffab5e"/>';
+  g.innerHTML = s;
+}
+
+/* ---------------- wiring ---------------- */
+function mountFigures(root){
+  root.querySelectorAll('[data-figure="ppo-clip"]').forEach(el => { el.outerHTML = clipFigure(); });
+  const fig = byId('fig-clip'); if (!fig) return;
+  fig.querySelectorAll('input[type=range]').forEach(i => i.addEventListener('input', drawClip));
+  fig.querySelectorAll('.legend button').forEach(b => b.addEventListener('click', () => {
+    const nowOn = b.getAttribute('aria-pressed') === 'true';
+    b.setAttribute('aria-pressed', String(!nowOn));
+    b.classList.toggle('off', nowOn);
+    drawClip();
+  }));
+  drawClip();
+}
+function wrapTables(root){
+  root.querySelectorAll('.prose > table').forEach(tb => {
+    const w = document.createElement('div'); w.className = 'tablewrap';
+    tb.parentNode.insertBefore(w, tb); w.appendChild(tb);
+  });
+}
+function wireCopy(root){
+  root.querySelectorAll('.code-block').forEach(pre => {
+    if (pre.querySelector('.copybtn')) return;
+    const b = document.createElement('button');
+    b.className = 'copybtn'; b.textContent = T().copy;
+    b.onclick = async () => {
+      try { await navigator.clipboard.writeText(pre.dataset.source || pre.textContent); } catch { return; }
+      b.textContent = T().copied; b.classList.add('ok');
+      setTimeout(() => { b.textContent = T().copy; b.classList.remove('ok'); }, 1400);
+    };
+    pre.appendChild(b);
+  });
+  const cb = root.querySelector('[data-copy-cite]');
+  if (cb) cb.onclick = async () => {
+    try { await navigator.clipboard.writeText(byId('bib').textContent); } catch { return; }
+    cb.textContent = T().copied; setTimeout(() => cb.textContent = T().copy, 1400);
+  };
+}
+function applyMode(){
+  const prose = byId('prose'); if (!prose) return;
+  prose.dataset.mode = S.mode;
+  prose.querySelectorAll('details.deeper').forEach(d => { d.open = S.mode !== 'skim'; });
+  prose.querySelectorAll('.eqn').forEach(eq => {
+    let tex = eq.querySelector('.texsrc');
+    if (S.mode !== 'derive') { if (tex) tex.remove(); return; }
+    if (tex) return;
+    const src = eq.querySelector('annotation[encoding="application/x-tex"]');
+    if (!src) return;
+    tex = document.createElement('pre');
+    tex.className = 'texsrc';
+    tex.textContent = src.textContent.trim();
+    eq.appendChild(tex);
+  });
+}
+function markSkim(prose){
+  let after = false;
+  [...prose.children].forEach(el => {
+    const tag = el.tagName.toLowerCase();
+    if (/^h[1-4]$/.test(tag)) { el.classList.add('keep'); after = true; return; }
+    if (el.classList.contains('eqn') || el.classList.contains('tablewrap') || el.classList.contains('figure') || tag === 'figure') {
+      el.classList.add('keep'); return;
+    }
+    if (after && tag === 'p') { el.classList.add('keep'); after = false; }
+  });
+}
+function wireModes(root){
+  root.querySelectorAll('button[data-mode]').forEach(b => b.onclick = () => {
+    S.mode = b.dataset.mode;
+    root.querySelectorAll('button[data-mode]').forEach(x => x.classList.toggle('on', x.dataset.mode === S.mode));
+    applyMode();
+  });
+}
+let scrollHandler = null;
+function wireScroll(){
+  if (scrollHandler) removeEventListener('scroll', scrollHandler);
+  const links = [...document.querySelectorAll('[data-toc]')], prog = byId('prog');
+  scrollHandler = () => {
+    const h = document.documentElement;
+    prog.style.width = (h.scrollTop / Math.max(1, h.scrollHeight - h.clientHeight) * 100) + '%';
+    if (!links.length) return;
+    let cur = links[0];
+    for (const a of links) {
+      const el = document.getElementById(a.dataset.toc);
+      if (el && el.getBoundingClientRect().top < 150) cur = a;
+    }
+    links.forEach(a => a.classList.toggle('cur', a === cur));
+  };
+  addEventListener('scroll', scrollHandler, { passive: true });
+  scrollHandler();
+}
+
+/* ---------------- render ---------------- */
+function render(){
+  const r = route();
+  chrome();
+  const isMap = r.kind === 'map';
+  byId('stage').classList.toggle('hide', !isMap);
+  byId('doc').classList.toggle('on', !isMap);
+  document.body.style.overflow = isMap ? 'hidden' : '';
+
+  if (isMap) {
+    if (!G.nodes.length) buildGraph();
+    else G.nodes.forEach(n => {
+      if (n.kind === 'cat') n.label = cat(n.cat).name[S.lang];
+      if (n.kind === 'series') n.label = ser(n.id.slice(2)).name[S.lang];
+      if (n.kind === 'hub') n.label = S.lang === 'zh' ? '随记' : 'Log';
+    });
+    hud();
+    settled = Math.min(settled, 700);
+    startLoop();
+    return;
+  }
+
+  const doc = byId('doc');
+  const view = {
+    all: viewAll, c: () => viewCategory(r.seg[1]), s: () => viewSeries(r.seg[1]), p: () => viewPost(r.seg[1]),
+    t: () => viewTag(r.seg[1]), log: viewLog, about: viewAbout, search: () => viewSearch(r.q.get('q') || ''),
+  }[r.kind] || viewAll;
+  doc.innerHTML = view();
+
+  wrapTables(doc); mountFigures(doc);
+  const prose = byId('prose');
+  if (prose) { markSkim(prose); applyMode(); }
+  wireCopy(doc); wireModes(doc); wireScroll();
+  doc.querySelectorAll('a[data-eq]').forEach(a => a.onclick = () => setTimeout(() => {
+    const eq = document.getElementById('eq-' + a.dataset.eq); if (!eq) return;
+    eq.classList.add('flash'); setTimeout(() => eq.classList.remove('flash'), 900);
+  }, 40));
+
+  const q = byId('q');
+  if (q) {
+    q.focus();
+    let timer;
+    q.oninput = () => { clearTimeout(timer); timer = setTimeout(() => {
+      history.replaceState(null, '', '#/search?q=' + encodeURIComponent(q.value)); render();
+    }, 220); };
+  }
+}
+
+addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT') { if (e.key === 'Escape') e.target.blur(); return; }
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  if (e.key === '/') { e.preventDefault(); location.hash = '#/search'; }
+  if (e.key === 'm') location.hash = '#/';
+  if (e.key === 'l') location.hash = '#/all';
+  if (e.key === 't') byId('themebtn').click();
+  if (e.key === 'r') byId('shuffle').click();
+});
+
+/* Style tokens are needed before the first layout pass, so build after fonts settle. */
+document.fonts.ready.then(() => { sizeCanvas(); render(); });
+render();
+</script>

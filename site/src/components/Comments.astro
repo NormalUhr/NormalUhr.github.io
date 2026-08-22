@@ -1,0 +1,32 @@
+---
+// giscus keeps threads in a GitHub Discussions category, so there is no database to
+// run and no third-party tracker. Nothing renders until the config is filled in.
+import { site, type Lang } from '../site.config'
+import { t } from '../lib/taxonomy'
+const { lang } = Astro.props as { lang: Lang }
+const L = t(lang)
+const g = site.giscus
+---
+{g && (
+  <section class="cmts">
+    <h2>{L.comments}</h2>
+    <script
+      is:inline
+      src="https://giscus.app/client.js"
+      data-repo={g.repo}
+      data-repo-id={g.repoId}
+      data-category={g.category}
+      data-category-id={g.categoryId}
+      data-mapping="pathname"
+      data-strict="1"
+      data-reactions-enabled="1"
+      data-emit-metadata="0"
+      data-input-position="top"
+      data-theme="preferred_color_scheme"
+      data-lang={lang === 'zh' ? 'zh-CN' : 'en'}
+      data-loading="lazy"
+      crossorigin="anonymous"
+      async
+    ></script>
+  </section>
+)}

@@ -1,0 +1,1161 @@
+<meta charset="utf-8">
+<title>Terminal Deck</title>
+<meta name="description" content="Redesign direction A: the blog as a shell.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,500;0,700;1,400&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>__KATEX_CSS__</style>
+
+<style>
+/* ============================================================
+   tty — Terminal Deck.  Dark-first: the base :root is the dark
+   palette, light is the deliberate override.
+   ============================================================ */
+:root {
+  --bg:#0a0d10; --bg-deep:#070a0c; --panel:#0f1419; --panel-2:#131a21;
+  --line:#1d2831; --line-soft:#161f26;
+  --fg:#c6d1dc; --fg-strong:#e8eff5; --dim:#6d7d8c; --dimmer:#4a5866;
+  --green:#5ee39b; --cyan:#6cb6ff; --amber:#ffab5e; --purple:#c39bff; --red:#ff7b72;
+  --accent:var(--green);
+  --sel:#132a22;
+  --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --sans:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --cjk:"PingFang SC","Hiragino Sans GB","Noto Sans CJK SC","Microsoft YaHei",sans-serif;
+  --shadow:0 18px 50px -18px #000b;
+  --rail:248px;
+  color-scheme:dark;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg:#f7f8f7; --bg-deep:#eef1ee; --panel:#ffffff; --panel-2:#f3f6f3;
+    --line:#dce2dc; --line-soft:#e9ede9;
+    --fg:#2b3230; --fg-strong:#0f1614; --dim:#6a746f; --dimmer:#98a29c;
+    --green:#17794c; --cyan:#1858a8; --amber:#8f5208; --purple:#5f34ab; --red:#ac3128;
+    --sel:#e1efe7; --shadow:0 18px 40px -22px #0003; color-scheme:light;
+  }
+}
+:root[data-theme="light"] {
+--bg:#f7f8f7; --bg-deep:#eef1ee; --panel:#ffffff; --panel-2:#f3f6f3;
+  --line:#dce2dc; --line-soft:#e9ede9;
+  --fg:#2b3230; --fg-strong:#0f1614; --dim:#6a746f; --dimmer:#98a29c;
+  --green:#17794c; --cyan:#1858a8; --amber:#8f5208; --purple:#5f34ab; --red:#ac3128;
+  --sel:#e1efe7; --shadow:0 18px 40px -22px #0003; color-scheme:light;
+}
+
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;background:var(--bg);color:var(--fg);
+  font-family:var(--mono);font-size:14px;line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+}
+:lang(zh) body,[data-lang="zh"] .prose{font-family:var(--sans),var(--cjk)}
+a{color:var(--cyan);text-decoration:none}
+a:hover{text-decoration:underline}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+::selection{background:var(--sel)}
+:focus-visible{outline:1.5px solid var(--accent);outline-offset:2px}
+
+/* ---------- window chrome ---------- */
+.titlebar{
+  position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:14px;
+  height:38px;padding:0 12px;background:var(--panel);
+  border-bottom:1px solid var(--line);font-size:12px;
+}
+.lights{display:flex;gap:6px;flex:none}
+.lights i{width:11px;height:11px;border-radius:50%;display:block}
+.lights i:nth-child(1){background:#ff5f57}.lights i:nth-child(2){background:#febc2e}.lights i:nth-child(3){background:#28c840}
+.crumb{color:var(--dim);flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.crumb b{color:var(--fg-strong);font-weight:500}
+.tb-actions{display:flex;align-items:center;gap:6px;flex:none}
+.chip{
+  border:1px solid var(--line);border-radius:5px;padding:2px 8px;font-size:11px;
+  color:var(--dim);background:var(--panel-2);transition:.15s;
+}
+.chip:hover{color:var(--fg-strong);border-color:var(--dimmer)}
+.chip.on{color:var(--bg);background:var(--accent);border-color:var(--accent);font-weight:700}
+.langsw{display:flex;border:1px solid var(--line);border-radius:5px;overflow:hidden}
+.langsw button{padding:2px 8px;font-size:11px;color:var(--dim);background:var(--panel-2)}
+.langsw button.on{background:var(--accent);color:var(--bg);font-weight:700}
+
+/* ---------- shell ---------- */
+.shell{display:grid;grid-template-columns:var(--rail) minmax(0,1fr);min-height:calc(100vh - 38px)}
+.rail{
+  border-right:1px solid var(--line);background:var(--bg-deep);
+  padding:16px 0 40px;position:sticky;top:38px;height:calc(100vh - 38px);overflow:auto;
+}
+.rail h6{
+  margin:16px 14px 6px;font-size:10px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--dimmer);font-weight:500;
+}
+.tree{list-style:none;margin:0;padding:0;font-size:13px}
+.tree a{
+  display:flex;gap:0;align-items:baseline;padding:2px 14px;color:var(--fg);
+  text-decoration:none;min-width:0;
+}
+.tree .br{color:var(--dimmer);white-space:pre;flex:none}
+.tree a:hover{background:var(--panel-2);text-decoration:none}
+.tree a.active{background:var(--sel);color:var(--fg-strong)}
+.tree a.active .nm{color:var(--accent);font-weight:700}
+.tree .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tree .ct{color:var(--dimmer);font-size:11px;padding-left:8px}
+.rail-foot{margin:22px 14px 0;padding-top:14px;border-top:1px solid var(--line-soft);font-size:11px;color:var(--dimmer);line-height:1.9}
+.rail-foot a{color:var(--dim)}
+.kbd{
+  display:inline-block;border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;
+  padding:0 4px;font-size:10px;color:var(--dim);background:var(--panel-2);min-width:16px;text-align:center;
+}
+
+/* ---------- main ---------- */
+.main{min-width:0;padding:26px 34px 90px;max-width:1180px}
+.prompt{color:var(--dim);font-size:13px;margin:0 0 18px}
+.prompt .u{color:var(--green)}.prompt .p{color:var(--cyan)}.prompt .c{color:var(--fg-strong)}
+.cursor{display:inline-block;width:7px;height:14px;background:var(--accent);vertical-align:-2px;animation:blink 1.1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+@media (prefers-reduced-motion:reduce){.cursor{animation:none}}
+
+.panel{border:1px solid var(--line);border-radius:8px;background:var(--panel);overflow:hidden}
+.panel-h{
+  display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1px solid var(--line);
+  background:var(--panel-2);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);
+}
+.panel-h .sp{flex:1}
+.panel-b{padding:16px 18px}
+
+/* neofetch */
+.fetch{display:grid;grid-template-columns:auto minmax(0,1fr);gap:0 30px;align-items:start}
+.fetch pre{margin:0;color:var(--accent);font-size:11px;line-height:1.25;white-space:pre}
+.fetch dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:2px 14px;font-size:13px}
+.fetch dt{color:var(--accent);font-weight:700}
+.fetch dd{margin:0;color:var(--fg)}
+.fetch .bar{display:flex;gap:3px;margin-top:12px;grid-column:1/-1}
+.fetch .bar i{width:22px;height:9px;border-radius:2px;display:block}
+@media (max-width:760px){.fetch{grid-template-columns:1fr}.fetch pre{display:none}}
+
+/* ls table */
+.ls{width:100%;border-collapse:collapse;font-size:13px}
+.ls th{
+  text-align:left;padding:0 12px 8px 0;font-size:10px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--dimmer);font-weight:500;border-bottom:1px solid var(--line-soft);
+}
+.ls td{padding:9px 12px 9px 0;border-bottom:1px solid var(--line-soft);vertical-align:top}
+.ls tr:last-child td{border-bottom:0}
+.ls tr[data-nav]{cursor:pointer}
+.ls tr[data-nav]:hover td,.ls tr.sel td{background:var(--panel-2)}
+.ls tr.sel td:first-child{box-shadow:inset 2px 0 0 var(--accent)}
+.ls .perm{color:var(--dimmer);white-space:nowrap}
+.ls .dt{color:var(--dim);white-space:nowrap}
+.ls .ttl{color:var(--fg-strong);font-family:var(--sans),var(--cjk);font-weight:600;font-size:14px}
+.ls .sub{color:var(--dim);font-family:var(--sans),var(--cjk);font-weight:400;font-size:12.5px;margin-top:2px;display:block}
+.ls .meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;align-items:center}
+
+.tag{
+  font-size:10.5px;border:1px solid var(--line);border-radius:99px;padding:1px 7px;color:var(--dim);
+  background:var(--panel-2);white-space:nowrap;
+}
+.tag:hover{color:var(--fg-strong);border-color:var(--dimmer)}
+.pill{font-size:10px;letter-spacing:.08em;text-transform:uppercase;padding:1px 6px;border-radius:3px;font-weight:700}
+.pill.en{color:var(--cyan);background:color-mix(in srgb,var(--cyan) 14%,transparent)}
+.pill.zh{color:var(--amber);background:color-mix(in srgb,var(--amber) 14%,transparent)}
+.pill.ser{color:var(--purple);background:color-mix(in srgb,var(--purple) 14%,transparent)}
+
+.grid2{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(290px,1fr))}
+.card{
+  border:1px solid var(--line);border-radius:8px;padding:14px 16px;background:var(--panel);
+  display:block;color:inherit;transition:.16s;
+}
+.card:hover{border-color:var(--acc,var(--accent));background:var(--panel-2);text-decoration:none;transform:translateY(-1px)}
+.card .g{font-size:20px;color:var(--acc,var(--accent));line-height:1}
+.card h3{margin:8px 0 4px;font-size:15px;color:var(--fg-strong);font-family:var(--sans),var(--cjk)}
+.card p{margin:0;font-size:12.5px;color:var(--dim);font-family:var(--sans),var(--cjk);line-height:1.6}
+.card .n{float:right;font-size:11px;color:var(--dimmer)}
+
+h1.view{font-size:22px;margin:0 0 4px;color:var(--fg-strong);font-weight:700;letter-spacing:-.01em}
+p.viewsub{margin:0 0 22px;color:var(--dim);font-size:13px;font-family:var(--sans),var(--cjk);max-width:70ch;line-height:1.7}
+.sec{margin:30px 0 12px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--dimmer);display:flex;align-items:center;gap:10px}
+.sec::after{content:"";flex:1;height:1px;background:var(--line-soft)}
+
+/* ---------- log / microblog ---------- */
+.log{border-left:1px solid var(--line);margin-left:6px;padding-left:0}
+.entry{position:relative;padding:0 0 22px 22px}
+.entry::before{
+  content:"";position:absolute;left:-4px;top:7px;width:7px;height:7px;border-radius:50%;
+  background:var(--accent);box-shadow:0 0 0 3px var(--bg);
+}
+.entry .ts{color:var(--dimmer);font-size:11.5px}
+.entry .ts b{color:var(--dim);font-weight:400}
+.entry .bd{margin:5px 0 0;max-width:66ch}
+.entry .bd p{
+  margin:0 0 .6em;font-family:var(--sans),var(--cjk);font-size:14px;color:var(--fg);line-height:1.72;
+}
+.entry .bd p:last-child{margin-bottom:0}
+.entry .bd code{font-family:var(--mono);font-size:12.5px;background:var(--panel-2);padding:1px 5px;border-radius:4px;color:var(--amber)}
+.entry .code-block{margin-top:10px;max-width:min(100%,78ch)}
+.entry .foot{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+
+/* ---------- post ---------- */
+.postwrap{display:grid;grid-template-columns:minmax(0,1fr) 210px;gap:44px;align-items:start}
+@media (max-width:1080px){.postwrap{grid-template-columns:1fr}.toc{display:none}}
+.progress{position:fixed;top:38px;left:0;height:2px;background:var(--accent);z-index:45;transition:width .1s linear}
+.posthead{border-bottom:1px solid var(--line);padding-bottom:20px;margin-bottom:26px}
+.posthead .kicker{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin-bottom:10px;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.posthead h1{
+  margin:0 0 8px;font-family:var(--sans),var(--cjk);font-size:29px;line-height:1.24;
+  letter-spacing:-.02em;color:var(--fg-strong);max-width:30ch;
+}
+.posthead .st{margin:0 0 14px;font-family:var(--sans),var(--cjk);font-size:15px;color:var(--dim);max-width:56ch;line-height:1.55}
+.postmeta{display:flex;gap:16px;flex-wrap:wrap;font-size:11.5px;color:var(--dim)}
+.postmeta b{color:var(--fg-strong);font-weight:500}
+.fallback{
+  margin:0 0 20px;border:1px solid var(--amber);border-radius:7px;padding:9px 13px;font-size:12.5px;
+  background:color-mix(in srgb,var(--amber) 9%,transparent);color:var(--fg);
+}
+.fallback b{color:var(--amber)}
+
+.depth{display:flex;align-items:center;gap:8px;margin:0 0 24px;font-size:11px;color:var(--dimmer)}
+.depth .grp{display:flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.depth button{padding:3px 11px;font-size:11px;color:var(--dim);background:var(--panel)}
+.depth button.on{background:var(--accent);color:var(--bg);font-weight:700}
+
+.prose{font-family:var(--sans),var(--cjk);font-size:16px;line-height:1.78;color:var(--fg);max-width:none}
+.prose>*{max-width:70ch}
+.prose h1{font-size:26px;margin:2.2em 0 .6em;color:var(--fg-strong);letter-spacing:-.015em}
+.prose h2{
+  font-size:20px;margin:2.4em 0 .7em;color:var(--fg-strong);letter-spacing:-.01em;
+  padding-top:.5em;border-top:1px solid var(--line-soft);
+}
+.prose h3{font-size:16.5px;margin:1.9em 0 .5em;color:var(--fg-strong)}
+.prose h4{font-size:14.5px;margin:1.6em 0 .4em;color:var(--dim);letter-spacing:.02em;text-transform:none}
+.prose p{margin:0 0 1.05em}
+.prose strong{color:var(--fg-strong);font-weight:650}
+.prose em{color:var(--fg-strong)}
+.prose ul,.prose ol{margin:0 0 1.15em;padding-left:1.4em}
+.prose li{margin:.35em 0}
+.prose li::marker{color:var(--accent)}
+.prose hr{border:0;border-top:1px dashed var(--line);margin:2.4em 0}
+.prose blockquote{
+  margin:1.4em 0;padding:2px 0 2px 16px;border-left:2px solid var(--accent);
+  color:var(--dim);font-style:normal;
+}
+.prose :not(pre)>code{
+  font-family:var(--mono);font-size:.85em;background:var(--panel-2);border:1px solid var(--line-soft);
+  padding:1px 5px;border-radius:4px;color:var(--amber);
+}
+.prose table{
+  border-collapse:collapse;font-size:13px;font-family:var(--sans),var(--cjk);
+  margin:1.6em 0;min-width:100%;
+}
+.prose .tablewrap{overflow-x:auto;max-width:100%;border:1px solid var(--line);border-radius:8px}
+.prose th{
+  text-align:left;padding:10px 14px;background:var(--panel-2);color:var(--fg-strong);
+  font-size:11px;letter-spacing:.08em;text-transform:uppercase;border-bottom:1px solid var(--line);
+}
+.prose td{padding:11px 14px;border-bottom:1px solid var(--line-soft);vertical-align:top;line-height:1.6}
+.prose tr:last-child td{border-bottom:0}
+.prose img,.prose video{max-width:100%;border-radius:8px;border:1px solid var(--line)}
+.prose audio{width:100%;max-width:520px}
+
+/* equations */
+.eqn{
+  display:grid;grid-template-columns:minmax(0,1fr) 42px;align-items:center;
+  margin:1.6em 0;max-width:100%;
+}
+.eqn>.katex-display{margin:0;grid-column:1;overflow-x:auto;overflow-y:hidden;min-width:0;padding:2px 0}
+.eqn>.texsrc{grid-column:1/-1}
+.eqn-tag{
+  grid-column:2;text-align:right;align-self:center;
+  font-family:var(--mono);font-size:11.5px;color:var(--dimmer);text-decoration:none;
+}
+.eqn-tag:hover{color:var(--accent);text-decoration:none}
+.eqn:target,.eqn.flash{background:var(--sel);border-radius:6px}
+.katex{font-size:1.03em}
+.prose .katex-display>.katex{text-align:left}
+
+/* code */
+.code-block{
+  position:relative;margin:1.5em 0;padding:14px 16px;border-radius:8px;overflow-x:auto;
+  border:1px solid var(--line);font-family:var(--mono);font-size:12.8px;line-height:1.62;
+  background:var(--panel-2)!important;color:var(--fg)!important;
+}
+.prose>.code-block{max-width:min(100%,84ch)}
+.code-block code{font-family:inherit}
+.code-block::before{
+  content:attr(data-lang);position:absolute;top:0;right:0;padding:2px 9px;font-size:9.5px;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--dimmer);
+  border-left:1px solid var(--line);border-bottom:1px solid var(--line);border-radius:0 7px 0 7px;
+}
+.copybtn{
+  position:absolute;top:6px;right:56px;font-size:10px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--dim);border:1px solid var(--line);border-radius:4px;padding:1px 7px;background:var(--panel);
+  opacity:0;transition:.15s;
+}
+.code-block:hover .copybtn,.copybtn:focus{opacity:1}
+.copybtn.ok{color:var(--green);border-color:var(--green)}
+/* Shiki dual theme: pick the variable that matches the active scheme */
+.code-block span{color:var(--sh-dark)}
+:root[data-theme="light"] .code-block span{color:var(--sh-light)}
+@media (prefers-color-scheme: light){:root:not([data-theme="dark"]) .code-block span{color:var(--sh-light)}}
+
+/* progressive disclosure */
+details.deeper{
+  margin:1.5em 0;border:1px solid var(--line);border-radius:8px;background:var(--panel);
+  overflow:hidden;max-width:70ch;
+}
+details.deeper>summary{
+  cursor:pointer;list-style:none;padding:9px 14px;font-family:var(--mono);font-size:11.5px;
+  letter-spacing:.08em;text-transform:uppercase;color:var(--accent);background:var(--panel-2);
+  display:flex;align-items:center;gap:9px;
+}
+details.deeper>summary::-webkit-details-marker{display:none}
+details.deeper>summary::before{content:"[+]";color:var(--dimmer);font-weight:700}
+details.deeper[open]>summary::before{content:"[-]"}
+details.deeper>summary:hover{color:var(--fg-strong)}
+details.deeper>*:not(summary){padding-left:14px;padding-right:14px}
+details.deeper>p:first-of-type{margin-top:13px}
+details.deeper>*:last-child{margin-bottom:13px}
+.depth-skim details.deeper{opacity:.55}
+.texsrc{
+  margin:8px 0 0;padding:8px 11px;border:1px dashed var(--line);border-radius:6px;
+  font-family:var(--mono);font-size:11.5px;color:var(--dim);background:var(--panel-2);
+  white-space:pre-wrap;word-break:break-word;user-select:all;
+}
+
+/* interactive figure */
+.figure{
+  margin:2em 0;border:1px solid var(--line);border-radius:9px;background:var(--panel);overflow:hidden;
+  max-width:100%;
+}
+.figure .fh{
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:9px 14px;
+  border-bottom:1px solid var(--line);background:var(--panel-2);
+  font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);
+}
+.figure .fh .live{color:var(--green);display:flex;align-items:center;gap:5px}
+.figure .fh .live::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 1.8s infinite}
+@keyframes pulse{50%{opacity:.25}}
+@media (prefers-reduced-motion:reduce){.figure .fh .live::before{animation:none}}
+.figure .fb{padding:14px}
+.figure svg{display:block;width:100%;height:auto;max-width:100%;overflow:visible}
+.ctrls{display:flex;gap:20px;flex-wrap:wrap;padding:0 14px 14px;font-family:var(--mono);font-size:11.5px}
+.ctrl{display:flex;flex-direction:column;gap:5px;min-width:170px;flex:1}
+.ctrl label{color:var(--dim);display:flex;justify-content:space-between;gap:10px}
+.ctrl label b{color:var(--accent);font-weight:700;font-variant-numeric:tabular-nums}
+.ctrl input[type=range]{width:100%;accent-color:var(--accent);height:16px}
+.legend{display:flex;gap:14px;flex-wrap:wrap;padding:0 14px 14px;font-family:var(--mono);font-size:11px}
+.legend button{display:flex;align-items:center;gap:6px;color:var(--dim);padding:2px 0}
+.legend button.off{opacity:.34;text-decoration:line-through}
+.legend i{width:16px;height:3px;border-radius:2px;display:block}
+.figcap{
+  padding:11px 14px;border-top:1px solid var(--line-soft);font-family:var(--sans),var(--cjk);
+  font-size:12.5px;color:var(--dim);line-height:1.65;background:var(--panel-2);
+}
+.figcap b{color:var(--fg-strong);font-weight:600}
+
+/* toc */
+.toc{position:sticky;top:64px;max-height:calc(100vh - 100px);overflow:auto;font-size:12px}
+.toc h6{margin:0 0 10px;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--dimmer);font-weight:500}
+.toc ol{list-style:none;margin:0;padding:0;border-left:1px solid var(--line)}
+.toc li a{display:block;padding:3px 0 3px 12px;color:var(--dim);border-left:2px solid transparent;margin-left:-1px;line-height:1.45}
+.toc li a:hover{color:var(--fg-strong);text-decoration:none}
+.toc li a.cur{color:var(--accent);border-left-color:var(--accent);background:var(--sel)}
+.toc li.d3 a{padding-left:24px;font-size:11.5px}
+.toc .stat{margin-top:16px;padding-top:12px;border-top:1px solid var(--line-soft);color:var(--dimmer);font-size:11px;line-height:1.9}
+.toc .stat b{color:var(--dim);font-weight:400}
+
+.citebox{margin:34px 0 0;border:1px solid var(--line);border-radius:8px;background:var(--panel)}
+.citebox .h{padding:8px 13px;border-bottom:1px solid var(--line);background:var(--panel-2);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);display:flex}
+.citebox pre{margin:0;padding:13px;font-size:11.5px;color:var(--dim);overflow-x:auto;line-height:1.65}
+
+.pager{display:flex;gap:12px;margin-top:34px;border-top:1px solid var(--line);padding-top:20px;flex-wrap:wrap}
+.pager a{
+  flex:1;min-width:220px;border:1px solid var(--line);border-radius:8px;padding:11px 14px;
+  background:var(--panel);color:var(--fg);
+}
+.pager a:hover{border-color:var(--accent);text-decoration:none;background:var(--panel-2)}
+.pager small{display:block;color:var(--dimmer);font-size:10px;letter-spacing:.1em;text-transform:uppercase}
+.pager span{font-family:var(--sans),var(--cjk);font-size:13.5px;color:var(--fg-strong)}
+
+/* ---------- command palette ---------- */
+.pal{position:fixed;inset:0;z-index:80;display:none;padding:9vh 16px 16px;justify-content:center;align-items:flex-start;background:#000a;backdrop-filter:blur(3px)}
+.pal.open{display:flex}
+.palbox{width:min(720px,100%);max-height:76vh;display:flex;flex-direction:column;border:1px solid var(--line);border-radius:10px;background:var(--panel);box-shadow:var(--shadow);overflow:hidden}
+.palin{display:flex;align-items:center;gap:10px;padding:13px 16px;border-bottom:1px solid var(--line);background:var(--panel-2)}
+.palin span{color:var(--green);font-weight:700}
+.palin input{flex:1;background:none;border:0;outline:0;color:var(--fg-strong);font:inherit;font-size:14px}
+.palout{overflow:auto;padding:6px}
+.palout .row{display:flex;gap:12px;align-items:baseline;padding:7px 11px;border-radius:6px;color:var(--fg);cursor:pointer}
+.palout .row.sel{background:var(--sel)}
+.palout .row .k{color:var(--accent);font-size:11px;min-width:74px;flex:none;text-transform:uppercase;letter-spacing:.06em}
+.palout .row .t{font-family:var(--sans),var(--cjk);font-size:13.5px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.palout .row .h{color:var(--dimmer);font-size:11px;flex:none}
+.palout pre{margin:0;padding:11px;font-size:12px;color:var(--fg);white-space:pre-wrap;line-height:1.65}
+.palout pre b{color:var(--accent)}
+.palfoot{padding:7px 14px;border-top:1px solid var(--line);background:var(--panel-2);font-size:10.5px;color:var(--dimmer);display:flex;gap:14px;flex-wrap:wrap}
+
+/* ---------- boot ---------- */
+.boot{position:fixed;inset:0;z-index:100;background:var(--bg-deep);padding:6vh 8vw;font-size:12.5px;color:var(--green);overflow:hidden}
+.boot.gone{opacity:0;pointer-events:none;transition:opacity .45s}
+.boot pre{margin:0;white-space:pre-wrap;line-height:1.65}
+.boot .hint{position:absolute;bottom:6vh;left:8vw;color:var(--dimmer);font-size:11px}
+.boot .ok{color:var(--fg)}
+.boot .warn{color:var(--amber)}
+
+.hidefig{display:none}
+@media (max-width:900px){
+  :root{--rail:0px}
+  .rail{display:none}
+  .main{padding:20px 16px 70px}
+  .postwrap{gap:0}
+  .posthead h1{font-size:24px}
+}
+</style>
+
+<div class="boot" id="boot" hidden><pre id="bootlog"></pre><div class="hint">press any key to skip</div></div>
+
+<div class="titlebar">
+  <div class="lights"><i></i><i></i><i></i></div>
+  <div class="crumb" id="crumb"></div>
+  <div class="tb-actions">
+    <div class="langsw" id="langsw"><button data-l="en">en</button><button data-l="zh">中</button></div>
+    <button class="chip" id="themebtn" title="Toggle theme">◐</button>
+    <button class="chip" id="palbtn">⌘K</button>
+  </div>
+</div>
+
+<div class="shell">
+  <nav class="rail" id="rail"></nav>
+  <main class="main" id="main"></main>
+</div>
+
+<div class="progress" id="prog" style="width:0"></div>
+
+<div class="pal" id="pal">
+  <div class="palbox">
+    <div class="palin"><span>$</span><input id="palinput" autocomplete="off" spellcheck="false" placeholder="type a command or search — try: help"></div>
+    <div class="palout" id="palout"></div>
+    <div class="palfoot">
+      <span><span class="kbd">↑↓</span> move</span><span><span class="kbd">↵</span> run</span>
+      <span><span class="kbd">esc</span> close</span><span>try <b>neofetch</b>, <b>cd rl</b>, <b>grep kv-cache</b></span>
+    </div>
+  </div>
+</div>
+
+<script id="payload" type="application/json">__PAYLOAD__</script>
+<script>
+"use strict";
+const D = JSON.parse(document.getElementById('payload').textContent);
+const S = {
+  lang: 'en',
+  theme: localStorage.getItem('tty-theme') || '',
+  depth: 'read',
+  nav: -1,
+};
+const T = () => D.ui[S.lang];
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const byId = id => document.getElementById(id);
+const cat = id => D.categories.find(c => c.id === id);
+const ser = id => D.series.find(s => s.id === id);
+const post = slug => D.posts.find(p => p.slug === slug);
+const inSeries = id => D.posts.filter(p => p.series.some(s => s.id === id))
+  .sort((a,b) => (a.series.find(s=>s.id===id).part ?? 99) - (b.series.find(s=>s.id===id).part ?? 99) || (a.date < b.date ? -1 : 1));
+const nPosts = n => n + ' ' + (n === 1 ? T().post : T().posts);
+const fmt = (s,o) => Object.entries(o).reduce((a,[k,v]) => a.replace('{'+k+'}', v), s);
+const nfmt = n => n.toLocaleString('en-US');
+
+/* language a post can actually be shown in, given the reader's choice */
+const shown = p => p.langs.includes(S.lang) ? S.lang : p.langs[0];
+const title = p => p.title;
+
+/* ---------------- theme ---------------- */
+function applyTheme(){ if (S.theme) document.documentElement.dataset.theme = S.theme; else delete document.documentElement.dataset.theme; }
+byId('themebtn').onclick = () => {
+  const dark = S.theme ? S.theme === 'dark' : !matchMedia('(prefers-color-scheme: light)').matches;
+  S.theme = dark ? 'light' : 'dark';
+  localStorage.setItem('tty-theme', S.theme); applyTheme();
+};
+applyTheme();
+
+byId('langsw').onclick = e => {
+  const b = e.target.closest('[data-l]'); if (!b) return;
+  S.lang = b.dataset.l; render();
+};
+
+/* ---------------- routing ---------------- */
+function route(){
+  const h = location.hash.replace(/^#\/?/, '');
+  const [pathPart, queryPart] = h.split('?');
+  const seg = pathPart.split('/').filter(Boolean).map(decodeURIComponent);
+  const q = new URLSearchParams(queryPart || '');
+  return { seg, q, kind: seg[0] || 'home' };
+}
+addEventListener('hashchange', () => { render(); scrollTo(0,0); });
+
+/* ---------------- rail ---------------- */
+function railHTML(){
+  const node = (br, name, href, count, accent) =>
+    '<li><a href="#/'+href+'"'+(('#/'+href)===(location.hash||'#/')?' class="active"':'')+'>'+
+    '<span class="br">'+br+'</span><span class="nm"'+(accent?' style="color:'+accent+'"':'')+'>'+esc(name)+'</span>'+
+    (count!=null?'<span class="ct">'+count+'</span>':'')+'</a></li>';
+  const research = D.categories.filter(c => ['rl','systems','trust'].includes(c.id));
+  const other = D.categories.filter(c => ['music','vault'].includes(c.id));
+  let h = '<h6>filesystem</h6><ul class="tree">';
+  h += node('', '~', '', null);
+  h += '<li><a href="#/c/rl" style="pointer-events:none"><span class="br">├── </span><span class="nm" style="color:var(--dim)">research/</span></a></li>';
+  research.forEach((c,i) => {
+    const last = i === research.length-1;
+    h += node('│   '+(last?'└── ':'├── '), c.id+'/', 'c/'+c.id, D.posts.filter(p=>p.category===c.id).length, c.accent);
+  });
+  other.forEach(c => h += node('├── ', c.id+'/', 'c/'+c.id, D.posts.filter(p=>p.category===c.id).length, c.accent));
+  h += node('├── ', 'log/', 'log', D.notes.length);
+  h += node('├── ', 'archive', 'archive', null);
+  h += node('└── ', 'about.md', 'about', null);
+  h += '</ul>';
+
+  h += '<h6>series</h6><ul class="tree">';
+  D.series.forEach((s,i) => h += node(i===D.series.length-1?'└── ':'├── ', s.name[S.lang], 's/'+s.id, inSeries(s.id).length, cat(s.category).accent));
+  h += '</ul>';
+
+  const tags = {};
+  D.posts.forEach(p => p.tags.forEach(t => tags[t] = (tags[t]||0)+1));
+  const top = Object.entries(tags).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  h += '<h6>tags</h6><div style="padding:0 14px;display:flex;flex-wrap:wrap;gap:5px">';
+  top.forEach(([t,n]) => h += '<a class="tag" href="#/t/'+encodeURIComponent(t)+'">'+esc(t)+' <span style="color:var(--dimmer)">'+n+'</span></a>');
+  h += '</div>';
+
+  h += '<div class="rail-foot">'+
+    '<span class="kbd">⌘K</span> command palette<br>'+
+    '<span class="kbd">/</span> search &nbsp; <span class="kbd">j</span><span class="kbd">k</span> move &nbsp; <span class="kbd">↵</span> open<br>'+
+    '<span class="kbd">g</span><span class="kbd">h</span> home &nbsp; <span class="kbd">?</span> shortcuts<br>'+
+    '<div style="margin-top:10px">'+D.site.links.map(l => '<a href="'+l.href+'" target="_blank" rel="noopener">'+esc(l.label)+'</a>').join(' · ')+'</div>'+
+    '</div>';
+  return h;
+}
+
+/* ---------------- shared bits ---------------- */
+function promptLine(cmd){
+  return '<p class="prompt"><span class="u">'+D.site.handle+'</span><span style="color:var(--dimmer)">@</span><span class="p">blog</span> '+
+    '<span style="color:var(--dimmer)">$</span> <span class="c">'+esc(cmd)+'</span><span class="cursor"></span></p>';
+}
+function langPills(p){
+  return p.langs.map(l => '<span class="pill '+l+'">'+l+'</span>').join('');
+}
+function postRow(p){
+  const sr = p.series[0] ? ser(p.series[0].id) : null;
+  const c = cat(p.category);
+  return '<tr data-nav data-href="#/p/'+p.slug+'">'+
+    '<td class="dt">'+p.date+'</td>'+
+    '<td class="perm" style="color:'+c.accent+'">'+c.glyph+'</td>'+
+    '<td><a class="ttl" href="#/p/'+p.slug+'">'+esc(title(p))+'</a>'+
+      (p.subtitle ? '<span class="sub">'+esc(p.subtitle)+'</span>' : '') +
+      '<span class="meta">'+langPills(p)+
+      (sr ? '<span class="pill ser">'+esc(sr.name[S.lang])+(p.series[0].part?' '+p.series[0].part:'')+'</span>' : '')+
+      p.tags.slice(0,3).map(t => '<a class="tag" href="#/t/'+encodeURIComponent(t)+'">'+esc(t)+'</a>').join('')+
+      '</span></td>'+
+    '</tr>';
+}
+function lsTable(posts, cmd){
+  if (!posts.length) return '<p style="color:var(--dim)">'+T().noResults+'</p>';
+  return (cmd ? promptLine(cmd) : '') +
+    '<div class="panel"><table class="ls"><thead><tr>'+
+    '<th style="padding-left:18px">date</th><th></th><th>'+T().allPosts+' ('+posts.length+')</th>'+
+    '</tr></thead><tbody>'+posts.map(postRow).join('').replace(/<td class="dt">/g,'<td class="dt" style="padding-left:18px">')+'</tbody></table></div>';
+}
+
+/* ---------------- views ---------------- */
+const ART = [
+ " ██╗   ██╗███████╗",
+ " ╚██╗ ██╔╝╚══███╔╝",
+ "  ╚████╔╝   ███╔╝ ",
+ "   ╚██╔╝   ███╔╝  ",
+ "    ██║   ███████╗",
+ "    ╚═╝   ╚══════╝"].join('\n');
+
+function viewHome(){
+  const t = T(), recent = D.posts.slice(0, 7);
+  const feat = D.posts.find(p => p.featured);
+  let h = promptLine('neofetch');
+  h += '<div class="panel"><div class="panel-h"><span>'+D.site.handle+'@blog</span><span class="sp"></span><span>uptime '+D.stats.years+'y</span></div><div class="panel-b">'+
+    '<div class="fetch"><pre>'+ART+'</pre><dl>'+
+    '<dt>user</dt><dd>'+esc(D.site.name[S.lang])+' <span style="color:var(--dimmer)">('+D.site.handle+')</span></dd>'+
+    '<dt>role</dt><dd>'+esc(D.site.role[S.lang])+'</dd>'+
+    '<dt>posts</dt><dd>'+D.stats.posts+' <span style="color:var(--dimmer)">('+D.stats.bilingual+' bilingual)</span></dd>'+
+    '<dt>notes</dt><dd>'+D.stats.notes+'</dd>'+
+    '<dt>topics</dt><dd>'+D.stats.categories+' '+t.categories.toLowerCase()+' · '+D.stats.series+' '+t.series.toLowerCase()+'</dd>'+
+    '<dt>words</dt><dd>~'+nfmt(D.stats.words)+'</dd>'+
+    '<dt>since</dt><dd>'+D.stats.since+'</dd>'+
+    '<dt>shell</dt><dd>tty · dark/light · '+Object.keys(D.ui).join('/')+'</dd>'+
+    '<div class="bar">'+D.categories.map(c=>'<i style="background:'+c.accent+'"></i>').join('')+'</div>'+
+    '</dl></div></div></div>';
+
+  h += '<p class="viewsub" style="margin:22px 0 0;max-width:74ch">'+esc(D.site.tagline[S.lang])+'</p>';
+
+  h += '<div class="sec">'+t.categories+'</div><div class="grid2">';
+  D.categories.forEach(c => {
+    const n = D.posts.filter(p => p.category === c.id).length;
+    h += '<a class="card" href="#/c/'+c.id+'" style="--acc:'+c.accent+'">'+
+      '<span class="n">'+nPosts(n)+'</span><span class="g">'+c.glyph+'</span>'+
+      '<h3>'+esc(c.name[S.lang])+'</h3><p>'+esc(c.blurb[S.lang])+'</p></a>';
+  });
+  h += '</div>';
+
+  if (feat) {
+    const c = cat(feat.category);
+    h += '<div class="sec">'+t.featured+'</div>'+
+      '<a class="card" href="#/p/'+feat.slug+'" style="--acc:'+c.accent+'">'+
+      '<div style="font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:'+c.accent+'">'+c.glyph+' '+esc(c.name[S.lang])+' · '+esc(t.kind[feat.kind])+'</div>'+
+      '<h3 style="font-size:20px;margin:9px 0 6px;max-width:34ch;line-height:1.3">'+esc(title(feat))+'</h3>'+
+      '<p style="max-width:78ch">'+esc(feat.excerpt)+'</p>'+
+      '<div style="margin-top:11px;display:flex;gap:7px;flex-wrap:wrap;align-items:center">'+langPills(feat)+
+      '<span class="tag">'+D.bodies.grpo.en.eqnCount+' '+t.equations+'</span>'+
+      '<span class="tag">'+D.bodies.grpo.en.minutes+' '+t.readingTime+'</span></div></a>';
+  }
+
+  h += '<div class="sec">'+t.recent+'</div>' + lsTable(recent, 'ls -lt --sort=date | head -7');
+
+  h += '<div class="sec">'+t.log+'</div>'+ promptLine('tail -f ~/.log') + '<div class="log">'+ D.notes.slice(0,3).map(noteHTML).join('') + '</div>'+
+    '<a class="chip" href="#/log" style="display:inline-block;margin-top:4px">'+D.notes.length+' '+t.notes+' →</a>';
+  return h;
+}
+
+function viewCategory(id){
+  const c = cat(id); if (!c) return viewHome();
+  const t = T(), posts = D.posts.filter(p => p.category === id);
+  const seriesHere = D.series.filter(s => s.category === id);
+  let h = '<h1 class="view" style="color:'+c.accent+'">'+c.glyph+' '+esc(c.name[S.lang])+'</h1>'+
+    '<p class="viewsub">'+esc(c.blurb[S.lang])+'</p>';
+  if (seriesHere.length) {
+    h += '<div class="sec">'+t.series+'</div><div class="grid2">';
+    seriesHere.forEach(s => {
+      const items = inSeries(s.id);
+      h += '<a class="card" href="#/s/'+s.id+'" style="--acc:'+c.accent+'">'+
+        '<span class="n">'+nPosts(items.length)+'</span><span class="g">⋯</span>'+
+        '<h3>'+esc(s.name[S.lang])+'</h3><p>'+esc(s.blurb[S.lang])+'</p></a>';
+    });
+    h += '</div>';
+  }
+  h += '<div class="sec">'+t.allPosts+'</div>' + lsTable(posts, 'cd '+id+' && ls -lt');
+  return h;
+}
+
+function viewSeries(id){
+  const s = ser(id); if (!s) return viewHome();
+  const c = cat(s.category), items = inSeries(id), t = T();
+  let h = '<h1 class="view">'+esc(s.name[S.lang])+'</h1><p class="viewsub">'+esc(s.blurb[S.lang])+'</p>';
+  h += '<div class="panel"><div class="panel-h"><span>reading order</span><span class="sp"></span><span>'+nPosts(items.length)+'</span></div><div class="panel-b" style="overflow-x:auto">';
+  h += '<div style="display:flex;align-items:center;gap:0;min-width:min-content">';
+  items.forEach((p,i) => {
+    h += '<a href="#/p/'+p.slug+'" style="flex:none;max-width:190px;border:1px solid var(--line);border-radius:7px;padding:10px 12px;background:var(--panel-2);color:var(--fg)">'+
+      '<div style="font-size:10px;letter-spacing:.1em;color:'+c.accent+'">'+String(i+1).padStart(2,'0')+'</div>'+
+      '<div style="font-family:var(--sans),var(--cjk);font-size:12.5px;line-height:1.4;margin-top:4px;color:var(--fg-strong)">'+esc(title(p))+'</div></a>';
+    if (i < items.length-1) h += '<span style="flex:none;color:var(--dimmer);padding:0 8px">──▶</span>';
+  });
+  h += '</div></div></div>';
+  h += '<div class="sec">'+t.allPosts+'</div>' + lsTable(items, '');
+  return h;
+}
+
+function viewTag(tag){
+  const posts = D.posts.filter(p => p.tags.includes(tag));
+  return '<h1 class="view"># '+esc(tag)+'</h1><p class="viewsub">'+posts.length+' '+T().posts+'</p>' + lsTable(posts, 'grep -l "'+tag+'" *.md');
+}
+
+function viewArchive(){
+  const t = T(), byYear = {};
+  D.posts.forEach(p => { (byYear[p.date.slice(0,4)] ||= []).push(p); });
+  const years = Object.keys(byYear).sort().reverse();
+  let h = '<h1 class="view">'+t.archive+'</h1><p class="viewsub">'+nPosts(D.posts.length)+' · '+D.stats.since+'–'+years[0]+'</p>';
+  h += '<div class="panel"><div class="panel-h"><span>commit density</span><span class="sp"></span><span>posts per month</span></div><div class="panel-b" style="overflow-x:auto">';
+  h += '<div style="display:grid;grid-template-columns:44px repeat(12,1fr);gap:3px;min-width:520px;font-size:10px">';
+  h += '<div></div>' + Array.from({length:12}, (_,m) => '<div style="color:var(--dimmer);text-align:center">'+'JFMAMJJASOND'[m]+'</div>').join('');
+  years.forEach(y => {
+    h += '<div style="color:var(--dim);line-height:16px">'+y+'</div>';
+    for (let m=1;m<=12;m++){
+      const mm = String(m).padStart(2,'0');
+      const items = byYear[y].filter(p => p.date.slice(5,7) === mm);
+      const c = items[0] ? cat(items[0].category).accent : null;
+      h += '<div title="'+y+'-'+mm+': '+items.length+'" style="height:16px;border-radius:3px;'+
+        (items.length ? 'background:'+c+';opacity:'+Math.min(1,.4+items.length*.3) : 'background:var(--line-soft)')+'"></div>';
+    }
+  });
+  h += '</div></div></div>';
+  years.forEach(y => {
+    h += '<div class="sec">'+y+' <span style="color:var(--dimmer);text-transform:none;letter-spacing:0">'+byYear[y].length+'</span></div>' + lsTable(byYear[y], '');
+  });
+  return h;
+}
+
+function noteHTML(n){
+  return '<div class="entry"><div class="ts">'+n.at+' <b>· '+n.lang+' · '+n.tags.map(t=>'#'+t).join(' ')+'</b></div>'+
+    '<div class="bd" lang="'+n.lang+'">'+n.html+'</div>'+
+    (n.code ? '<pre class="code-block" data-lang="'+n.code.lang+'" data-source="'+esc(n.code.source)+'"><code>'+esc(n.code.source)+'</code></pre>' : '')+
+    (n.link ? '<div class="foot"><a class="tag" href="'+n.link.href+'">↗ '+esc(n.link.label)+'</a></div>' : '')+
+    '</div>';
+}
+
+function viewLog(){
+  const t = T();
+  return '<h1 class="view">~/.log</h1><p class="viewsub">'+
+    (S.lang==='zh' ? '短的东西放在这里。想法、踩过的坑、当天读到的一段代码，不值得写成一篇文章，但是也不该丢掉。' :
+     'Where the short things go. Half-thoughts, bugs that cost me a day, a snippet worth keeping. Not worth a post, not worth losing.')+
+    '</p>' + promptLine('tail -f ~/.log') +
+    '<div class="log">'+D.notes.map(noteHTML).join('')+'</div>'+
+    '<p style="color:var(--dimmer);font-size:11.5px">'+D.notes.length+' '+t.notes+' · one markdown file each, so they show up in search alongside the posts.</p>';
+}
+
+function searchAll(q){
+  const needle = q.toLowerCase().trim();
+  if (!needle) return { posts: [], notes: [] };
+  const hit = s => String(s).toLowerCase().includes(needle);
+  return {
+    posts: D.posts.filter(p => hit(p.title) || hit(p.subtitle) || hit(p.excerpt) || p.tags.some(hit) || hit(p.slug)),
+    notes: D.notes.filter(n => hit(n.body) || n.tags.some(hit)),
+  };
+}
+
+function viewSearch(q){
+  const r = searchAll(q), t = T();
+  let h = '<h1 class="view">'+t.search+'</h1>'+promptLine('grep -ri "'+q+'" .');
+  h += '<p class="viewsub">'+nPosts(r.posts.length)+' · '+r.notes.length+' '+t.notes+'</p>';
+  if (r.posts.length) h += lsTable(r.posts, '');
+  if (r.notes.length) h += '<div class="sec">'+t.log+'</div><div class="log">'+r.notes.map(noteHTML).join('')+'</div>';
+  if (!r.posts.length && !r.notes.length) h += '<p style="color:var(--dim)">'+t.noResults+'</p>';
+  return h;
+}
+
+function viewAbout(){
+  const zh = S.lang === 'zh';
+  return '<h1 class="view">about.md</h1>'+promptLine('cat about.md')+
+    '<div class="prose" lang="'+S.lang+'" style="max-width:70ch">'+
+    '<p>'+(zh
+      ? '我是张逸骅，在 Together AI 做强化学习的基础设施。这个博客上大部分内容是我在弄懂某样东西的过程中写下来的笔记，写完之后发现别人也可能用得上，就留在了这里。'
+      : "I'm Yihua Zhang. I work on reinforcement-learning infrastructure at Together AI. Most of what is on this site started as notes I wrote to convince myself I understood something, and stayed up because it turned out other people needed the same explanation.")+'</p>'+
+    '<p>'+(zh
+      ? '写得最多的是强化学习和模型效率这两块。偶尔也会写音乐，把一首曲子拿到谱面上逐小节拆开来看，这两件事在我这里用的其实是同一种思路。'
+      : 'Mostly that means RL and model efficiency. Occasionally it means taking a piece of music apart bar by bar, which turns out to use the same habit of mind.')+'</p>'+
+    '<h2>'+(zh?'这个站是怎么搭的':'How this site is built')+'</h2>'+
+    '<ul>'+
+    '<li>'+(zh?'公式在构建时就被 KaTeX 渲染成静态的 HTML，浏览器不需要加载任何数学相关的脚本。':'Equations are rendered to static HTML by KaTeX at build time. The browser loads no math JavaScript at all.')+'</li>'+
+    '<li>'+(zh?'代码高亮同样发生在构建时，深色和浅色两套配色都被写进同一份产物里。':'Syntax highlighting also happens at build time, with both colour schemes baked into one artifact.')+'</li>'+
+    '<li>'+(zh?'每一篇文章的每一种语言都有自己独立的地址，因此深层链接和搜索引擎都不会出问题。':'Every language of every post gets its own URL, so deep links and search engines both behave.')+'</li>'+
+    '</ul></div>';
+}
+
+/* ---------------- post view ---------------- */
+function bodyFor(p){
+  const key = p.slug.startsWith('grpo') && p.slug === 'grpo' ? 'grpo' : (p.slug === 'decorators' ? 'decorators' : null);
+  if (!key) return null;
+  const b = D.bodies[key];
+  return b[shown(p)] || b[p.langs[0]] || null;
+}
+
+function viewPost(slug){
+  const p = post(slug); if (!p) return viewHome();
+  const t = T(), c = cat(p.category), lang = shown(p), body = bodyFor(p);
+  const fallback = lang !== S.lang;
+  const idx = D.posts.indexOf(p);
+  const prev = D.posts[idx+1], next = D.posts[idx-1];
+
+  let head = '<div class="posthead">'+
+    '<div class="kicker"><a href="#/c/'+c.id+'" style="color:'+c.accent+'">'+c.glyph+' '+esc(c.name[S.lang])+'</a>'+
+    '<span style="color:var(--dimmer)">'+esc(t.kind[p.kind])+'</span>'+
+    p.series.map(s => '<a href="#/s/'+s.id+'" class="pill ser">'+esc(ser(s.id).name[S.lang])+(s.part ? ' · '+fmt(t.partOf,{n:s.part,m:inSeries(s.id).length}) : '')+'</a>').join('')+
+    '</div>'+
+    '<h1 lang="'+lang+'">'+esc(title(p))+'</h1>'+
+    (p.subtitle ? '<p class="st" lang="'+lang+'">'+esc(p.subtitle)+'</p>' : '')+
+    '<div class="postmeta"><span>'+t.published+' <b>'+p.date+'</b></span>'+
+    (body ? '<span><b>'+body.minutes+'</b> '+t.readingTime+'</span><span><b>'+nfmt(body.words)+'</b> '+t.words+'</span>'+
+      (body.eqnCount ? '<span><b>'+body.eqnCount+'</b> '+t.equations+'</span>' : '') : '')+
+    '<span>'+p.tags.map(x=>'<a class="tag" href="#/t/'+encodeURIComponent(x)+'">'+esc(x)+'</a>').join(' ')+'</span>'+
+    '</div></div>';
+
+  if (fallback) {
+    head += '<p class="fallback"><b>⚠ '+fmt(t.onlyIn,{lang:t.langName[lang]})+'.</b> '+
+      (S.lang==='zh' ? '站点界面仍然是中文，正文按照原文显示。' : 'The site chrome stays in your language; the article is served in the one it exists in.')+'</p>';
+  }
+
+  let controls = '';
+  if (body) {
+    controls = '<div class="depth"><span>depth</span><div class="grp">'+
+      ['skim','read','derive'].map(d => '<button data-depth="'+d+'"'+(S.depth===d?' class="on"':'')+'>'+t[d]+'</button>').join('')+
+      '</div><span style="color:var(--dimmer)">— '+(S.lang==='zh'
+        ? '「略读」把推导折叠起来，「推导」会额外把每个公式的 LaTeX 源码显示出来。'
+        : 'skim folds the derivations away; derive also reveals the LaTeX behind every equation.')+'</span></div>';
+  }
+
+  const content = body
+    ? '<div class="prose depth-'+S.depth+'" id="prose" lang="'+lang+'">'+body.html+'</div>'
+    : '<div class="prose"><p style="color:var(--dim)">'+
+      (S.lang==='zh' ? '这是一份设计演示。为了控制文件体积，只有两篇文章被完整渲染进来，请打开《'+D.posts.find(x=>x.slug==='grpo').title.slice(0,28)+'…》或者那一篇讲装饰器的文章。'
+                     : 'This is a design demo. To keep the file small only two posts are rendered in full — open the GRPO piece or the decorators piece to see the reading view.')+
+      '</p><p style="color:var(--dim)">'+esc(p.excerpt)+'</p></div>';
+
+  const toc = body ? '<aside class="toc"><h6>'+t.contents+'</h6><ol>'+
+    body.toc.map(x => '<li class="d'+x.depth+'"><a href="#'+x.id+'" data-toc="'+x.id+'">'+esc(x.text)+'</a></li>').join('')+
+    '</ol><div class="stat">'+
+    '<b>'+body.words.toLocaleString()+'</b> '+t.words+'<br><b>'+body.eqnCount+'</b> '+t.equations+'<br><b>'+body.minutes+'</b> '+t.readingTime+
+    '</div></aside>' : '<aside class="toc"></aside>';
+
+  const cite = '<div class="citebox"><div class="h">'+t.cite+'<span style="flex:1"></span><button class="chip" data-copy-cite>'+t.copy+'</button></div>'+
+    '<pre id="bib">@misc{zhang'+p.date.slice(0,4)+p.slug.replace(/-/g,'')+',\n  author = {Zhang, Yihua},\n  title  = {'+p.title.replace(/[{}]/g,'')+'},\n  year   = {'+p.date.slice(0,4)+'},\n  url    = {https://normaluhr.github.io/'+lang+'/p/'+p.slug+'}\n}</pre></div>';
+
+  const pager = '<div class="pager">'+
+    (prev ? '<a href="#/p/'+prev.slug+'"><small>← older</small><span>'+esc(title(prev))+'</span></a>' : '')+
+    (next ? '<a href="#/p/'+next.slug+'" style="text-align:right"><small>newer →</small><span>'+esc(title(next))+'</span></a>' : '')+
+    '</div>';
+
+  return '<div class="postwrap"><div>'+head+controls+content+cite+pager+'</div>'+toc+'</div>';
+}
+
+/* ---------------- interactive figure: PPO clipping ---------------- */
+function clipFigure(){
+  const zh = S.lang === 'zh';
+  return '<figure class="figure" id="fig-clip">'+
+    '<div class="fh"><span>figure 1 — interactive</span><span style="flex:1"></span><span class="live">live</span></div>'+
+    '<div class="fb"><svg viewBox="0 0 660 330" role="img" aria-label="The PPO clipped surrogate objective as a function of the probability ratio"><g id="clip-g"></g></svg></div>'+
+    '<div class="ctrls">'+
+      '<div class="ctrl"><label>ε <b id="clip-eps">0.20</b></label><input type="range" id="clip-eps-i" min="2" max="60" value="20"></div>'+
+      '<div class="ctrl"><label>advantage A <b id="clip-a">+1.0</b></label><input type="range" id="clip-a-i" min="-20" max="20" value="10"></div>'+
+    '</div>'+
+    '<div class="legend">'+
+      '<button data-series="unclipped" aria-pressed="true"><i style="background:var(--dimmer)"></i>r·A '+(zh?'（未裁剪）':'(unclipped)')+'</button>'+
+      '<button data-series="clipped" aria-pressed="true"><i style="background:var(--green)"></i>'+(zh?'PPO 目标':'PPO objective')+'</button>'+
+      '<button data-series="band" aria-pressed="true"><i style="background:var(--amber)"></i>'+(zh?'信任区间':'trust band')+'</button>'+
+    '</div>'+
+    '<figcaption class="figcap">'+(zh
+      ? '<b>把 A 拖到负数看一眼。</b>裁剪并不对称：当优势为正时，PPO 会给上涨的那一侧封一个顶，因此策略无法一次更新就冲得太远；当优势为负时，被封住的是下跌的那一侧。这正好解释了 <a href="#eq-4">公式 (4)</a> 里为什么要取 min 而不是直接裁剪。'
+      : '<b>Drag A negative.</b> The clip is not symmetric: with positive advantage PPO caps the upside, so one update cannot push the policy too far; with negative advantage it caps the downside instead. That asymmetry is exactly why <a href="#eq-4">Eq. (4)</a> takes a min rather than just clipping.')+
+    '</figcaption></figure>';
+}
+
+function drawClip(){
+  const svg = document.querySelector('#fig-clip svg'); if (!svg) return;
+  const g = byId('clip-g'), W = 660, H = 330, P = { l: 54, r: 16, t: 24, b: 40 };
+  const eps = Number(byId('clip-eps-i').value) / 100;
+  const A = Number(byId('clip-a-i').value) / 10;
+  byId('clip-eps').textContent = eps.toFixed(2);
+  byId('clip-a').textContent = (A >= 0 ? '+' : '') + A.toFixed(1);
+  const on = k => document.querySelector('#fig-clip [data-series="'+k+'"]').getAttribute('aria-pressed') === 'true';
+
+  const x0 = 0, x1 = 2.2, yMax = 2.6;
+  const X = r => P.l + (r - x0) / (x1 - x0) * (W - P.l - P.r);
+  const Y = v => P.t + (yMax - v) / (2 * yMax) * (H - P.t - P.b);
+  const clip = (r) => Math.min(Math.max(r, 1 - eps), 1 + eps);
+  const obj = (r) => Math.min(r * A, clip(r) * A);
+
+  const pathOf = f => {
+    let d = '';
+    for (let i = 0; i <= 200; i++) {
+      const r = x0 + (x1 - x0) * i / 200;
+      const v = Math.max(-yMax, Math.min(yMax, f(r)));
+      d += (i ? 'L' : 'M') + X(r).toFixed(1) + ' ' + Y(v).toFixed(1);
+    }
+    return d;
+  };
+
+  let s = '';
+  // grid + axes
+  for (let v = -2; v <= 2; v++) {
+    s += '<line x1="'+P.l+'" y1="'+Y(v)+'" x2="'+(W-P.r)+'" y2="'+Y(v)+'" stroke="var(--line-soft)" stroke-width="1"/>'+
+      '<text x="'+(P.l-8)+'" y="'+(Y(v)+4)+'" text-anchor="end" fill="var(--dimmer)" font-size="10" font-family="var(--mono)">'+v+'</text>';
+  }
+  for (let r = 0; r <= 2; r += 0.5) {
+    s += '<line x1="'+X(r)+'" y1="'+P.t+'" x2="'+X(r)+'" y2="'+(H-P.b)+'" stroke="var(--line-soft)" stroke-width="1"/>'+
+      '<text x="'+X(r)+'" y="'+(H-P.b+16)+'" text-anchor="middle" fill="var(--dimmer)" font-size="10" font-family="var(--mono)">'+r.toFixed(1)+'</text>';
+  }
+  s += '<line x1="'+P.l+'" y1="'+Y(0)+'" x2="'+(W-P.r)+'" y2="'+Y(0)+'" stroke="var(--dim)" stroke-width="1"/>';
+  s += '<text x="'+(W-P.r)+'" y="'+(H-P.b+30)+'" text-anchor="end" fill="var(--dim)" font-size="10.5" font-family="var(--mono)">ratio  r = π_θ / π_old</text>';
+
+  if (on('band')) {
+    s += '<rect x="'+X(1-eps)+'" y="'+P.t+'" width="'+(X(1+eps)-X(1-eps))+'" height="'+(H-P.t-P.b)+'" fill="var(--amber)" opacity=".1"/>'+
+      '<line x1="'+X(1-eps)+'" y1="'+P.t+'" x2="'+X(1-eps)+'" y2="'+(H-P.b)+'" stroke="var(--amber)" stroke-width="1" stroke-dasharray="3 3"/>'+
+      '<line x1="'+X(1+eps)+'" y1="'+P.t+'" x2="'+X(1+eps)+'" y2="'+(H-P.b)+'" stroke="var(--amber)" stroke-width="1" stroke-dasharray="3 3"/>'+
+      '<text x="'+(X(1-eps)-4)+'" y="'+(P.t-1)+'" text-anchor="end" fill="var(--amber)" font-size="10" font-family="var(--mono)">1−ε</text>'+
+      '<text x="'+(X(1+eps)+4)+'" y="'+(P.t-1)+'" text-anchor="start" fill="var(--amber)" font-size="10" font-family="var(--mono)">1+ε</text>';
+  }
+  if (on('unclipped')) s += '<path d="'+pathOf(r => r*A)+'" fill="none" stroke="var(--dimmer)" stroke-width="1.6" stroke-dasharray="5 4"/>';
+  if (on('clipped')) s += '<path d="'+pathOf(obj)+'" fill="none" stroke="var(--green)" stroke-width="2.6" stroke-linejoin="round"/>';
+  s += '<circle cx="'+X(1)+'" cy="'+Y(A)+'" r="3.5" fill="var(--cyan)"/>'+
+    '<text x="'+(X(1)+8)+'" y="'+(Y(A)-7)+'" fill="var(--cyan)" font-size="10" font-family="var(--mono)">r=1</text>';
+  g.innerHTML = s;
+}
+
+/* ---------------- post-mount wiring ---------------- */
+function mountFigures(root){
+  root.querySelectorAll('[data-figure="ppo-clip"]').forEach(el => { el.outerHTML = clipFigure(); });
+  const fig = byId('fig-clip');
+  if (fig) {
+    fig.querySelectorAll('input[type=range]').forEach(i => i.addEventListener('input', drawClip));
+    fig.querySelectorAll('.legend button').forEach(b => b.addEventListener('click', () => {
+      const nowOn = b.getAttribute('aria-pressed') === 'true';
+      b.setAttribute('aria-pressed', String(!nowOn));
+      b.classList.toggle('off', nowOn);
+      drawClip();
+    }));
+    drawClip();
+  }
+}
+
+function wireCopy(root){
+  root.querySelectorAll('.code-block').forEach(pre => {
+    if (pre.querySelector('.copybtn')) return;
+    const b = document.createElement('button');
+    b.className = 'copybtn'; b.textContent = T().copy;
+    b.onclick = async () => {
+      try { await navigator.clipboard.writeText(pre.dataset.source || pre.textContent); } catch { return; }
+      b.textContent = T().copied; b.classList.add('ok');
+      setTimeout(() => { b.textContent = T().copy; b.classList.remove('ok'); }, 1400);
+    };
+    pre.appendChild(b);
+  });
+  const cb = root.querySelector('[data-copy-cite]');
+  if (cb) cb.onclick = async () => {
+    try { await navigator.clipboard.writeText(byId('bib').textContent); } catch { return; }
+    cb.textContent = T().copied; setTimeout(() => cb.textContent = T().copy, 1400);
+  };
+}
+
+function wrapTables(root){
+  root.querySelectorAll('.prose > table').forEach(tb => {
+    const w = document.createElement('div'); w.className = 'tablewrap';
+    tb.parentNode.insertBefore(w, tb); w.appendChild(tb);
+  });
+}
+
+function wireDepth(root){
+  root.querySelectorAll('[data-depth]').forEach(b => b.onclick = () => {
+    S.depth = b.dataset.depth;
+    root.querySelectorAll('[data-depth]').forEach(x => x.classList.toggle('on', x.dataset.depth === S.depth));
+    applyDepth();
+  });
+  applyDepth();
+}
+
+/** skim: derivations closed. read: open. derive: open, plus the TeX source under each equation. */
+function applyDepth(){
+  const prose = byId('prose'); if (!prose) return;
+  prose.className = 'prose depth-' + S.depth;
+  prose.querySelectorAll('details.deeper').forEach(d => { d.open = S.depth !== 'skim'; });
+  prose.querySelectorAll('.eqn').forEach(eq => {
+    let tex = eq.querySelector('.texsrc');
+    if (S.depth !== 'derive') { if (tex) tex.remove(); return; }
+    if (tex) return;
+    const src = eq.querySelector('annotation[encoding="application/x-tex"]');
+    if (!src) return;
+    tex = document.createElement('pre');
+    tex.className = 'texsrc';
+    tex.textContent = src.textContent.trim();
+    eq.appendChild(tex);
+  });
+}
+
+let scrollHandler = null;
+function wireScroll(){
+  if (scrollHandler) removeEventListener('scroll', scrollHandler);
+  const prose = byId('prose'), prog = byId('prog');
+  const links = [...document.querySelectorAll('[data-toc]')];
+  scrollHandler = () => {
+    const h = document.documentElement;
+    prog.style.width = (h.scrollTop / Math.max(1, h.scrollHeight - h.clientHeight) * 100) + '%';
+    if (!prose || !links.length) return;
+    let cur = links[0];
+    for (const a of links) {
+      const el = document.getElementById(a.dataset.toc);
+      if (el && el.getBoundingClientRect().top < 140) cur = a;
+    }
+    links.forEach(a => a.classList.toggle('cur', a === cur));
+  };
+  addEventListener('scroll', scrollHandler, { passive: true });
+  scrollHandler();
+}
+
+function wireNav(root){
+  root.querySelectorAll('tr[data-nav]').forEach(tr => tr.onclick = e => {
+    if (e.target.closest('a')) return;
+    location.hash = tr.dataset.href;
+  });
+  root.querySelectorAll('.eqn-tag').forEach(a => a.onclick = () => {
+    setTimeout(() => {
+      const t = document.querySelector(a.getAttribute('href'));
+      if (!t) return;
+      t.classList.add('flash'); setTimeout(() => t.classList.remove('flash'), 900);
+    }, 30);
+  });
+}
+
+/* ---------------- render ---------------- */
+function crumbFor(r){
+  const parts = { home:['~'], c:['~','research',r.seg[1]], s:['~','series',r.seg[1]], p:['~','posts',r.seg[1]],
+    log:['~','.log'], archive:['~','archive'], about:['~','about.md'], t:['~','tags',r.seg[1]], search:['~','grep'] };
+  const p = (parts[r.kind] || ['~']).filter(Boolean);
+  return p.map((x,i) => i === p.length-1 ? '<b>'+esc(x)+'</b>' : esc(x)).join(' / ') +
+    ' <span style="color:var(--dimmer)">— zsh</span>';
+}
+
+function render(){
+  const r = route();
+  byId('langsw').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.l === S.lang));
+  byId('crumb').innerHTML = crumbFor(r);
+  byId('rail').innerHTML = railHTML();
+  const main = byId('main');
+  const view = {
+    home: viewHome, c: () => viewCategory(r.seg[1]), s: () => viewSeries(r.seg[1]), p: () => viewPost(r.seg[1]),
+    t: () => viewTag(r.seg[1]), log: viewLog, archive: viewArchive, about: viewAbout,
+    search: () => viewSearch(r.q.get('q') || ''),
+  }[r.kind] || viewHome;
+  main.innerHTML = view();
+  document.documentElement.lang = S.lang;
+  wrapTables(main); mountFigures(main); wireCopy(main); wireDepth(main); wireNav(main); wireScroll();
+  S.nav = -1;
+}
+
+/* ---------------- command palette ---------------- */
+const PAL = byId('pal'), PIN = byId('palinput'), POUT = byId('palout');
+let palRows = [], palSel = 0;
+
+const HELP = [
+  ['ls',            'list recent posts'],
+  ['cd <topic>',    'enter a category: rl, systems, trust, music, vault'],
+  ['open <words>',  'jump to a post by title'],
+  ['grep <words>',  'search posts and notes'],
+  ['lang en|zh',    'switch the site language'],
+  ['theme',         'toggle dark and light'],
+  ['log',           'the microblog'],
+  ['archive',       'everything, by year'],
+  ['neofetch',      'who is this'],
+  ['whoami',        'shorter answer'],
+];
+
+function palOpen(prefill){
+  PAL.classList.add('open');
+  PIN.value = prefill || '';
+  PIN.focus(); PIN.select();
+  palUpdate();
+}
+function palClose(){ PAL.classList.remove('open'); }
+
+function palUpdate(){
+  const q = PIN.value.trim();
+  palRows = [];
+  if (!q) {
+    palRows = HELP.map(([k,h]) => ({ k: k.split(' ')[0], t: k, h, run: () => { PIN.value = k.split(' ')[0]+' '; palUpdate(); } }));
+    POUT.innerHTML = palRows.map((r,i) => rowHTML(r,i)).join('');
+    palSel = 0; paint(); return;
+  }
+  const [cmd, ...rest] = q.split(/\s+/);
+  const arg = rest.join(' ');
+  const c = cmd.toLowerCase();
+
+  if (c === 'help' || c === '?') {
+    POUT.innerHTML = '<pre>'+HELP.map(([k,h]) => '  <b>'+k.padEnd(16)+'</b>'+h).join('\n')+
+      '\n\n  '+'shortcuts'.padEnd(16)+'/ search · j k move · ↵ open · g h home · ? this</pre>';
+    palRows = []; return;
+  }
+  if (c === 'neofetch') { palGo('#/'); return; }
+  if (c === 'whoami') {
+    POUT.innerHTML = '<pre>  <b>'+D.site.name.en+'</b> ('+D.site.handle+')\n  '+D.site.role.en+
+      '\n  '+D.stats.posts+' posts · '+D.stats.notes+' notes · writing since '+D.stats.since+'</pre>';
+    palRows = []; return;
+  }
+  if (c === 'theme') { byId('themebtn').click(); palClose(); return; }
+  if (c === 'lang') { if (arg === 'en' || arg === 'zh') { S.lang = arg; render(); palClose(); } return; }
+  if (c === 'log' || c === 'archive' || c === 'about') { palGo('#/'+c); return; }
+  if (c === 'sudo') { POUT.innerHTML = '<pre>  '+D.site.handle+' is not in the sudoers file.\n  This incident has been reported. (to me. by me.)</pre>'; palRows = []; return; }
+  if (c === 'cd') {
+    const hit = D.categories.filter(x => !arg || x.id.startsWith(arg.toLowerCase()) || x.name.en.toLowerCase().includes(arg.toLowerCase()));
+    palRows = hit.map(x => ({ k: 'cd', t: x.id + '/  ' + x.name[S.lang], h: D.posts.filter(p=>p.category===x.id).length+' posts', href: '#/c/'+x.id }));
+  } else if (c === 'ls') {
+    palRows = D.posts.slice(0, 12).map(p => ({ k: p.date, t: title(p), h: p.category, href: '#/p/'+p.slug }));
+  } else {
+    const needle = (c === 'grep' || c === 'open' ? arg : q).toLowerCase();
+    const r = searchAll(needle);
+    palRows = [
+      ...r.posts.slice(0, 9).map(p => ({ k: 'post', t: title(p), h: p.date, href: '#/p/'+p.slug })),
+      ...r.notes.slice(0, 4).map(n => ({ k: 'note', t: n.body.slice(0, 70), h: n.at.slice(0,10), href: '#/log' })),
+      ...D.categories.filter(x => x.name.en.toLowerCase().includes(needle) || x.id.includes(needle))
+        .map(x => ({ k: 'topic', t: x.name[S.lang], h: 'category', href: '#/c/'+x.id })),
+    ];
+    if (needle && !palRows.length) palRows = [{ k: 'grep', t: T().noResults + ' — "'+needle+'"', h: '', href: '#/search?q='+encodeURIComponent(needle) }];
+  }
+  POUT.innerHTML = palRows.map((r,i) => rowHTML(r,i)).join('') || '<pre>  '+T().noResults+'</pre>';
+  palSel = 0; paint();
+}
+const rowHTML = (r,i) => '<div class="row'+(i===0?' sel':'')+'" data-i="'+i+'"><span class="k">'+esc(r.k)+'</span><span class="t">'+esc(r.t)+'</span><span class="h">'+esc(r.h||'')+'</span></div>';
+function paint(){ POUT.querySelectorAll('.row').forEach((el,i) => el.classList.toggle('sel', i === palSel)); }
+function palGo(href){ palClose(); location.hash = href; }
+function palRun(){
+  const r = palRows[palSel]; if (!r) return;
+  if (r.href) palGo(r.href); else if (r.run) r.run();
+}
+PIN.addEventListener('input', palUpdate);
+PIN.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { palClose(); return; }
+  if (e.key === 'Enter') { e.preventDefault(); palRun(); return; }
+  if (e.key === 'ArrowDown' || (e.key === 'n' && e.ctrlKey)) { e.preventDefault(); palSel = Math.min(palSel+1, palRows.length-1); paint(); }
+  if (e.key === 'ArrowUp' || (e.key === 'p' && e.ctrlKey)) { e.preventDefault(); palSel = Math.max(0, palSel-1); paint(); }
+});
+POUT.addEventListener('click', e => { const row = e.target.closest('.row'); if (!row) return; palSel = +row.dataset.i; palRun(); });
+PAL.addEventListener('click', e => { if (e.target === PAL) palClose(); });
+byId('palbtn').onclick = () => palOpen();
+
+/* ---------------- keyboard ---------------- */
+let gPending = false;
+addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); palOpen(); return; }
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  if (e.key === '/') { e.preventDefault(); palOpen(); return; }
+  if (e.key === '?') { e.preventDefault(); palOpen('help'); return; }
+  if (e.key === 'g') { gPending = true; setTimeout(() => gPending = false, 700); return; }
+  if (gPending && e.key === 'h') { gPending = false; location.hash = '#/'; return; }
+  if (gPending && e.key === 'l') { gPending = false; location.hash = '#/log'; return; }
+  if (gPending && e.key === 'a') { gPending = false; location.hash = '#/archive'; return; }
+  if (e.key === 'j' || e.key === 'k') {
+    const rows = [...document.querySelectorAll('tr[data-nav]')];
+    if (!rows.length) return;
+    e.preventDefault();
+    rows.forEach(r => r.classList.remove('sel'));
+    S.nav = Math.max(0, Math.min(rows.length-1, S.nav + (e.key === 'j' ? 1 : -1)));
+    rows[S.nav].classList.add('sel');
+    rows[S.nav].scrollIntoView({ block: 'nearest' });
+  }
+  if (e.key === 'Enter') {
+    const sel = document.querySelector('tr[data-nav].sel');
+    if (sel) location.hash = sel.dataset.href;
+  }
+  if (e.key === 't') byId('themebtn').click();
+});
+
+/* ---------------- boot sequence ---------------- */
+const BOOT = [
+  ['ok', 'tty 4.2.0 — booting ' + D.site.handle + '@blog'],
+  ['ok', 'mount /content        ' + D.stats.posts + ' posts, ' + D.stats.notes + ' notes'],
+  ['ok', 'katex                 pre-rendered at build, 0 kB of math JS'],
+  ['ok', 'shiki                 dual theme baked in'],
+  ['ok', 'i18n                  en, zh — per-post fallback enabled'],
+  ['warn','header images         dropped (as requested)'],
+  ['ok', 'index                 ' + D.stats.series + ' series, ' + D.stats.categories + ' categories'],
+  ['ok', 'ready — press ⌘K for the command palette'],
+];
+function boot(){
+  const el = byId('boot'), log = byId('bootlog');
+  if (sessionStorage.getItem('tty-booted') || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  sessionStorage.setItem('tty-booted', '1');
+  el.hidden = false;
+  let i = 0;
+  const done = () => { el.classList.add('gone'); setTimeout(() => el.hidden = true, 500); removeEventListener('keydown', skip); };
+  const skip = () => done();
+  addEventListener('keydown', skip, { once: true });
+  el.addEventListener('click', done);
+  const tick = () => {
+    if (i >= BOOT.length) { setTimeout(done, 420); return; }
+    const [k, text] = BOOT[i++];
+    log.insertAdjacentHTML('beforeend', '<span class="'+k+'">[ '+(k === 'ok' ? ' OK ' : 'WARN')+' ] </span>'+esc(text)+'\n');
+    setTimeout(tick, 95);
+  };
+  tick();
+}
+
+render();
+boot();
+</script>
