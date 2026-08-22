@@ -12,7 +12,7 @@ const rendered = await Promise.all(notes.map(async (n) => ({ n, Content: (await 
 {rendered.length === 0 ? (
   <p class="empty">{L.noPosts}</p>
 ) : (
-  <div class="notes">
+  <div class={compact ? "notes" : "notes full"}>
     {rendered.map(({ n, Content }) => {
       // The file whose folder matches `origin` is the one actually written; the other
       // is a translation, and says so.

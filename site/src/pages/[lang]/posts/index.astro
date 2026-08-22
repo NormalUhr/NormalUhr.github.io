@@ -14,7 +14,7 @@ const notes = await allNotes(lang)
 <Base lang={lang} title={L.posts} section="posts"
       altPaths={{ en: '/en/posts', zh: '/zh/posts' }}>
   <h1 class="big">{L.posts}</h1>
-  <div style="max-width:62ch;margin-top:24px">
+  <div style="margin-top:24px">
     <NoteList lang={lang} notes={notes} />
   </div>
 </Base>

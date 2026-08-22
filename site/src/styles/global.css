@@ -125,6 +125,23 @@ p.lede { font-size: 17.5px; line-height: 1.58; color: var(--ink-soft); margin: 0
 .note .bd :not(pre) > code { font-family: var(--mono); font-size: .82em; background: var(--paper-3); padding: 1px 4px; border-radius: 3px; color: var(--vermilion); }
 .note .katex { font-size: .96em; }
 .side .note .code-block { display: none; }
+/* The full listing borrows the article row: date in a gutter, rule across the page,
+   and the text measured rather than stretched. */
+.notes.full .note {
+  display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 20px;
+  align-items: baseline; padding: 16px 4px;
+}
+.notes.full .note:hover { background: var(--paper-2); }
+.notes.full .note .w { font-variant-numeric: tabular-nums; }
+.notes.full .note .bd { margin-top: 0; max-width: 74ch; }
+.notes.full .note .bd p { font-size: 16.5px; line-height: 1.72; }
+.notes.full .note .bd[lang="zh"] p { line-height: 1.9; }
+.notes.full .note .xlat { grid-column: 2; }
+@media (max-width: 640px) {
+  .notes.full .note { grid-template-columns: 1fr; gap: 4px; }
+  .notes.full .note .xlat { grid-column: 1; }
+}
+
 /* Says plainly that the text above was machine-translated, and from which language. */
 .xlat {
   margin: 7px 0 0; font-family: var(--sans); font-size: 11px; letter-spacing: .02em;
