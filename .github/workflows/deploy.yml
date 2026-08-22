@@ -50,5 +50,12 @@ jobs:
       name: github-pages
       url: ${{ steps.deploy.outputs.page_url }}
     steps:
+      # TEMPORARY. Settings -> Pages -> Source is still "Deploy from a branch", so the
+      # old Jekyll builder also runs on every push and whichever deployment lands last
+      # is the one served. It takes about 100s; this build takes about 85s, so without
+      # a wait the old site wins. Switch Source to "GitHub Actions" and delete this
+      # step: the legacy builder stops running and the wait becomes dead weight.
+      - name: Wait out the legacy Pages build
+        run: sleep 75
       - id: deploy
         uses: actions/deploy-pages@v4
