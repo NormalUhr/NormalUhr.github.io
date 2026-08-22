@@ -8,6 +8,12 @@ interface Props { lang: Lang; notes: NoteEntry[]; compact?: boolean }
 const { lang, notes, compact = false } = Astro.props
 const L = t(lang)
 const rendered = await Promise.all(notes.map(async (n) => ({ n, Content: (await render(n)).Content })))
+
+// The compact column is a teaser, so a note too long for it is cut off there and links to
+// its full text. A Chinese character takes about twice the width of a Latin one, so weigh
+// the two apart rather than counting characters; 600 is roughly where the clip height sits.
+const weigh = (s: string) =>
+  [...s.replace(/\s+/g, '')].reduce((n, ch) => n + (/[\u2e80-\u9fff\uff00-\uffef]/.test(ch) ? 2 : 1), 0)
 ---
 {rendered.length === 0 ? (
   <p class="empty">{L.noPosts}</p>
@@ -17,8 +23,10 @@ const rendered = await Promise.all(notes.map(async (n) => ({ n, Content: (await 
       // The file whose folder matches `origin` is the one actually written; the other
       // is a translation, and says so.
       const translated = n.data.origin !== lang
+      const id = n.id.split('/').slice(1).join('/')
+      const clipped = compact && weigh(n.body ?? '') > 600
       return (
-        <div class="note" id={n.id.split('/').slice(1).join('/')}>
+        <div class:list={["note", clipped && "clip"]} id={id}>
           <div class="w">
             <time datetime={dateISO(n.data.date)}>
               {compact ? dateISO(n.data.date).slice(5) : dateISO(n.data.date)}
@@ -30,6 +38,7 @@ const rendered = await Promise.all(notes.map(async (n) => ({ n, Content: (await 
               {fill(L.translated, { lang: L.langName[n.data.origin] })}
             </p>
           )}
+          {clipped && <a class="morelink" href={`/${lang}/posts#${id}`}>{L.readFull} →</a>}
         </div>
       )
     })}

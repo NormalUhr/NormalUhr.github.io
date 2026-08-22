@@ -121,6 +121,12 @@ p.lede { font-size: 17.5px; line-height: 1.58; color: var(--ink-soft); margin: 0
 .note .bd > :first-child { margin-top: 0; }
 .note .bd > :last-child { margin-bottom: 0; }
 .note .bd p { margin: 0 0 .5em; font-size: 14px; line-height: 1.55; color: var(--ink); }
+
+/* A note longer than the compact column is cut off there, with the rest one click away. */
+.note.clip .bd { max-height: 420px; overflow: hidden;
+  mask-image: linear-gradient(to bottom, #000 74%, transparent);
+  -webkit-mask-image: linear-gradient(to bottom, #000 74%, transparent); }
+.note.clip .morelink { margin-top: 6px; }
 .note .bd[lang="zh"] p { font-family: var(--serif), var(--cjk); line-height: 1.72; }
 .note .bd :not(pre) > code { font-family: var(--mono); font-size: .82em; background: var(--paper-3); padding: 1px 4px; border-radius: 3px; color: var(--vermilion); }
 .note .katex { font-size: .96em; }
