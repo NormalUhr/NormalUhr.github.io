@@ -31,13 +31,14 @@ const articles = defineCollection({
  *
  * `origin` is the language the post was actually written in. The other file is a
  * translation, and the page says so, so a reader is never shown machine-written prose
- * without being told.
+ * without being told. `both` is for a post written by hand in both languages, where
+ * neither side is a translation and neither carries the notice.
  */
 const notes = defineCollection({
   loader: glob({ pattern: '**/*.md', base: './src/content/notes' }),
   schema: z.object({
     date: z.coerce.date(),
-    origin: z.enum(['en', 'zh']),
+    origin: z.enum(['en', 'zh', 'both']),
     draft: z.boolean().default(false),
   }),
 })

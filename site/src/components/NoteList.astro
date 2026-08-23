@@ -21,8 +21,8 @@ const weigh = (s: string) =>
   <div class={compact ? "notes" : "notes full"}>
     {rendered.map(({ n, Content }) => {
       // The file whose folder matches `origin` is the one actually written; the other
-      // is a translation, and says so.
-      const translated = n.data.origin !== lang
+      // is a translation, and says so. `both` sides were written by hand, so neither does.
+      const from = n.data.origin === 'both' || n.data.origin === lang ? null : n.data.origin
       const id = n.id.split('/').slice(1).join('/')
       const clipped = compact && weigh(n.body ?? '') > 600
       return (
@@ -33,9 +33,9 @@ const weigh = (s: string) =>
             </time>
           </div>
           <div class="bd" lang={lang}><Content /></div>
-          {translated && (
+          {from && (
             <p class="xlat" lang={lang}>
-              {fill(L.translated, { lang: L.langName[n.data.origin] })}
+              {fill(L.translated, { lang: L.langName[from] })}
             </p>
           )}
           {clipped && <a class="morelink" href={`/${lang}/posts#${id}`}>{L.readFull} →</a>}
