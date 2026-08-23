@@ -1,13 +1,13 @@
 # Builds site/ and publishes it to GitHub Pages.
 #
-# Inert until this branch is merged and Pages is switched to "GitHub Actions" as its
-# source (Settings -> Pages -> Build and deployment). Nothing here runs on its own.
+# Runs on every push rather than only on pushes that touch site/. Pages is still set to
+# deploy from the branch, so the legacy builder runs alongside this workflow, and a push
+# this one ignored would leave that builder's output as the only deployment.
 name: Deploy site
 
 on:
   push:
     branches: [master]
-    paths: ['site/**', 'img/**', 'videos/**', '.github/workflows/deploy.yml']
   workflow_dispatch:
 
 permissions:
@@ -51,10 +51,11 @@ jobs:
       url: ${{ steps.deploy.outputs.page_url }}
     steps:
       # TEMPORARY. Settings -> Pages -> Source is still "Deploy from a branch", so the
-      # old Jekyll builder also runs on every push and whichever deployment lands last
-      # is the one served. It takes about 100s; this build takes about 85s, so without
-      # a wait the old site wins. Switch Source to "GitHub Actions" and delete this
-      # step: the legacy builder stops running and the wait becomes dead weight.
+      # legacy builder also runs on every push and whichever deployment lands last is
+      # the one served. It takes about 100s; this build takes about 85s, so without a
+      # wait its output wins, and with the Jekyll theme gone that output has no index
+      # at the root. Switch Source to "GitHub Actions" and delete this step: the legacy
+      # builder stops running and the wait becomes dead weight.
       - name: Wait out the legacy Pages build
         run: sleep 75
       - id: deploy
