@@ -1,8 +1,8 @@
 # Builds site/ and publishes it to GitHub Pages.
 #
-# Runs on every push rather than only on pushes that touch site/. Pages is still set to
-# deploy from the branch, so the legacy builder runs alongside this workflow, and a push
-# this one ignored would leave that builder's output as the only deployment.
+# Runs on every push rather than only on pushes that touch site/. The build reads from
+# site/ but also from img/ and videos/ through symlinks, and a redundant build costs
+# less than a push that quietly fails to publish.
 name: Deploy site
 
 on:
@@ -50,13 +50,5 @@ jobs:
       name: github-pages
       url: ${{ steps.deploy.outputs.page_url }}
     steps:
-      # TEMPORARY. Settings -> Pages -> Source is still "Deploy from a branch", so the
-      # legacy builder also runs on every push and whichever deployment lands last is
-      # the one served. It takes about 100s; this build takes about 85s, so without a
-      # wait its output wins, and with the Jekyll theme gone that output has no index
-      # at the root. Switch Source to "GitHub Actions" and delete this step: the legacy
-      # builder stops running and the wait becomes dead weight.
-      - name: Wait out the legacy Pages build
-        run: sleep 75
       - id: deploy
         uses: actions/deploy-pages@v4
