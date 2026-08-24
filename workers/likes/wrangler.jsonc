@@ -12,8 +12,7 @@
     {
       "binding": "DB",
       "database_name": "blog-likes",
-      // Filled in by `wrangler d1 create blog-likes`.
-      "database_id": "REPLACE_WITH_DATABASE_ID"
+      "database_id": "75dfbecf-1cf0-4282-b11a-7c87122ef2b7"
     }
   ],
   "observability": {

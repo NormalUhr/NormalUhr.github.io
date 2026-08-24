@@ -39,7 +39,7 @@ export const site = {
    * See workers/likes/. Readers need no account; the count is per article and shared
    * between its languages. Leave null and no like button is rendered.
    */
-  likes: null as string | null,
+  likes: 'https://blog-likes.zhangyihua1997.workers.dev' as string | null,
 
   /**
    * giscus, which keeps comment threads in a GitHub Discussions category.
