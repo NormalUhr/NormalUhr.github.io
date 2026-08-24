@@ -114,7 +114,9 @@ const nav = [
       // Site total, read from GoatCounter's public counter endpoint. It arrives
       // pre-formatted with thin spaces, so reformat it to match the rest of the page.
       fetch(`https://${code}.goatcounter.com/counter/TOTAL.json`)
-        .then((r) => (r.ok ? r.json() : null))
+        // A path GoatCounter has not recorded yet answers 404, but still with a
+        // usable body, so read that too rather than showing nothing.
+        .then((r) => (r.ok || r.status === 404 ? r.json() : null))
         .then((d) => {
           if (!d || d.count == null) return
           const digits = String(d.count).replace(/\D/g, '')

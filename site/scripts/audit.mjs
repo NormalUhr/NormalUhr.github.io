@@ -12,6 +12,7 @@ const DIST = path.join(SITE, 'dist')
 const SHOTS = path.join(SITE, 'shots')
 const CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
 const PORT = 4399
+const THIRD_PARTY = /googleapis|gstatic|goatcounter|giscus|gc\.zgo\.at|\/v1\//
 const WANT_SHOTS = process.argv.includes('--shots')
 
 const TYPES = {
@@ -95,10 +96,17 @@ for (const route of all) {
   await page.setViewport({ width, height: 900 })
   const errors = []
   page.on('pageerror', (e) => errors.push(String(e.message).slice(0, 160)))
-  page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text().slice(0, 160)) })
+  page.on('console', (m) => {
+    if (m.type() !== 'error') return
+    // A failed subresource also logs a console error, whose location is the URL that
+    // failed. GoatCounter answers 404 for a path it has not recorded yet, so judge
+    // these by the same third-party rule as the response listener below.
+    if (THIRD_PARTY.test(m.location()?.url ?? '')) return
+    errors.push(m.text().slice(0, 160))
+  })
   page.on('response', (r) => {
     // Third-party fonts and analytics are unreachable offline by design.
-    if (/googleapis|gstatic|goatcounter|giscus|gc\.zgo\.at|\/v1\//.test(r.url())) return
+    if (THIRD_PARTY.test(r.url())) return
     if (r.status() >= 400) errors.push(`HTTP ${r.status()} ${r.url().replace(`http://localhost:${PORT}`, '')}`)
   })
 

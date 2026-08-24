@@ -162,7 +162,9 @@ const bib = [
       // GoatCounter pre-formats the count and separates thousands with a thin space, so
       // read the digits back out and format them the way the rest of the page does.
       fetch(`https://${code}.goatcounter.com/counter${path}.json`)
-        .then((r) => (r.ok ? r.json() : null))
+        // A path GoatCounter has not recorded yet answers 404, but still with a
+        // usable body, so read that too rather than showing nothing.
+        .then((r) => (r.ok || r.status === 404 ? r.json() : null))
         .then((d) => {
           if (!d || d.count == null) return
           const digits = String(d.count).replace(/\D/g, '')

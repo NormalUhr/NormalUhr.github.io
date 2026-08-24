@@ -32,7 +32,7 @@ export const site = {
    * Setting it turns on the page-view script, the per-article read count and the
    * site total in the footer. Leave null and none of that appears.
    */
-  goatcounter: null as string | null,
+  goatcounter: 'normaluhr' as string | null,
 
   /**
    * Base URL of the likes Worker, e.g. 'https://blog-likes.yourname.workers.dev'.
@@ -46,7 +46,12 @@ export const site = {
    * Fill this in from https://giscus.app after enabling Discussions on the repo.
    * Leave null and no comment section is rendered.
    */
-  giscus: null as null | {
+  giscus: {
+    repo: 'NormalUhr/NormalUhr.github.io',
+    repoId: 'MDEwOlJlcG9zaXRvcnkyMjIxMzA2NDM=',
+    category: 'Announcements',
+    categoryId: 'DIC_kwDODT1x084DEDSI',
+  } as null | {
     repo: string
     repoId: string
     category: string
