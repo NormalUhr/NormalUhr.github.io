@@ -138,6 +138,7 @@ for (const route of all) {
 // cancels media preloads as soon as the page closes.
 const mediaMissing = new Map()
 const mediaExternal = new Map()
+const katexErrors = new Map()
 const walkHtml = (dir) => {
   for (const name of fs.readdirSync(dir)) {
     const full = path.join(dir, name)
@@ -145,6 +146,12 @@ const walkHtml = (dir) => {
     if (fs.statSync(full).isDirectory()) walkHtml(full)
     else if (name.endsWith('.html')) {
       const html = fs.readFileSync(full, 'utf8')
+      // KaTeX renders what it could not parse as red source text and records why in a
+      // title attribute. MathJax accepted syntax KaTeX rejects, so this catches the
+      // difference rather than leaving a broken formula on the page.
+      for (const m of html.matchAll(/class="katex-error"[^>]*title="([^"]*)"/g)) {
+        katexErrors.set(m[1].replace(/&#x27;/g, "'").replace(/&quot;/g, '"'), path.relative(DIST, full))
+      }
       for (const m of html.matchAll(/<(?:img|video|audio|source)\b[^>]*\bsrc="([^"]+)"/g)) {
         const url = m[1]
         if (/^https?:\/\//.test(url)) { mediaExternal.set(url, path.relative(DIST, full)); continue }
@@ -156,6 +163,7 @@ const walkHtml = (dir) => {
 }
 walkHtml(DIST)
 for (const [url, where] of mediaMissing) problems.push(`missing media ${url} (${where})`)
+for (const [msg, where] of katexErrors) problems.push(`equation did not typeset (${where}): ${msg.slice(0, 120)}`)
 if (mediaExternal.size) {
   console.log(`\nnote: ${mediaExternal.size} media reference(s) point at another host, so they depend on it staying up:`)
   for (const [url, where] of mediaExternal) console.log(`  ${where}  ->  ${url.slice(0, 96)}`)

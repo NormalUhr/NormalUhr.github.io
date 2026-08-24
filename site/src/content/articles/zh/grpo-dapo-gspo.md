@@ -96,7 +96,7 @@ $$
 $$
 
 $$
-\text{s.t.}, 0 < |\{o_i | \text{is_equivalent}(a, o_i)\}| < G
+\text{s.t.}, 0 < |\{o_i | \text{is\_equivalent}(a, o_i)\}| < G
 $$
 
 ### 为什么 DAPO 提高了 $1+\epsilon_{\text{high}}$ 的上界？
@@ -114,7 +114,7 @@ Clip-Higher 解决了“好 token 涨幅受限”的问题，但并未触及另�
 DAPO 的第二个创新是 **动态采样**（Dynamic Sampling）。这项技术的背景是：假如一个 query 我们 sample 了 10 次，这 10 次每次都答得很好/或者很差，都取得了max reward/zero reward，这个时候由于 GRPO 的计算方法，导致这 10 次采样的 advantage 都是 0，所以这些采样所带来的 gradient 就也都是 0；这样做的一个后果就是，实际的有梯度的 sample 要远低于名义 sample 数，导致最后梯度汇集的时候没有收集到足够的信息，从而形成高方差、不稳定的训练，以及 sample 的浪费。需要注意的是，这种现象是在训练初期；以及后期随着训练的进行在不断加强的，因为刚开始时模型效果很差，而训练越到后边模型效果越好，给出满分回答的几率就越大。因此，DAPO 在采集样本时，额外做了一件事：保证每次采样出来的回答，reward 不全是 0 或者 1，如果采样出来的回答全是0或者1就继续采样，直到不满足为止。这也是损失函数中 
 
 $$
-\text{s.t.}, 0 < |\{o_i | \text{is_equivalent}(a, o_i)\}| < G
+\text{s.t.}, 0 < |\{o_i | \text{is\_equivalent}(a, o_i)\}| < G
 $$
 
 的来源，它保证同一输入下的采样集合中既包含正确回答，也包含错误回答。

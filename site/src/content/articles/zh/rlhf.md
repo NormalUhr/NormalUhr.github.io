@@ -753,18 +753,18 @@ $$
 
 前面我们提到，**PPO** 很像你在真实棋盘上有一位教练随时指导，边对弈边在真实环境中改进策略（在线学习）；而 **DPO** 则更像你坐在家里研究一本棋谱（离线数据），通过已有的胜负对照来推断如何改进走法。本节就来具体推导 DPO（Direct Preference Optimization）的数学原理，解释它在和 **PPO**（或更一般的 RLHF 思路）对比时有何长处与不足。
 
-在此之前，请先牢记下面 3 个关键的目标函数：$r_\boldsymbol\phi$ 表示奖励模型（Reward Model），$\pi_{\boldsymbol\theta}$ 是我们需要训练的对齐模型（策略），$\pi_{\text{ref}}$ 则是参考模型（无论是 PPO 还是 DPO，都需要它来保证策略别跑得太偏）。这 3 个目标函数分别是：
+在此之前，请先牢记下面 3 个关键的目标函数：$r_{\boldsymbol\phi}$ 表示奖励模型（Reward Model），$\pi_{\boldsymbol\theta}$ 是我们需要训练的对齐模型（策略），$\pi_{\text{ref}}$ 则是参考模型（无论是 PPO 还是 DPO，都需要它来保证策略别跑得太偏）。这 3 个目标函数分别是：
 
 - **Reward Model Loss**:
 
   $$
-  \max_{r_\boldsymbol\phi} \Bigl\{ \mathbb{E}_{x, y_{\text{w}}, y_{\text{l}} \sim \mathcal{D}} \bigl[\log\sigma(x, y_{\text{w}}) - \log\sigma(x, y_{\text{l}})\bigr]\Bigr\}
+  \max_{r_{\boldsymbol\phi}} \Bigl\{ \mathbb{E}_{x, y_{\text{w}}, y_{\text{l}} \sim \mathcal{D}} \bigl[\log\sigma(x, y_{\text{w}}) - \log\sigma(x, y_{\text{l}})\bigr]\Bigr\}
   $$
 
 - **PPO Loss**:
 
   $$
-  \max_{\pi_{\boldsymbol\theta}} \biggl\{ \mathbb{E}_{x \sim \mathcal{D},\, y \sim \pi_{\boldsymbol\theta}(y\mid x)}\bigl[r_\boldsymbol\phi(x, y)\bigr]
+  \max_{\pi_{\boldsymbol\theta}} \biggl\{ \mathbb{E}_{x \sim \mathcal{D},\, y \sim \pi_{\boldsymbol\theta}(y\mid x)}\bigl[r_{\boldsymbol\phi}(x, y)\bigr]
   \;-\;\beta \,\mathbb{D}_{KL}\bigl[\pi_{\boldsymbol\theta}(y\mid x)\,\big\|\,\pi_{\text{ref}}(y\mid x)\bigr]\biggr\}
   $$
 

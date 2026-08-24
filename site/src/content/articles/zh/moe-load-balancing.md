@@ -72,7 +72,7 @@ $$
 然后我们选
 
 $$
-\text{expert_index}(x)=\text{argmax}_i \, g_i(x).
+\text{expert\_index}(x)=\text{argmax}_i \, g_i(x).
 $$
 
 Switch Transformer 最重要的创新点在于它的 **单专家路由**：每个 token 只走一个专家，代码好写，训练速度也快得多。为了保持负载均衡，还是会用类似 GShard 的辅助损失，并且提出了一个 **capacity factor** 的概念：  

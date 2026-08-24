@@ -98,7 +98,7 @@ $$
 $$
 
 $$
-\text{s.t.}, 0 < |\{o_i | \text{is_equivalent} (a, o_i)\}| < G
+\text{s.t.}, 0 < |\{o_i | \text{is\_equivalent} (a, o_i)\}| < G
 $$
 
 ### Why does DAPO raise the upper bound $1+\epsilon_{\text{high}}$ while keeping $1-\epsilon_{\text{low}}$ fixed?
@@ -120,7 +120,7 @@ This means the number of effective gradient-contributing samples is far lower th
 To counter this, DAPO enforces an additional sampling rule: for each query, the set of sampled responses must not all have rewards of 0 or 1. If all samples are 0 or all are 1, additional samples are drawn until this condition is violated. This is expressed in the constraint:
 
 $$
-\text{s.t.}, 0 < |\{o_i | \text{is_equivalent} (a, o_i)\}| < G
+\text{s.t.}, 0 < |\{o_i | \text{is\_equivalent} (a, o_i)\}| < G
 $$
 
 which ensures that for the same input, the sampled set contains both correct and incorrect answers.

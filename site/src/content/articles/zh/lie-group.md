@@ -393,7 +393,7 @@ $$
 假设某空间点$\mathbf{p}$ 经过了一次变换$\mathbf{T}$，对应的李代数为$\xi$，得到$\mathbf{Tp}$。给 $\mathbf{T}$左乘一个微小扰动$\mathbf{\Delta T}$，扰动项的李代数为$\delta \xi = [\delta \rho , \delta \phi]^T$。则有：
 
 $$
-\frac{\partial(\mathbf{T}\mathbf{p})}{\partial\delta\xi}=\lim_{\delta\xi\to0}\frac{\exp(\delta\xi^\wedge)\exp(\xi^\wedge)\mathbf{p}-\exp(\xi^\wedge)\mathbf{p}}{\delta\xi}= \begin{bmatrix} \mathbf{I}_{3\times3} & -(\mathbf{R}\mathbf{p} + \mathbf{t})^\wedge_{3\times3} \\ \mathbf{0}^T_{1\times3} & \mathbf{0}^T_{1\times3}\\ \end{bmatrix}=(\mathbf{T}\mathbf{p})^\bigodot
+\frac{\partial(\mathbf{T}\mathbf{p})}{\partial\delta\xi}=\lim_{\delta\xi\to0}\frac{\exp(\delta\xi^\wedge)\exp(\xi^\wedge)\mathbf{p}-\exp(\xi^\wedge)\mathbf{p}}{\delta\xi}= \begin{bmatrix} \mathbf{I}_{3\times3} & -(\mathbf{R}\mathbf{p} + \mathbf{t})^\wedge_{3\times3} \\ \mathbf{0}^T_{1\times3} & \mathbf{0}^T_{1\times3}\\ \end{bmatrix}=(\mathbf{T}\mathbf{p})^{\bigodot}
 $$
 
 最后结果被定义为了运算符号$\bigodot$，把一个齐次坐标下的空间点变换成一个4*6 的矩阵。

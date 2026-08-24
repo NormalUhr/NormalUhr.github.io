@@ -65,7 +65,7 @@ $$g_i(x) = \text{softmax}(W_{\text{router}} \cdot x)_i$$
 
 and we pick
 
-$$\text{expert_index}(x)={\text{argmax}}_i g_i(x)$$.
+$$\text{expert\_index}(x)={\text{argmax}}_i g_i(x)$$.
 
 The primary innovation of Switch Transformer is its single-expert routing, as fewer experts activated in general gives you simpler code, and further typically faster training speeds. In order to better balance the load, they keep an auxiliary load-balancing loss akin to GShar's approach. They also define a **capacity factor** to let experts handle more tokens than naive fraction. For example,
 
