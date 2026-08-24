@@ -159,9 +159,15 @@ const bib = [
 
   {site.goatcounter && (
     <script is:inline define:vars={{ code: site.goatcounter, path: `/${lang}/p/${slug}` }}>
+      // GoatCounter pre-formats the count and separates thousands with a thin space, so
+      // read the digits back out and format them the way the rest of the page does.
       fetch(`https://${code}.goatcounter.com/counter${path}.json`)
         .then((r) => (r.ok ? r.json() : null))
-        .then((d) => { if (d && d.count) document.getElementById('read-count').textContent = d.count })
+        .then((d) => {
+          if (!d || d.count == null) return
+          const digits = String(d.count).replace(/\D/g, '')
+          if (digits) document.getElementById('read-count').textContent = Number(digits).toLocaleString('en-US')
+        })
         .catch(() => {})
     </script>
   )}

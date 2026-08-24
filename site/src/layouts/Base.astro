@@ -111,10 +111,15 @@ const nav = [
 
   {site.goatcounter && (
     <script is:inline define:vars={{ code: site.goatcounter }}>
-      // Site total, read from GoatCounter's public counter endpoint.
+      // Site total, read from GoatCounter's public counter endpoint. It arrives
+      // pre-formatted with thin spaces, so reformat it to match the rest of the page.
       fetch(`https://${code}.goatcounter.com/counter/TOTAL.json`)
         .then((r) => (r.ok ? r.json() : null))
-        .then((d) => { if (d && d.count) document.getElementById('site-visits').textContent = d.count })
+        .then((d) => {
+          if (!d || d.count == null) return
+          const digits = String(d.count).replace(/\D/g, '')
+          if (digits) document.getElementById('site-visits').textContent = Number(digits).toLocaleString('en-US')
+        })
         .catch(() => {})
     </script>
   )}
