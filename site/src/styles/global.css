@@ -121,6 +121,8 @@ p.lede { font-size: 17.5px; line-height: 1.58; color: var(--ink-soft); margin: 0
 .note .bd > :first-child { margin-top: 0; }
 .note .bd > :last-child { margin-bottom: 0; }
 .note .bd p { margin: 0 0 .5em; font-size: 14px; line-height: 1.55; color: var(--ink); }
+.note .bd blockquote { margin: 0 0 .7em; padding-left: 13px; border-left: 2px solid var(--vermilion); font-style: italic; }
+.note .bd blockquote p { color: var(--ink-soft); }
 
 /* A note longer than the compact column is cut off there, with the rest one click away. */
 .note.clip .bd { max-height: 420px; overflow: hidden;
