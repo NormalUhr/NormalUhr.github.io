@@ -2,7 +2,7 @@
 import ArticleRow from './ArticleRow.astro'
 import type { Lang } from '../site.config'
 import { t } from '../lib/taxonomy'
-import { titleFor, type Article } from '../lib/articles'
+import { subtitleFor, titleFor, type Article } from '../lib/articles'
 
 const { lang, articles } = Astro.props as { lang: Lang; articles: Array<Article & { langs: Lang[] }> }
 ---
@@ -12,7 +12,7 @@ const { lang, articles } = Astro.props as { lang: Lang; articles: Array<Article 
   <div class="stream">
     {articles.map((a) => (
       <ArticleRow
-        lang={lang} slug={a.slug} title={titleFor(a, lang)} subtitle={a.entry.data.subtitle}
+        lang={lang} slug={a.slug} title={titleFor(a, lang)} subtitle={subtitleFor(a, lang)}
         date={a.entry.data.date} categoryId={a.entry.data.category} seriesId={a.entry.data.series}
         part={a.entry.data.part} tags={a.entry.data.tags} langs={a.langs} eqns={a.eqns}
       />

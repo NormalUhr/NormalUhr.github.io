@@ -2,7 +2,7 @@
 import Base from '../../layouts/Base.astro'
 import { LANGS, type Lang } from '../../site.config'
 import { category, t } from '../../lib/taxonomy'
-import { resolved, allNotes, dateISO, titleFor } from '../../lib/articles'
+import { resolved, allNotes, dateISO, subtitleFor, titleFor } from '../../lib/articles'
 
 export function getStaticPaths() { return LANGS.map((lang) => ({ params: { lang } })) }
 
@@ -18,7 +18,7 @@ const index = [
     kind: 'article' as const,
     href: `/${lang}/p/${a.slug}`,
     title: titleFor(a, lang),
-    sub: a.entry.data.subtitle ?? '',
+    sub: subtitleFor(a, lang) ?? '',
     date: dateISO(a.entry.data.date),
     meta: category(a.entry.data.category).name[lang],
     hay: [a.entry.data.title, a.entry.data.titleAlt ?? '', a.entry.data.subtitle ?? '', ...a.entry.data.tags].join(' ').toLowerCase(),

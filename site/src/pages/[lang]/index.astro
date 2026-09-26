@@ -4,7 +4,7 @@ import ArticleRow from '../../components/ArticleRow.astro'
 import NoteList from '../../components/NoteList.astro'
 import { site, LANGS, type Lang } from '../../site.config'
 import { t } from '../../lib/taxonomy'
-import { liveArticles, archiveArticles, allNotes, titleFor } from '../../lib/articles'
+import { liveArticles, archiveArticles, allNotes, subtitleFor, titleFor } from '../../lib/articles'
 
 export function getStaticPaths() {
   return LANGS.map((lang) => ({ params: { lang } }))
@@ -26,7 +26,7 @@ const notes = await allNotes(lang)
       <div class="stream">
         {articles.map((a) => (
           <ArticleRow
-            lang={lang} slug={a.slug} title={titleFor(a, lang)} subtitle={a.entry.data.subtitle}
+            lang={lang} slug={a.slug} title={titleFor(a, lang)} subtitle={subtitleFor(a, lang)}
             date={a.entry.data.date} categoryId={a.entry.data.category} seriesId={a.entry.data.series}
             part={a.entry.data.part} tags={a.entry.data.tags} langs={a.langs} eqns={a.eqns}
           />

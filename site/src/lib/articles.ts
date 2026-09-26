@@ -89,6 +89,16 @@ export function titleFor(a: Article, lang: Lang): string {
   return a.entry.data.titleAlt ?? a.entry.data.title
 }
 
+/**
+ * The subtitle, but only to a reader of the language it is written in. An article whose
+ * body exists in one language still carries a name in both, so `titleFor` gives the list
+ * an English row for a Chinese piece; its subtitle has no counterpart, and printing it
+ * anyway would put two scripts in one row.
+ */
+export function subtitleFor(a: Article, lang: Lang): string | undefined {
+  return a.lang === lang ? a.entry.data.subtitle : undefined
+}
+
 export const isArchive = (a: Article) => a.entry.data.category === 'archive'
 
 export async function liveArticles(lang: Lang) {
