@@ -61,7 +61,7 @@ $$
 形式上， 这个策略的回报被定义在所有可能的轨迹上：
 
 $$
-J(\pi_{\theta}) = \int_\tau P(\tau \mid \pi) R(\tau) = \mathbb{E}_{\tau \sim \pi} [R(\tau)]
+J(\pi_{\theta}) = \int_\tau P(\tau \mid \pi) R(\tau) \, d\tau = \mathbb{E}_{\tau \sim \pi} [R(\tau)]
 $$
 
 所谓的轨迹，就是一连串状态和对应动作的组合 $(\text{state}, \text{action})$：
@@ -79,7 +79,7 @@ $$
 那么一个轨迹 $\tau$  的概率则为：
 
 $$
-P(\tau \mid \pi) = \rho_0(s_0) \prod_{t=0}^{T-1} P(s_{t+1} \mid s_t, a_t) \pi(a_t \mid s_t)
+P(\tau \mid \pi) = \rho_0(s_0) \prod_{t=0}^{T} P(s_{t+1} \mid s_t, a_t) \pi(a_t \mid s_t)
 $$
 
 在强化学习中，我们会不断提到回报会随着时间不断打折 (discount reward) 的概念：未来的回报总是不如当下的回报那么重要。所以一个策略 $\tau$ 的总回报可以被视作：
@@ -146,7 +146,7 @@ $$
 在下棋的过程中，每盘棋的走法取决于你每一步的决策。假设一盘棋的轨迹 $\tau$ 可表示为：
 
 $$
-P(\tau\mid\theta) = \rho_0(s_0) \prod_{i=0}^{T-1} P(s_{i+1}\mid s_i, a_i) \pi_{\theta}(a_i\mid s_i)
+P(\tau\mid\theta) = \rho_0(s_0) \prod_{i=0}^{T} P(s_{i+1}\mid s_i, a_i) \pi_{\theta}(a_i\mid s_i)
 $$
 
 这里 $\pi_{\theta}(a_i\mid s_i)$ 就是你在棋局某一时刻（状态 $s_i$）下选择某一步棋（动作 $a_i$）的概率。取对数后求梯度，我们得到：
@@ -259,19 +259,19 @@ $$
 用数学表达就是，我们将原来的梯度估计调整为：
 
 $$
-\nabla_\theta J(\theta) \approx \frac{1}{N} \sum_{i=1}^N \left( \sum_{t=0}^T \nabla_\theta \log \pi_\theta(a_{i,t} \mid s_{i,t}) \right) \left( \sum_{t'=t}^T r(s_{i,t'}, a_{i,t'}) \right)
+\nabla_\theta J(\theta) \approx \frac{1}{N} \sum_{i=1}^N \sum_{t=0}^T \nabla_\theta \log \pi_\theta(a_{i,t} \mid s_{i,t}) \left( \sum_{t'=t}^T r(s_{i,t'}, a_{i,t'}) \right)
 $$
 
 这里，$\sum_{t'=t}^T r(s_{i,t'}, a_{i,t'})$ 就代表了从当前走法开始到局末的“奖励总和”。这样做就像你在复盘时，只关注从某一步开始后续的变化，而不纠结于那一步之前已经发生的事情。
 
-因此，当我们把这些“来自过去的”的冗余项去除后，噪声就自然而然会减少一些。
+因此，当我们把这些“来自过去的”的冗余项去除后，噪声通常就会减少一些。这里需要说明的是，这一点以及后面两节提到的方差下降，都是实践中观察到的经验规律，而不是严格的理论保证。
 
 ### 2.6 减小方差：参考线（Baseline）
 
 为了进一步减少评估中的波动，我们可以为每一步的“后续奖励”减去一个基准值。数学上，这个参考线通常记为 $b$（在实际中，我们常用价值函数 $V^\pi(s)$ 来作为这个参考线），公式为：
 
 $$
-\nabla_\theta J(\theta) \approx \frac{1}{N} \sum_{i=1}^N \left( \sum_{t=0}^T \nabla_\theta \log \pi_\theta(a_{i,t} \mid s_{i,t}) \right) \left( \sum_{t'=t}^T r(s_{i,t'}, a_{i,t'}) - b \right)
+\nabla_\theta J(\theta) \approx \frac{1}{N} \sum_{i=1}^N \sum_{t=0}^T \nabla_\theta \log \pi_\theta(a_{i,t} \mid s_{i,t}) \left( \sum_{t'=t}^T r(s_{i,t'}, a_{i,t'}) - b \right)
 $$
 
 其中 $b$ 就是所谓的参考线，他不一定是一个常数，更多时候是另外一个状态 $s_t$ 的函数。 这个参考显得实际意义是，在当前的状态下， 回报的期望大概是什么样子。那么所谓超出期望的部分 $\sum_{t'=t}^T r(s_{i,t'}, a_{i,t'}) - b$ 就是优势（Advantage）。在实际训练中，我们会用优势代替原来的奖励进行梯度估计，以减小方差。 
@@ -291,7 +291,7 @@ $$
 最终，我们可以将策略梯度写为：
 
 $$
-\nabla_\theta J(\theta) \approx \frac{1}{N} \sum_{i=1}^N \left( \sum_{t=0}^T \nabla_\theta \log \pi_\theta(a_{i,t} \mid s_{i,t}) \right) A^\pi(s, a)
+\nabla_\theta J(\theta) \approx \frac{1}{N} \sum_{i=1}^N \sum_{t=0}^T \nabla_\theta \log \pi_\theta(a_{i,t} \mid s_{i,t}) \, A^\pi(s_{i,t}, a_{i,t})
 $$
 
 这公式正是衡量你在每个局面上，通过比对每一步棋与平均表现的差距，从而决定如何调整你的下棋策略。
@@ -376,10 +376,10 @@ $$
 **PPO 总损失（PPO Loss, $L_{\text{PPO}}$）**
 
 $$
-L_{\text{PPO}} = L_{\text{POLICY}} + c_1 L_{\text{VF}} + c_2 L_{\text{ENTROPY}}
+L_{\text{PPO}} = L_{\text{POLICY}} - c_1 L_{\text{VF}} + c_2 L_{\text{ENTROPY}}
 $$
 
-将这些部分结合起来，就构成了 PPO 的总损失函数。这个损失函数旨在在更新策略时既提高胜率（奖励），又防止策略偏离原有风格过远，保持平稳而高效的改进。
+将这些部分结合起来，就构成了 PPO 的总目标。这里需要注意符号：$L_{\text{POLICY}}$ 和熵这两项是我们想要最大化的量，而 $L_{\text{VF}}$ 是一个我们想要最小化的平方误差，所以它前面是减号。如果在代码里调用的是最小化器，那么整个式子需要取负。这个损失函数旨在在更新策略时既提高胜率（奖励），又防止策略偏离原有风格过远，保持平稳而高效的改进。
 
 ### 2.11 使用 PPO 的优势
 
@@ -405,7 +405,7 @@ GAE 的创新之处在于结合了多步估计和时间差分（TD）估计的�
 
 **残差的数学表达**
 
-对于策略梯度方法，价值函数的梯度可以写为：
+对于策略梯度方法，策略梯度可以写为：
 
 $$
 \nabla R_{\theta} = \mathbb{E}_{(a_t, s_t)\sim \pi_\theta} \left [A^{\theta}(a_t, s_t) \nabla \log P_{\theta} (a_t \mid s_t) \right]
@@ -455,10 +455,10 @@ $$
 当 $k$ 趋于无穷时，有：
 
 $$
-A^k(t) = \sum_{i=0}^{\infty} \gamma^{i} \delta_{t+i}
+A^{\infty}(t) = \sum_{i=0}^{\infty} \gamma^{i} \delta_{t+i}
 $$
 
-根据残差的定义，这可以展开为：
+根据残差的定义，有限 $k$ 的版本可以展开为：
 
 $$
 A^k(t) = r_t + \gamma r_{t+1} + \dots + \gamma^{k-1} r_{t+k-1} + \gamma^k V(s_{t+k}) - V(s_t)
@@ -482,7 +482,7 @@ $$
 \hat{A}_t = \delta_t + \gamma \lambda \hat{A}_{t+1}
 $$
 
-这里，$\lambda \in [0,1)$ 就像你在下棋时决定对未来几步影响的重视程度：
+这里，$\lambda \in [0,1]$ 就像你在下棋时决定对未来几步影响的重视程度：
 - 当 $\lambda=1$ 时，你会尽可能考虑整盘棋的所有后续效果（偏差最小，但方差最大）。
 - 当 $\lambda=0$ 时，你只关注当前一步（偏差最大，但方差最小）。
 
@@ -620,8 +620,9 @@ $$
    $$
    
    直白理解：  
-   - 如果当前策略与旧策略的概率比 $r_t(\theta)$ 和优势 $A_t$ 的乘积在可接受范围内（在 $[1-\epsilon, 1+\epsilon]$ 内），就用这个值。  
-   - 如果比值太大或者太小，就用限制后的值（clip 后的值），防止更新步长过大。
+   - clip 只作用在概率比 $r_t(\theta)$ 上，而不是作用在它与优势 $A_t$ 的乘积上。只要 $r_t(\theta)$ 还落在 $[1-\epsilon, 1+\epsilon]$ 区间内，它就原样通过。  
+   - 一旦 $r_t(\theta)$ 超出了这个区间，就改用 clip 之后的比值，从而防止更新的步长过大。  
+   - 外层的 $\min$ 决定了 clip 只在一个方向上起作用。当策略已经沿着优势指示的方向走得足够远时，clip 才会生效，这是因为我们并不能完全相信单条轨迹给出的信号；而如果策略走错了方向，这一项仍然会被完整地修正回来。
 
 5. **对所有 token 取平均，更新参数 θ**  
    将所有 token 的损失 $L_t(\theta)$ 平均，得到整个批次的 loss。然后用梯度下降（或其他优化器）更新模型参数 $\theta$。  
@@ -890,7 +891,7 @@ $$
 1. 首先，我们定义了一个整体的优化目标，用于对齐人类偏好。这个目标函数假设我们已经有了一个奖励函数，并旨在找到一个能最大化该目标的对齐模型。可以将其理解为，在下棋时，你希望根据教练（奖励函数）的评分，找到一种策略（下棋方法）使得你的胜率最高。数学上，这个目标写为：
 
    $$
-   \max_{\pi_{\boldsymbol\theta}} \left\{ \mathbb{E}_{x,\, y_{\text{w}},\, y_{\text{l}} \sim \mathcal{D}} \left[ \log \sigma \left( \beta \log \frac{\pi_{\boldsymbol\theta} (y_{\text{win}} \mid x)}{\pi_\text{ref} (y_{\text{w}} \mid x)} - \beta \log \frac{\pi_{\boldsymbol\theta} (y_{\text{l}} \mid x)}{\pi_\text{ref} (y_{\text{lose}} \mid x)} \right) \right] \right\}.
+   \max_{\pi_{\boldsymbol\theta}} \Bigl\{ \mathbb{E}_{x \sim \mathcal{D},\, y \sim \pi_{\boldsymbol\theta}(y \mid x)} \Bigl[ r_{\phi}(x,y) - \beta \log \frac{\pi_{\boldsymbol\theta}(y \mid x)}{\pi_{\text{ref}}(y \mid x)} \Bigr] \Bigr\}.
    $$
 
 2. 接着，我们从这个优化目标出发，推导出在固定奖励函数 $r$ 情况下，对齐模型 $\pi$ 的显式解。类似于在棋谱中找到一条最优走法，这个显式解为：
@@ -908,7 +909,7 @@ $$
 3. 最后，在实际训练中，我们通常不会单独训练奖励模型，而是在最优奖励模型 $r_{\phi}^{\ast}$ 的指导下，直接训练出最优的对齐模型。换句话说，就像你通过不断实战和教练点评，最终掌握了真正能下出好棋的策略一样，我们将上面的公式稍作调整，得到：
 
    $$
-   r_{\phi}(x,y) = \beta \log\frac{\pi^{\ast}(y \mid x)\,Z(x)}{\pi_{\text{ref}}(y \mid x)} + \beta \log Z(x).
+   r_{\phi}(x,y) = \beta \log\frac{\pi^{\ast}(y \mid x)}{\pi_{\text{ref}}(y \mid x)} + \beta \log Z(x).
    $$
 
 这三个步骤展示了从整体对齐目标出发，到推导出最优策略，再到将奖励模型和对齐模型关联起来的全过程。整个流程就像是：首先确定比赛的胜负标准（优化目标），接着从棋谱中总结出最佳走法（显式策略解），最后通过不断实战验证和反馈（奖励模型训练），最终获得一套既能正确评估也能实际应用的下棋策略。
@@ -938,10 +939,10 @@ $$
 
 $$
 r_{\phi}^{\ast}(x,y)
-=\;\beta\,\log\!\Bigl(\tfrac{\pi^{\ast}(y\mid x)\,Z(x)}{\pi_{\text{ref}}(y\mid x)}\Bigr)\;+\;\beta\,\log Z(x).
+=\;\beta\,\log\!\Bigl(\tfrac{\pi^{\ast}(y\mid x)}{\pi_{\text{ref}}(y\mid x)}\Bigr)\;+\;\beta\,\log Z(x).
 $$
 
-这样，就能把 $\pi^{\ast}$ 表达成 $r^{\ast}$ 的函数，从而把“训练奖励模型”与“训练对齐模型”之间的关系打通。
+这样，就能把 $r^{\ast}$ 表达成 $\pi^{\ast}$ 的函数，从而把“训练奖励模型”与“训练对齐模型”之间的关系打通。
 
 
 **总结这一部分：**
@@ -964,10 +965,10 @@ $$
 想象你在下棋时，教练只给你展示两种走法——一种被标记为“好招”（chosen），另一种为“坏招”（reject）。在这种情况下，你的目标就是让你的“打分系统”（奖励模型）尽可能高地评估好招，而低地评估坏招，也就是说，希望“好招打败坏招”的概率尽可能大。为此，我们可以借助经典的 Bradley-Terry (BT) 模型进行建模。BT 模型最初在 1952 年提出，用于分析成对数据间的相对优势，广泛应用于体育比赛、市场调查等领域。对于一对数据 $y_1$ 和 $y_2$（在这里分别代表 chosen 和 reject 回答），BT 模型将“$y_1$ 打败 $y_2$”的概率表示为：
 
 $$
-P(y_1 > y_2 \mid x) \;=\; \frac{e^{\lambda y_1}}{e^{\lambda y_1} + e^{\lambda y_2}},
+P(y_1 > y_2 \mid x) \;=\; \frac{e^{\lambda_{y_1}}}{e^{\lambda_{y_1}} + e^{\lambda_{y_2}}},
 $$
 
-其中，$\lambda y_1$ 和 $\lambda y_2$ 分别代表了两者的强度参数，就像在棋赛中，我们可以用过往胜率来衡量两位棋手的实力。类似地，当 $y_1$ 和 $y_2$ 分别代表 chosen 和 reject 回答时，这里的强度参数可以被视为奖励模型对这两个回答打出的分数。
+其中，$\lambda_{y_1}$ 和 $\lambda_{y_2}$ 分别代表了两者的强度参数，就像在棋赛中，我们可以用过往胜率来衡量两位棋手的实力。类似地，当 $y_1$ 和 $y_2$ 分别代表 chosen 和 reject 回答时，这里的强度参数可以被视为奖励模型对这两个回答打出的分数。
 
 我们的目标是让 $y_1$ 打败 $y_2$ 的概率尽可能大，也就是说，在整个标注数据集 \\(\mathcal{D} = \left\{x^i, y_w^i, y_l^i\right\}_{i=1}^N\\) 中，我们希望 chosen 回答的表现远远优于 reject 回答。因此，奖励函数的总体优化目标可以设计为：
 
@@ -985,7 +986,7 @@ $$
 假设我们找到了最优的奖励模型，其形式为
 
 $$
-r_{\phi}^{\ast}(x,y) \;=\; \beta\,\log\!\Bigl(\frac{\pi^{\ast}(y\mid x)\,Z(x)}{\pi_{\text{ref}}(y\mid x)}\Bigr) \;+\; \beta\,\log Z(x),
+r_{\phi}^{\ast}(x,y) \;=\; \beta\,\log\!\Bigl(\frac{\pi^{\ast}(y\mid x)}{\pi_{\text{ref}}(y\mid x)}\Bigr) \;+\; \beta\,\log Z(x),
 $$
 
 将这一最优奖励函数代入前面的目标函数中，我们得到：
@@ -1032,7 +1033,7 @@ $$
 
 $$
 r_{\phi}^{\ast}(x,y)
-=\;\beta \,\log\!\Bigl(\frac{\pi^{\ast}(y\mid x)\,Z(x)}{\pi_{\text{ref}}(y\mid x)}\Bigr)
+=\;\beta \,\log\!\Bigl(\frac{\pi^{\ast}(y\mid x)}{\pi_{\text{ref}}(y\mid x)}\Bigr)
 \;+\;\beta\,\log Z(x),
 $$
 
@@ -1045,14 +1046,14 @@ $$
 接着，我们利用 $\pi^{\ast}$ 来表达 $r_{\phi}^{\ast}$（注意：在这里 $Z(x)$ 可以被看作是一个与 $\pi$ 无关的归一化常数，可以在后续处理中省略），从而将表达式写成：
 
 $$
-P(\tau \mid y_1, y_2, \dots, y_K, x) = \prod_{k=1}^{K}\frac{\exp\!\Bigl(\beta\,\log\frac{\pi^{\ast}(y\mid x)\,Z(x)}{\pi_{\text{ref}}(y\mid x)}\Bigr)}{\sum_{j=k}^{K}\exp\!\Bigl(\beta\,\log\frac{\pi^{\ast}(y\mid x)\,Z(x)}{\pi_{\text{ref}}(y\mid x)}\Bigr)}.
+P(\tau \mid y_1, y_2, \dots, y_K, x) = \prod_{k=1}^{K}\frac{\exp\!\Bigl(\beta\,\log\frac{\pi^{\ast}(y_{\tau_k}\mid x)}{\pi_{\text{ref}}(y_{\tau_k}\mid x)}\Bigr)}{\sum_{j=k}^{K}\exp\!\Bigl(\beta\,\log\frac{\pi^{\ast}(y_{\tau_j}\mid x)}{\pi_{\text{ref}}(y_{\tau_j}\mid x)}\Bigr)}.
 $$
 
 最后，对于整个数据集，我们希望真实排序 $\tau$ 的平均概率尽可能大，也就是说，我们的目标是最大化整个数据集中真实排序的概率。因此，针对多回答情况下的 DPO 目标函数可以写为：
 
 $$
 \mathcal{L}_{\text{DPO}}(\pi_\theta, \pi_{\text{ref}})
-=\;-\;\mathbb{E}_{\tau,\,y_1,\,y_2,\,\dots,\,y_K,\,x \sim \mathcal{D}}\!\left[\log \prod_{k=1}^{K}\frac{\exp\!\Bigl(\beta\,\log\frac{\pi_\theta(y\mid x)\,Z(x)}{\pi_{\text{ref}}(y\mid x)}\Bigr)}{\sum_{j=k}^{K}\exp\!\Bigl(\beta\,\log\frac{\pi_\theta(y\mid x)\,Z(x)}{\pi_{\text{ref}}(y\mid x)}\Bigr)}\right].
+=\;-\;\mathbb{E}_{\tau,\,y_1,\,y_2,\,\dots,\,y_K,\,x \sim \mathcal{D}}\!\left[\log \prod_{k=1}^{K}\frac{\exp\!\Bigl(\beta\,\log\frac{\pi_\theta(y_{\tau_k}\mid x)}{\pi_{\text{ref}}(y_{\tau_k}\mid x)}\Bigr)}{\sum_{j=k}^{K}\exp\!\Bigl(\beta\,\log\frac{\pi_\theta(y_{\tau_j}\mid x)}{\pi_{\text{ref}}(y_{\tau_j}\mid x)}\Bigr)}\right].
 $$
 
 参考资料：

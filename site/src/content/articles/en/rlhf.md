@@ -67,7 +67,7 @@ $$
 Formally, the return of a policy is defined over all possible trajectories:
 
 $$
-J(\pi_{\theta}) = \int_\tau P(\tau \mid \pi) R(\tau) = \mathbb{E}_{\tau \sim \pi} [R(\tau)]
+J(\pi_{\theta}) = \int_\tau P(\tau \mid \pi) R(\tau) \, d\tau = \mathbb{E}_{\tau \sim \pi} [R(\tau)]
 $$
 
 A trajectory is simply a sequence of states and corresponding actions:
@@ -85,7 +85,7 @@ $$
 Thus, the probability of a trajectory $\tau$ is given by:
 
 $$
-P(\tau \mid \pi) = \rho_0(s_0) \prod_{t=0}^{T-1} P(s_{t+1} \mid s_t, a_t) \pi(a_t \mid s_t)
+P(\tau \mid \pi) = \rho_0(s_0) \prod_{t=0}^{T} P(s_{t+1} \mid s_t, a_t) \pi(a_t \mid s_t)
 $$
 
 In reinforcement learning, we frequently discount future rewards—future returns are never as valuable as immediate ones. Therefore, the total return for a trajectory is defined as:
@@ -151,7 +151,7 @@ $$
 During a game, every move is determined by your decision at that time. If we represent a game trajectory $\tau$ as:
 
 $$
-P(\tau\mid\theta) = \rho_0(s_0) \prod_{i=0}^{T-1} P(s_{i+1}\mid s_i, a_i) \pi_{\theta}(a_i\mid s_i)
+P(\tau\mid\theta) = \rho_0(s_0) \prod_{i=0}^{T} P(s_{i+1}\mid s_i, a_i) \pi_{\theta}(a_i\mid s_i)
 $$
 
 then $\pi_{\theta}(a_i\mid s_i)$ is the probability of selecting a particular move $a_i$ given the board state $s_i$. Taking the logarithm and then the gradient, we obtain:
@@ -264,19 +264,19 @@ Returning to our chess example: if every move’s score also factors in earlier 
 Mathematically, we adjust our gradient estimate as follows:
 
 $$
-\nabla_\theta J(\theta) \approx \frac{1}{N} \sum_{i=1}^N \left( \sum_{t=0}^T \nabla_\theta \log \pi_\theta(a_{i,t} \mid s_{i,t}) \right) \left( \sum_{t'=t}^T r(s_{i,t'}, a_{i,t'}) \right)
+\nabla_\theta J(\theta) \approx \frac{1}{N} \sum_{i=1}^N \sum_{t=0}^T \nabla_\theta \log \pi_\theta(a_{i,t} \mid s_{i,t}) \left( \sum_{t'=t}^T r(s_{i,t'}, a_{i,t'}) \right)
 $$
 
 Here, $\sum_{t'=t}^T r(s_{i,t'}, a_{i,t'})$ represents the total rewards from the current move to the end of the game. This is analogous to reviewing a game by focusing only on the impact of moves from a certain point forward, ignoring what has already transpired.
 
-By eliminating these redundant past rewards, the variance in our gradient estimates naturally decreases.
+By eliminating these redundant past rewards, the variance in our gradient estimates typically goes down. This, and the variance reductions in the next two sections, are empirical regularities rather than formal guarantees. They hold in practice but are not proved to hold for every problem.
 
 ### 2.6 Reducing Variance: Introducing a Baseline
 
 To further mitigate fluctuations in our evaluation, we can subtract a baseline value from the future rewards at each step. Mathematically, this baseline is often denoted as $b$ (in practice, we commonly use the value function $V^\pi(s)$ as the baseline). The modified gradient estimate becomes:
 
 $$
-\nabla_\theta J(\theta) \approx \frac{1}{N} \sum_{i=1}^N \left( \sum_{t=0}^T \nabla_\theta \log \pi_\theta(a_{i,t} \mid s_{i,t}) \right) \left( \sum_{t'=t}^T r(s_{i,t'}, a_{i,t'}) - b \right)
+\nabla_\theta J(\theta) \approx \frac{1}{N} \sum_{i=1}^N \sum_{t=0}^T \nabla_\theta \log \pi_\theta(a_{i,t} \mid s_{i,t}) \left( \sum_{t'=t}^T r(s_{i,t'}, a_{i,t'}) - b \right)
 $$
 
 Here, $b$ serves as a baseline—typically a function of the state $s_t$—representing the expected return from the current state. The term $\sum_{t'=t}^T r(s_{i,t'}, a_{i,t'}) - b$ then reflects the **advantage**, or the amount by which the actual return exceeds this baseline. In practice, we use this advantage instead of the raw reward in our gradient estimates to reduce variance.
@@ -296,7 +296,7 @@ Using our chess analogy, the Q-function quantifies the potential outcome of the 
 Ultimately, we can express the policy gradient as:
 
 $$
-\nabla_\theta J(\theta) \approx \frac{1}{N} \sum_{i=1}^N \left( \sum_{t=0}^T \nabla_\theta \log \pi_\theta(a_{i,t} \mid s_{i,t}) \right) A^\pi(s, a)
+\nabla_\theta J(\theta) \approx \frac{1}{N} \sum_{i=1}^N \sum_{t=0}^T \nabla_\theta \log \pi_\theta(a_{i,t} \mid s_{i,t}) \, A^\pi(s_{i,t}, a_{i,t})
 $$
 
 This formula encapsulates how the relative performance of each move (compared to the average) guides the adjustment of your strategy.
@@ -377,10 +377,10 @@ The entropy loss encourages the policy to maintain a level of exploration. Much 
 **Overall PPO Loss**
 
 $$
-L_{\text{PPO}} = L_{\text{POLICY}} + c_1 L_{\text{VF}} + c_2 L_{\text{ENTROPY}}
+L_{\text{PPO}} = L_{\text{POLICY}} - c_1 L_{\text{VF}} + c_2 L_{\text{ENTROPY}}
 $$
 
-By combining these components, we obtain the total PPO loss. This loss function is designed to improve the win rate (or reward) when updating the policy while ensuring that the policy does not deviate too drastically from its original behavior—thus promoting stable and efficient learning.
+By combining these components, we obtain the total PPO objective. Note the signs: $L_{\text{POLICY}}$ and the entropy term are quantities we want to maximize, while $L_{\text{VF}}$ is a squared error we want to minimize, which is why it enters with a minus sign. An implementation that calls a minimizer negates the whole expression. This loss function is designed to improve the win rate (or reward) when updating the policy while ensuring that the policy does not deviate too drastically from its original behavior—thus promoting stable and efficient learning.
 
 ### 2.11 Advantages of Using PPO
 
@@ -406,7 +406,7 @@ Imagine you’re at a critical juncture in a game. Based on experience, you beli
 
 **Mathematical Expression of the Residual**
 
-For policy gradient methods, the gradient of the value function can be written as:
+For policy gradient methods, the policy gradient can be written as:
 
 $$
 \nabla R_{\theta} = \mathbb{E}_{(a_t, s_t)\sim \pi_\theta} \left [A^{\theta}(a_t, s_t) \nabla \log P_{\theta} (a_t \mid s_t) \right]
@@ -456,10 +456,10 @@ $$
 When $k$ tends to infinity:
 
 $$
-A^k(t) = \sum_{i=0}^{\infty} \gamma^{i} \delta_{t+i}
+A^{\infty}(t) = \sum_{i=0}^{\infty} \gamma^{i} \delta_{t+i}
 $$
 
-Based on the definition of the residual, this expands to:
+Based on the definition of the residual, the finite-$k$ version expands to:
 
 $$
 A^k(t) = r_t + \gamma r_{t+1} + \dots + \gamma^{k-1} r_{t+k-1} + \gamma^k V(s_{t+k}) - V(s_t)
@@ -483,7 +483,7 @@ $$
 \hat{A}_t = \delta_t + \gamma \lambda \hat{A}_{t+1}
 $$
 
-Here, $\lambda \in [0,1)$ determines how much weight you give to future moves:
+Here, $\lambda \in [0,1]$ determines how much weight you give to future moves:
 - When $\lambda=1$, you consider the full effect of the entire game (minimal bias but maximal variance).
 - When $\lambda=0$, you rely solely on the immediate information (maximal bias but minimal variance).
 
@@ -623,8 +623,9 @@ L_t(\theta) = -\min\Big( r_t(\theta) A_t,\ \text{clip}(r_t(\theta), 1-\epsilon, 
 $$
    
    In plain terms:  
-   - If the product of the probability ratio $r_t(\theta)$ and the advantage $A_t$ falls within the acceptable range (i.e., between $1-\epsilon$ and $1+\epsilon$), that value is used.  
-   - Otherwise, if the ratio is too high or too low, the clipped value is used to prevent excessively large updates.
+   - The clipping is applied to the probability ratio $r_t(\theta)$ on its own, not to its product with the advantage $A_t$. While $r_t(\theta)$ stays between $1-\epsilon$ and $1+\epsilon$, it passes through unchanged.  
+   - Once $r_t(\theta)$ leaves that interval, the clipped ratio is used instead, which prevents an excessively large update.  
+   - The outer $\min$ is what makes the clipping bite in one direction only. It takes effect when the policy has already moved far in the direction the advantage points, so we stop pushing further on evidence a single trajectory cannot support, while a move in the wrong direction is still corrected in full.
 
 5. **Averaging Over All Tokens and Updating $\theta$**  
    The losses $L_t(\theta)$ for all tokens are averaged to form the overall batch loss. You then update the model parameters $\theta$ using gradient descent (or another optimizer).  
@@ -827,7 +828,7 @@ $$
 1. First, we defined an overall optimization objective for aligning with human preferences. This objective function assumes that we have a reward function and seeks to find an aligned model that maximizes this objective. It can be understood as, in a game of chess, striving to adopt a strategy (a way of playing) that maximizes your win rate based on the coach’s (reward function’s) evaluation. Mathematically, this objective is written as:
 
 $$
-\max_{\pi_{\boldsymbol\theta}} \Biggl\{ \mathbb{E}_{x,\, y_{\text{w}},\, y_{\text{l}} \sim D} \Biggl[ \log \sigma \Biggl( \beta \log \frac{\pi_{\boldsymbol\theta} (y_{\text{win}} \mid x)}{\pi_\text{ref} (y_{\text{w}} \mid x)} - \beta \log \frac{\pi_{\boldsymbol\theta} (y_{\text{l}} \mid x)}{\pi_\text{ref} (y_{\text{lose}} \mid x)} \Biggr) \Biggr] \Biggr\}.
+\max_{\pi_{\boldsymbol\theta}} \Bigl\{ \mathbb{E}_{x \sim \mathcal{D},\, y \sim \pi_{\boldsymbol\theta}(y \mid x)} \Bigl[ r_{\phi}(x,y) - \beta \log \frac{\pi_{\boldsymbol\theta}(y \mid x)}{\pi_{\text{ref}}(y \mid x)} \Bigr] \Bigr\}.
 $$
 
 2. Next, starting from this optimization objective, we derived the explicit solution for the aligned model $\pi$ when the reward function $r$ is fixed. Analogous to finding the optimal move in a chess game from historical records, this explicit solution is given by:
@@ -845,7 +846,7 @@ $$
 3. Finally, in practical training, we typically do not train the reward model in isolation. Instead, we train the aligned model directly under the guidance of the optimal reward model $r_{\phi}^{\ast}$. In other words, just as continuous practice and coach feedback eventually yield a strategy that truly wins games, we adjust the above formula slightly to obtain:
 
 $$
-r_{\phi}(x,y) = \beta \log\frac{\pi^{\ast}(y \mid x)\,Z(x)}{\pi_{\text{ref}}(y \mid x)} + \beta \log Z(x).
+r_{\phi}(x,y) = \beta \log\frac{\pi^{\ast}(y \mid x)}{\pi_{\text{ref}}(y \mid x)} + \beta \log Z(x).
 $$
 
 These three steps illustrate the entire process—from defining the overall alignment objective, to deriving the optimal policy, and finally linking the reward model with the aligned model. The entire procedure is akin to first establishing the criteria for winning a game (the optimization objective), then deducing the best moves from historical records (the explicit policy solution), and ultimately, through continuous practice and feedback (reward model training), arriving at a strategy that both evaluates correctly and performs effectively.
@@ -877,10 +878,10 @@ we can equivalently transform it into:
 
 $$
 r_{\phi}^{\ast}(x,y)
-=\;\beta\,\log\!\Bigl(\frac{\pi^{\ast}(y\mid x)\,Z(x)}{\pi_{\text{ref}}(y\mid x)}\Bigr)\;+\;\beta\,\log Z(x).
+=\;\beta\,\log\!\Bigl(\frac{\pi^{\ast}(y\mid x)}{\pi_{\text{ref}}(y\mid x)}\Bigr)\;+\;\beta\,\log Z(x).
 $$
 
-This expression allows us to represent $\pi^{\ast}$ in terms of $r^{\ast}$, thereby bridging the gap between training the reward model and the aligned model.
+This expression allows us to represent $r^{\ast}$ in terms of $\pi^{\ast}$, thereby bridging the gap between training the reward model and the aligned model.
 
 **Summary of this section:**
 
@@ -901,10 +902,10 @@ In some training frameworks (such as ChatGPT’s implementation), when more than
 Imagine that while playing chess your coach shows you only two candidate moves—one labeled “good” (chosen) and the other “bad” (reject). In this case, your goal is for your “scoring system” (the reward model) to evaluate the good move as significantly superior to the bad one. To model this, we can employ the classic Bradley-Terry (BT) model, originally proposed in 1952 to analyze pairwise comparisons, and widely used in sports, market research, and other fields. For a pair of items $y_1$ and $y_2$ (here representing the chosen and rejected responses), the BT model expresses the probability that $y_1$ beats $y_2$ as:
 
 $$
-P(y_1 > y_2 \mid x) \;=\; \frac{e^{\lambda y_1}}{e^{\lambda y_1} + e^{\lambda y_2}},
+P(y_1 > y_2 \mid x) \;=\; \frac{e^{\lambda_{y_1}}}{e^{\lambda_{y_1}} + e^{\lambda_{y_2}}},
 $$
 
-where $\lambda y_1$ and $\lambda y_2$ denote their respective strength parameters—analogous to using historical win rates to gauge the strength of chess players. In our context, when $y_1$ and $y_2$ correspond to the chosen and rejected responses, these parameters can be interpreted as the scores given by the reward model.
+where $\lambda_{y_1}$ and $\lambda_{y_2}$ denote their respective strength parameters—analogous to using historical win rates to gauge the strength of chess players. In our context, when $y_1$ and $y_2$ correspond to the chosen and rejected responses, these parameters can be interpreted as the scores given by the reward model.
 
 Our objective is to maximize the probability that $y_1$ beats $y_2$ across the entire annotated dataset \\(\mathcal{D} = \left\{x^i, y_w^i, y_l^i \right\}_{i=1}^N\\). That is, we want the chosen responses to consistently outperform the rejected ones. Accordingly, the overall optimization objective for the reward function can be formulated as:
 
@@ -922,7 +923,7 @@ The final expression above is precisely the reward model optimization objective 
 Assuming we have found the optimal reward model of the form
 
 $$
-r_{\phi}^{\ast}(x,y) \;=\; \beta\,\log\!\Bigl(\frac{\pi^{\ast}(y\mid x)\,Z(x)}{\pi_{\text{ref}}(y\mid x)}\Bigr) \;+\; \beta\,\log Z(x),
+r_{\phi}^{\ast}(x,y) \;=\; \beta\,\log\!\Bigl(\frac{\pi^{\ast}(y\mid x)}{\pi_{\text{ref}}(y\mid x)}\Bigr) \;+\; \beta\,\log Z(x),
 $$
 
 substituting this optimal reward function into our earlier objective yields:
@@ -958,7 +959,7 @@ Next, we substitute the optimal reward function $r_{\phi}^{\ast}(x,y)$ into the 
 
 $$
 r_{\phi}^{\ast}(x,y)
-=\;\beta \,\log\!\Bigl(\frac{\pi^{\ast}(y\mid x)\,Z(x)}{\pi_{\text{ref}}(y\mid x)}\Bigr)
+=\;\beta \,\log\!\Bigl(\frac{\pi^{\ast}(y\mid x)}{\pi_{\text{ref}}(y\mid x)}\Bigr)
 \;+\;\beta\,\log Z(x),
 $$
 
@@ -971,14 +972,14 @@ $$
 We then express $r_{\phi}^{\ast}$ in terms of $\pi^{\ast}$ (note: here $Z(x)$ can be regarded as a normalization constant independent of $\pi$ and omitted in subsequent analysis), so that the expression can be rewritten as
 
 $$
-P(\tau \mid y_1, y_2, \dots, y_K, x) = \prod_{k=1}^{K}\frac{\exp\!\Bigl(\beta\,\log\frac{\pi^{\ast}(y\mid x)\,Z(x)}{\pi_{\text{ref}}(y\mid x)}\Bigr)}{\sum_{j=k}^{K}\exp\!\Bigl(\beta\,\log\frac{\pi^{\ast}(y\mid x)\,Z(x)}{\pi_{\text{ref}}(y\mid x)}\Bigr)}.
+P(\tau \mid y_1, y_2, \dots, y_K, x) = \prod_{k=1}^{K}\frac{\exp\!\Bigl(\beta\,\log\frac{\pi^{\ast}(y_{\tau_k}\mid x)}{\pi_{\text{ref}}(y_{\tau_k}\mid x)}\Bigr)}{\sum_{j=k}^{K}\exp\!\Bigl(\beta\,\log\frac{\pi^{\ast}(y_{\tau_j}\mid x)}{\pi_{\text{ref}}(y_{\tau_j}\mid x)}\Bigr)}.
 $$
 
 Finally, for the entire dataset, we desire that the average probability of the true ranking $\tau$ is as high as possible—in other words, our goal is to maximize the probability of the true ranking over the dataset. Thus, for the multi-response case, the DPO objective function can be written as:
 
 $$
 \mathcal{L}_{\text{DPO}}(\pi_\theta, \pi_{\text{ref}})
-=\;-\;\mathbb{E}_{\tau,\,y_1,\,y_2,\,\dots,\,y_K,\,x \sim D}\!\left[\log \prod_{k=1}^{K}\frac{\exp\!\Bigl(\beta\,\log\frac{\pi_\theta(y\mid x)\,Z(x)}{\pi_{\text{ref}}(y\mid x)}\Bigr)}{\sum_{j=k}^{K}\exp\!\Bigl(\beta\,\log\frac{\pi_\theta(y\mid x)\,Z(x)}{\pi_{\text{ref}}(y\mid x)}\Bigr)}\right].
+=\;-\;\mathbb{E}_{\tau,\,y_1,\,y_2,\,\dots,\,y_K,\,x \sim D}\!\left[\log \prod_{k=1}^{K}\frac{\exp\!\Bigl(\beta\,\log\frac{\pi_\theta(y_{\tau_k}\mid x)}{\pi_{\text{ref}}(y_{\tau_k}\mid x)}\Bigr)}{\sum_{j=k}^{K}\exp\!\Bigl(\beta\,\log\frac{\pi_\theta(y_{\tau_j}\mid x)}{\pi_{\text{ref}}(y_{\tau_j}\mid x)}\Bigr)}\right].
 $$
 
 **References:**
