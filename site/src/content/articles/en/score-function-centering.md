@@ -1,5 +1,5 @@
 ---
-title: "The Simplest Explanation of Score Function Centering: Understanding Trainer-Generator Mismatch in Async RL"
+title: "Score Function Centering Made Simple: Understanding Trainer-Generator Mismatch in Async RL from the Score Function"
 date: 2026-10-08
 category: post-training
 series: grpo-line
@@ -7,7 +7,7 @@ part: 4
 tags: ["GRPO"]
 ---
 
-# The Simplest Explanation of Score Function Centering: Understanding Trainer-Generator Mismatch in Async RL
+# Score Function Centering Made Simple: Understanding Trainer-Generator Mismatch in Async RL from the Score Function
 
 I find that the explanations of score function centering available online are all more or less roundabout, and not direct enough. I want this article to give you the most direct explanation of score function centering, starting from intuition. This article was written entirely by hand, not by AI. Of course, if you are reading the English version, I am sorry, that one was translated by AI.
 

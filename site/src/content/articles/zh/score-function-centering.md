@@ -1,5 +1,5 @@
 ---
-title: "Score Function Centering 最简单直接的解释：理解异步 RL 中 Trainer-Generator Mismatch"
+title: "Score Function Centering 深入浅出：从 Score Function 理解异步 RL 中的 Trainer-Generator Mismatch"
 date: 2026-10-08
 category: post-training
 series: grpo-line
@@ -7,7 +7,7 @@ part: 4
 tags: ["GRPO"]
 ---
 
-# Score Function Centering 最简单直接的解释：理解异步 RL 中 Trainer-Generator Mismatch
+# Score Function Centering 深入浅出：从 Score Function 理解异步 RL 中的 Trainer-Generator Mismatch
 
 我觉得网上关于 score function centering 的解释或多或少都有些绕，不够直接。我希望写这篇文章给大家提供一种从 intuition 讲起，对 score function centering 最直接的解释。这篇文章是我纯手工手搓，不是 AI 写的，当然如果你读的是英文版，很抱歉，它是 AI 翻译的。
 
