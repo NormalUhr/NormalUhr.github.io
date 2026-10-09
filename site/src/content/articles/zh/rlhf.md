@@ -155,7 +155,7 @@ $$
 \nabla_{\theta} \log P(\tau\mid\theta) = \sum_{i=0}^{T} \nabla_{\theta} \log \pi_{\theta}(a_i\mid s_i)
 $$
 
-（注意：棋局中对手的反应 $P(s_{i+1}\mid s_i, a_i)$ 由规则决定，与 $\theta$ 无关，因此其梯度为零。 也就是说，当$s_i, a_i$给定时，$s_{i+1}$ 也就定下来了。）
+（注意：棋局中对手的反应被包含在转移概率 $P(s_{i+1}\mid s_i, a_i)$ 里，而它与 $\theta$ 无关，因此这一项的梯度为零。这里需要强调的是，并不要求 $s_{i+1}$ 在 $s_i, a_i$ 给定之后就被唯一确定：无论对手是按固定的规则应对，还是带有随机性，这一项都不依赖于 $\theta$。这也正是我们完全不需要知道对手策略的原因，也就是所谓的 model-free。）
 
 ### 2.2 最终策略梯度公式（Final Policy Gradient Formula）
 

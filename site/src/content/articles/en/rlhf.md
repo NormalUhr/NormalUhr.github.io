@@ -160,7 +160,7 @@ $$
 \nabla_{\theta} \log P(\tau\mid\theta) = \sum_{i=0}^{T} \nabla_{\theta} \log \pi_{\theta}(a_i\mid s_i)
 $$
 
-(Note: The opponent’s moves $P(s_{i+1}\mid s_i, a_i)$ are determined by fixed rules and do not depend on $\theta$, so their gradients vanish.)
+(Note: The transition $P(s_{i+1}\mid s_i, a_i)$, which absorbs whatever the opponent does, carries no dependence on $\theta$, so its gradient vanishes. This holds whether the opponent replies by a fixed rule or at random, which is why we never need to know the opponent's policy. That property is what makes the method model-free.)
 
 ### 2.2 Final Policy Gradient Formula
 
