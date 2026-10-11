@@ -172,7 +172,7 @@ At the same time, you will notice that this is the most direct thing a single ba
 
 ### 2.1 What is the beautiful property of the score function, and why does it matter?
 
-Let us now talk about the advantage. We all know that in GRPO/PPO we do not use the reward directly, we use the advantage ([why?](/en/p/grpo)). The advantage is the reward minus a constant:
+Let us now talk about the advantage. We all know that in GRPO/PPO we do not use the reward directly, we use the advantage ([why?](https://normaluhr.github.io/en/p/grpo/)). The advantage is the reward minus a constant:
 
 $$
 A(a)=R(a)-b,

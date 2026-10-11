@@ -172,7 +172,7 @@ $$
 
 ### 2.1 score function 有什么美好的性质？这个性质为什么重要？
 
-我们现在来讨论讨论 advantage。我们都知道，在 GRPO/PPO 里，我们不会直接使用 reward，我们使用的是 advantage（[为什么？](/zh/p/grpo)）。advantage 就是 reward 减去一个常数：
+我们现在来讨论讨论 advantage。我们都知道，在 GRPO/PPO 里，我们不会直接使用 reward，我们使用的是 advantage（[为什么？](https://normaluhr.github.io/zh/p/grpo/)）。advantage 就是 reward 减去一个常数：
 
 $$
 A(a)=R(a)-b,
