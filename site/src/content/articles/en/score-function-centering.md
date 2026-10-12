@@ -11,7 +11,7 @@ tags: ["GRPO"]
 
 I find that the explanations of score function centering available online are all more or less roundabout, and not direct enough. I want this article to give you the most direct explanation of score function centering, starting from intuition. This article was written entirely by hand, not by AI. Of course, if you are reading the English version, I am sorry, that one was translated by AI.
 
-This article assumes you know how to use PPO or GRPO (what the loss looks like) and some simple probability theory (that really is enough).
+This article assumes you know how to use PPO or GRPO (what the loss looks like) and some simple probability theory (that really is enough). If you have not read it yet, please take ten minutes to read [this article](https://normaluhr.github.io/en/p/grpo/).
 
 If any one of the following describes you, this article should suit you:
 
@@ -24,9 +24,9 @@ Score Function Centering is not an established term. I know that every frontier 
 
 TL;DR:
 
-* After chapter one you will know that the score function is an important bridge for computing the policy gradient, and the most direct thing we can get out of auto-differentiation.
-* After chapter two you will know the important property of the score function: it is already centered, so its expectation is 0. We need that expectation to stay 0 in order to replace reward with the so-called advantage in the policy gradient. You will also see how trainer-generator mismatch breaks that property. And you will see what breaking it actually costs: the mean advantage produces an extra gradient that pulls the current trainer toward the old generator, which is why we need to repair it.
-* After chapter three you will know what score function centering is really doing, why it repairs that zero-expectation property, how we should use it in practice, and one direction for churning out papers in this area.
+* After section 1 you will know that the score function is an important bridge for computing the policy gradient, and the most direct thing we can get out of auto-differentiation.
+* After section 2 you will know the important property of the score function: it is already centered, so its expectation is 0. We need that expectation to stay 0 in order to replace reward with the so-called advantage in the policy gradient. You will also see how trainer-generator mismatch breaks that property. And you will see what breaking it actually costs: the mean advantage produces an extra gradient that pulls the current trainer toward the old generator, which is why we need to repair it.
+* After section 3 you will know what score function centering is really doing, why it repairs that zero-expectation property, how we should use it in practice, and one direction for churning out papers in this area.
 
 ## 1. Let us start from the score function. What is a score? Why do we use it?
 
@@ -309,13 +309,25 @@ $$
 \log\sum_v e^{z_\theta(v)}
 $$
 
-A small rearrangement gives:
+This needs the chain rule twice. First differentiate the outer log, which puts the sum inside the log into the denominator:
+
+$$
+\nabla_\theta\log\sum_v e^{z_\theta(v)}=\frac{1}{\sum_u e^{z_\theta(u)}}\nabla_\theta\sum_v e^{z_\theta(v)}.
+$$
+
+Then move the gradient inside the sum and use the chain rule once more on every $e^{z_\theta(v)}$:
+
+$$
+\nabla_\theta\sum_v e^{z_\theta(v)}=\sum_v\nabla_\theta e^{z_\theta(v)}=\sum_v e^{z_\theta(v)}\nabla_\theta z_\theta(v).
+$$
+
+Putting the two steps together gives:
 
 $$
 \frac{
 \sum_v \color{orange}{e^{z_\theta(v)}} \color{blue}{\nabla_\theta z_\theta(v)}
 }{
-\color{orange}{\sum_v e^{z_\theta(v)}}
+\color{orange}{\sum_u e^{z_\theta(u)}}
 }.
 $$
 
@@ -345,11 +357,7 @@ $$
 
 This expression is especially important, because it tells us that **inside the score function, Softmax is already centering the logit Jacobian by itself**. $J_\theta(a)$ is the logit gradient of the action we just sampled, while $\mathbb E_{v\sim p_\theta}[J_\theta(v)]$ is the average logit gradient over all actions, weighted by the current policy $p_\theta$.
 
-So the score really is:
-
-$$
-\text{logit Jacobian of the sampled action} - \text{average logit Jacobian under the current policy}.
-$$
+So the score really is **the logit Jacobian of the sampled action minus the average logit Jacobian under the current policy**.
 
 With that expression in hand, the fact that the expectation of the score is 0 barely needs proving. Because the action itself is sampled from:
 
@@ -569,6 +577,8 @@ $$
 
 If $c>0$, what this gradient does is very direct: **it pulls the current trainer $p_\theta$ toward the distribution of the old generator $q_\phi$.**
 
+The other way around, if $c<0$, the trainer is pushed away from the generator. That is a bad thing to have, because the $c$ here is playing the role of the baseline, and in theory a baseline is free to be positive or negative. So we have effectively added a perturbation to the distance between the trainer and the generator, and the direction and the size of that perturbation are decided entirely by the value of the baseline.
+
 There is another way to look at this direction. Suppose we really do take the samples of the old generator and maximize the log likelihood of the current trainer:
 
 $$
@@ -587,7 +597,7 @@ $$
 q_\phi-p_\theta=-\nabla_zD_{\mathrm{KL}}(q_\phi\|p_\theta).
 $$
 
-So when the mean reward or the mean advantage is positive, that thing which was supposed to be no more than "the part that everyone shares" quietly turns into **a gradient whose direction is exactly the direction of doing behavior cloning on the old generator**. If that mean is negative, it pushes backwards along the same mismatch direction. Either way this is quite strange: **the average says nothing about which action is better or worse than which, so what gives it the right to decide whether we move toward the old generator, and by how much?**
+So when the mean reward or the mean advantage is positive, that thing which was supposed to be no more than "the part that everyone shares" quietly turns into **a gradient whose direction is exactly the direction of doing behavior cloning on the old generator**. This is quite strange: **the average says nothing about which action is better or worse than which, so what gives it the right to decide whether we move toward the old generator, and by how much?**
 
 The same thing shows up in the parameter-space notation we used earlier. Split the advantage into:
 

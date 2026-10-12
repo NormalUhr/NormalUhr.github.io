@@ -11,7 +11,7 @@ tags: ["GRPO"]
 
 我觉得网上关于 score function centering 的解释或多或少都有些绕，不够直接。我希望写这篇文章给大家提供一种从 intuition 讲起，对 score function centering 最直接的解释。这篇文章是我纯手工手搓，不是 AI 写的，当然如果你读的是英文版，很抱歉，它是 AI 翻译的。
 
-这篇文章需要你知道 PPO 或者 GRPO 的使用方法（loss 长什么样）和一些简单的概率论知识（就够了）。
+这篇文章需要你知道 PPO 或者 GRPO 的使用方法（loss 长什么样）和一些简单的概率论知识（就够了）。如果你还没读过，请你花十分钟读一下[这一篇文章](https://normaluhr.github.io/zh/p/grpo/)。
 
 如果你满足以下任意一条，这篇文章应该是适合你的：
 
@@ -309,13 +309,25 @@ $$
 \log\sum_v e^{z_\theta(v)}
 $$
 
-做一个小小的变形，得到：
+这里只需要用两次链式法则。先对最外层的 log 求导，得到的分母就是 log 里面的那个求和：
+
+$$
+\nabla_\theta\log\sum_v e^{z_\theta(v)}=\frac{1}{\sum_u e^{z_\theta(u)}}\nabla_\theta\sum_v e^{z_\theta(v)}.
+$$
+
+然后把梯度放进求和里面，再对每一个 $e^{z_\theta(v)}$ 用一次链式法则：
+
+$$
+\nabla_\theta\sum_v e^{z_\theta(v)}=\sum_v\nabla_\theta e^{z_\theta(v)}=\sum_v e^{z_\theta(v)}\nabla_\theta z_\theta(v).
+$$
+
+把这两步合起来，就得到：
 
 $$
 \frac{
 \sum_v \color{orange}{e^{z_\theta(v)}} \color{blue}{\nabla_\theta z_\theta(v)}
 }{
-\color{orange}{\sum_v e^{z_\theta(v)}}
+\color{orange}{\sum_u e^{z_\theta(u)}}
 }.
 $$
 
@@ -345,11 +357,7 @@ $$
 
 这个式子特别重要，因为它告诉我们 **在 score function 里，Softmax 自己就在给 logit Jacobian 做 centering**。$J_\theta(a)$ 是当前 sample 到的 action 的 logit gradient，而 $\mathbb E_{v\sim p_\theta}[J_\theta(v)]$ 是按照当前 policy $p_\theta$ 加权以后，所有 action 的平均 logit gradient。
 
-所以 score 其实就是：
-
-$$
-\text{被采样到的 action 的 logit Jacobian} - \text{当前 policy 下平均的 logit Jacobian}.
-$$
+所以 score 其实就是**被采样到的 action 的 logit Jacobian，减去当前 policy 下平均的 logit Jacobian**。
 
 有了上边这个式子，score 的 expectation 为 0 这件事情几乎都不用证明了。因为 action 本身就是从：
 
@@ -569,6 +577,8 @@ $$
 
 如果 $c>0$，这条 gradient 做的事情非常直接：**把当前 trainer $p_\theta$ 往旧 generator $q_\phi$ 的 distribution 拉。**
 
+反过来，如果 $c<0$，trainer 就会被推向远离 generator 的方向。这是一件非常不好的事情，因为 $c$ 在这里扮演的其实就是 baseline 的角色，而 baseline 在理论上本来就有正有负。这就相当于我们在 trainer 和 generator 之间的距离上加了一个扰动，而这个扰动的方向和大小完全取决于 baseline 的取值。
+
 这个方向还可以换一个角度来看。假设我们真的拿旧 generator 的 sample 去最大化当前 trainer 的 log likelihood：
 
 $$
@@ -587,7 +597,7 @@ $$
 q_\phi-p_\theta=-\nabla_zD_{\mathrm{KL}}(q_\phi\|p_\theta).
 $$
 
-所以当 mean reward 或者 mean advantage 是正的时候，那个本来应该只是“大家共同拥有的常数部分”，居然会偷偷变成一个**方向上和对旧 generator 做 behavior cloning 完全一致的 gradient**。如果这个 mean 是负的，它又会沿着同一个 mismatch direction 反着推。无论哪一种，其实都很奇怪：**一个和 action 之间谁好谁坏都没有关系的平均值，凭什么能决定我们要不要往旧 generator 靠近，以及靠近多少？**
+所以当 mean reward 或者 mean advantage 是正的时候，那个本来应该只是“大家共同拥有的常数部分”，居然会偷偷变成一个**方向上和对旧 generator 做 behavior cloning 完全一致的 gradient**。这件事情其实很奇怪：**一个和 action 之间谁好谁坏都没有关系的平均值，凭什么能决定我们要不要往旧 generator 靠近，以及靠近多少？**
 
 用我们前面在参数空间里的写法来看，结论也是一样的。把 advantage 拆成：
 
