@@ -11,7 +11,7 @@ tags: ["GRPO"]
 
 这是 Score Function Centering 系列的第二篇。我相信读完本系列的[第一篇文章](https://normaluhr.github.io/zh/p/score-function-centering/)之后，你已经对 score function 是什么、为什么要做 Score Function Centering 以及它能达到什么效果有了初步的认识。在本文中，我希望给读者提供一个关于 Score Function Centering 的全新视角，看看它在 async RL 中解决了哪些问题，以及更重要的，它还没有解决哪些问题。同时，我希望在这篇文章里打破一个观念，那就是 stale rollout 一定要用 importance sampling 校正到 current policy 上，并且给出一些新的应对策略。
 
-**人工与创新声明**：这篇文章并不是对已有工作和认知的总结，而是作者自己提出的对 Score Function Centering 的全新视角、理解和方法。和第一篇文章一样，本文由作者纯手工手搓，不是 AI 写的，当然如果你读的是英文版，很抱歉，它是 AI 翻译的。同时，作者强烈建议读者先阅读关于 Score Function Centering 的[第一篇文章](https://normaluhr.github.io/zh/p/score-function-centering/)，以确保理解本文使用的术语和持有的观点。
+**人工与创新声明**：这篇文章并不是对已有工作和认知的总结，而是作者自己提出的对 Score Function Centering 的全新视角、理解和方法。和第一篇文章一样，本文由作者纯手搓，不是 AI 写的，当然如果你读的是英文版，很抱歉，它是 AI 翻译的。同时，作者强烈建议读者先阅读关于 Score Function Centering 的[第一篇文章](https://normaluhr.github.io/zh/p/score-function-centering/)，以确保理解本文使用的术语和持有的观点。
 
 
 ## 1. 从 Score Function Centering 没有解决的问题讲起

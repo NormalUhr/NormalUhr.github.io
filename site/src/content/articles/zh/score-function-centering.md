@@ -9,7 +9,7 @@ tags: ["GRPO"]
 
 # Score Function Centering 深入浅出：从 Score Function 理解异步 RL 中的 Trainer-Generator Mismatch
 
-我觉得网上关于 score function centering 的解释或多或少都有些绕，不够直接。我希望写这篇文章给大家提供一种从 intuition 讲起，对 score function centering 最直接的解释。这篇文章是我纯手工手搓，不是 AI 写的，当然如果你读的是英文版，很抱歉，它是 AI 翻译的。
+我觉得网上关于 score function centering 的解释或多或少都有些绕，不够直接。我希望写这篇文章给大家提供一种从 intuition 讲起，对 score function centering 最直接的解释。这篇文章是我纯手搓，不是 AI 写的，当然如果你读的是英文版，很抱歉，它是 AI 翻译的。
 
 这篇文章需要你知道 PPO 或者 GRPO 的使用方法（loss 长什么样）和一些简单的概率论知识（就够了）。如果你还没读过，请你花十分钟读一下[这一篇文章](https://normaluhr.github.io/zh/p/grpo/)。
 
