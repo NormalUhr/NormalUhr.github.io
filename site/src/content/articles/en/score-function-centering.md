@@ -25,7 +25,7 @@ Score Function Centering is not an established term. I know that every frontier 
 TL;DR:
 
 * After chapter one you will know that the score function is an important bridge for computing the policy gradient, and the most direct thing we can get out of auto-differentiation.
-* After chapter two you will know the important property of the score function: it is already centered, so its expectation is 0. We need that expectation to stay 0 in order to replace reward with the so-called advantage in the policy gradient. You will also see how trainer-generator mismatch breaks that property, and why we therefore need to repair it.
+* After chapter two you will know the important property of the score function: it is already centered, so its expectation is 0. We need that expectation to stay 0 in order to replace reward with the so-called advantage in the policy gradient. You will also see how trainer-generator mismatch breaks that property. And you will see what breaking it actually costs: the mean advantage produces an extra gradient that pulls the current trainer toward the old generator, which is why we need to repair it.
 * After chapter three you will know what score function centering is really doing, why it repairs that zero-expectation property, how we should use it in practice, and one direction for churning out papers in this area.
 
 ## 1. Let us start from the score function. What is a score? Why do we use it?
@@ -536,6 +536,80 @@ $$
 At this point we have in fact explained the most critical layer of trainer-generator mismatch:
 
 **In synchronous RL, the generator and the trainer are the same distribution, so the standard score is zero-mean by nature. In async RL, the action comes from the old generator $q_\phi$ while the score is still centered by the current trainer $p_\theta$, and so the zero-mean property is broken.**
+
+### 2.4 What does this non-zero mean actually cause in practice?
+
+At this point you may feel that $\mathbb E_{q_\phi}[s_\theta]\neq 0$ still sounds a bit abstract. We said above that it breaks baseline invariance, but what kind of gradient does it actually produce in training?
+
+This becomes very intuitive if we look at it directly in logit space. For a Softmax, the gradient of the log probability of some action $a$ with respect to the whole logit vector $z$ is:
+
+$$
+\nabla_z\log p_\theta(a)=e_a-p_\theta,
+$$
+
+where $e_a$ is the one-hot vector of action $a$. In synchronous training $a\sim p_\theta$, so taking the expectation of it gives:
+
+$$
+\mathbb E_{a\sim p_\theta}[\nabla_z\log p_\theta(a)]=p_\theta-p_\theta=0.
+$$
+
+But now the action is sampled by the old generator $q_\phi$:
+
+$$
+\mathbb E_{a\sim q_\phi}[\nabla_z\log p_\theta(a)]=q_\phi-p_\theta.
+$$
+
+This formula makes the intuition behind it easier to see than $\mathbb E_q[J]-\mathbb E_p[J]$ did: **if some token is more common in the old generator than in the current trainer, that is $q_\phi(v)>p_\theta(v)$, this direction pushes its logit up. The other way around, if $q_\phi(v)<p_\theta(v)$, this direction pulls it down.**
+
+Now let us go back to the baseline we have been discussing all along. Suppose you add a constant $c$ that has nothing to do with the action to every reward or advantage. In a normal on-policy setting this constant should not produce any expected gradient. But after trainer-generator mismatch it produces an extra:
+
+$$
+\Delta g_z=c\,\mathbb E_{a\sim q_\phi}[\nabla_z\log p_\theta(a)]=c(q_\phi-p_\theta).
+$$
+
+If $c>0$, what this gradient does is very direct: **it pulls the current trainer $p_\theta$ toward the distribution of the old generator $q_\phi$.**
+
+There is another way to look at this direction. Suppose we really do take the samples of the old generator and maximize the log likelihood of the current trainer:
+
+$$
+\mathbb E_{a\sim q_\phi}[\log p_\theta(a)],
+$$
+
+its gradient in logit space is exactly:
+
+$$
+\nabla_z\mathbb E_{a\sim q_\phi}[\log p_\theta(a)]=q_\phi-p_\theta.
+$$
+
+In other words:
+
+$$
+q_\phi-p_\theta=-\nabla_zD_{\mathrm{KL}}(q_\phi\|p_\theta).
+$$
+
+So when the mean reward or the mean advantage is positive, that thing which was supposed to be no more than "the part that everyone shares" quietly turns into **a gradient whose direction is exactly the direction of doing behavior cloning on the old generator**. If that mean is negative, it pushes backwards along the same mismatch direction. Either way this is quite strange: **the average says nothing about which action is better or worse than which, so what gives it the right to decide whether we move toward the old generator, and by how much?**
+
+The same thing shows up in the parameter-space notation we used earlier. Split the advantage into:
+
+$$
+A(a)=(A(a)-\bar A_q)+\bar A_q,\qquad \bar A_q=\mathbb E_{q_\phi}[A].
+$$
+
+Then:
+
+$$
+\mathbb E_{q_\phi}[A(a)s_\theta(a)]=\mathbb E_{q_\phi}[(A(a)-\bar A_q)s_\theta(a)]+\bar A_q\,\mathbb E_{q_\phi}[s_\theta(a)].
+$$
+
+And the second term is:
+
+$$
+\bar A_q\left(\mathbb E_{q_\phi}[J_\theta]-\mathbb E_{p_\theta}[J_\theta]\right).
+$$
+
+This is one of the most practical consequences of breaking the zero-mean property: **the term that really describes how good one token is relative to another is the first one, but the mean advantage additionally multiplies a trainer-generator mismatch direction.**
+
+Looking at Score Function Centering now, the motivation is more direct. We do not only want a mathematical expectation to look like 0 again, we also want to take this old-policy cloning direction, the one quietly controlled by "the average reward level", out of the reward gradient. How far apart the trainer and the generator should be allowed to drift is a separate question, and $\bar A_q$ should not get to decide it for us in passing here.
 
 ## 3. What is Score Function Centering actually doing?
 

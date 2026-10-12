@@ -25,7 +25,7 @@ Score Function Centering 并不是一个专有名词，我知道各家 frontier 
 太长不看版：
 
 * 读完第一章你会知道 score function 是计算 policy gradient 的一个重要桥梁，以及我们能从 auto-differentiation 中得到的最直接的产物。
-* 读完第二章，你会知道 score function 的重要性质：它本身是中心化过了的，所以它的期望是 0，我们需要这个期望一直是 0，才能在 policy gradient 中用所谓的 advantage 来代替 reward，以及 trainer-generator mismatch 如何破坏了这个性质，所以我们需要修复它。
+* 读完第二章，你会知道 score function 的重要性质：它本身是中心化过了的，所以它的期望是 0，我们需要这个期望一直是 0，才能在 policy gradient 中用所谓的 advantage 来代替 reward，以及 trainer-generator mismatch 如何破坏了这个性质。你还会知道这个性质被破坏以后的实际后果：平均 advantage 会额外产生一个把当前 trainer 往旧 generator 拉的 gradient，所以我们需要修复它。
 * 读完第三章，你会知道 score function centering 本质是在干什么，它为什么修复了这个 0 期望属性；以及实际在工程上我们应该如何使用它，以及在这个领域灌水的一个方向。
 
 ## 1. 我们从 score function 讲起，score 是啥？为啥要用它？
@@ -537,6 +537,80 @@ $$
 
 **在同步 RL 里，generator 和 trainer 是同一个 distribution，所以标准 score 天然是 zero-mean 的；而在 async RL 里，action 来自旧 generator $q_\phi$，score 却仍然由当前 trainer $p_\theta$ 来 center，于是这个 zero-mean property 被破坏了。**
 
+### 2.4 这个 non-zero mean 到底会造成什么实际后果？
+
+到这里你可能会觉得，$\mathbb E_{q_\phi}[s_\theta]\neq 0$ 听起来还是有点抽象。我们前面说它会破坏 baseline invariance，但是它到底会给训练带来一个什么样的 gradient？
+
+这件事情如果直接放到 logit space 里看，会非常直观。对于 Softmax，某个 action $a$ 的 log probability 对整条 logit vector $z$ 的梯度是：
+
+$$
+\nabla_z\log p_\theta(a)=e_a-p_\theta,
+$$
+
+其中 $e_a$ 是 action $a$ 对应的 one-hot vector。在同步训练里 $a\sim p_\theta$，所以对它取 expectation：
+
+$$
+\mathbb E_{a\sim p_\theta}[\nabla_z\log p_\theta(a)]=p_\theta-p_\theta=0.
+$$
+
+但是现在 action 是由旧 generator $q_\phi$ sample 出来的：
+
+$$
+\mathbb E_{a\sim q_\phi}[\nabla_z\log p_\theta(a)]=q_\phi-p_\theta.
+$$
+
+这个式子就比 $\mathbb E_q[J]-\mathbb E_p[J]$ 更容易看出背后的 intuition 了：**如果某个 token 在旧 generator 里比在当前 trainer 里更常见，也就是 $q_\phi(v)>p_\theta(v)$，这个方向就会把它的 logit 往上推。反过来，如果 $q_\phi(v)<p_\theta(v)$，这个方向就会把它往下拉。**
+
+现在再回到我们前面一直在讨论的 baseline。假设你给所有 reward 或者 advantage 同时加了一个和 action 无关的常数 $c$。在正常的 on-policy setting 里，这个常数不应该产生任何 expected gradient。但是在 trainer-generator mismatch 以后，它会额外产生：
+
+$$
+\Delta g_z=c\,\mathbb E_{a\sim q_\phi}[\nabla_z\log p_\theta(a)]=c(q_\phi-p_\theta).
+$$
+
+如果 $c>0$，这条 gradient 做的事情非常直接：**把当前 trainer $p_\theta$ 往旧 generator $q_\phi$ 的 distribution 拉。**
+
+这个方向还可以换一个角度来看。假设我们真的拿旧 generator 的 sample 去最大化当前 trainer 的 log likelihood：
+
+$$
+\mathbb E_{a\sim q_\phi}[\log p_\theta(a)],
+$$
+
+它在 logit space 里的 gradient 恰好就是：
+
+$$
+\nabla_z\mathbb E_{a\sim q_\phi}[\log p_\theta(a)]=q_\phi-p_\theta.
+$$
+
+换句话说：
+
+$$
+q_\phi-p_\theta=-\nabla_zD_{\mathrm{KL}}(q_\phi\|p_\theta).
+$$
+
+所以当 mean reward 或者 mean advantage 是正的时候，那个本来应该只是“大家共同拥有的常数部分”，居然会偷偷变成一个**方向上和对旧 generator 做 behavior cloning 完全一致的 gradient**。如果这个 mean 是负的，它又会沿着同一个 mismatch direction 反着推。无论哪一种，其实都很奇怪：**一个和 action 之间谁好谁坏都没有关系的平均值，凭什么能决定我们要不要往旧 generator 靠近，以及靠近多少？**
+
+用我们前面在参数空间里的写法来看，结论也是一样的。把 advantage 拆成：
+
+$$
+A(a)=(A(a)-\bar A_q)+\bar A_q,\qquad \bar A_q=\mathbb E_{q_\phi}[A].
+$$
+
+那么：
+
+$$
+\mathbb E_{q_\phi}[A(a)s_\theta(a)]=\mathbb E_{q_\phi}[(A(a)-\bar A_q)s_\theta(a)]+\bar A_q\,\mathbb E_{q_\phi}[s_\theta(a)].
+$$
+
+而第二项就是：
+
+$$
+\bar A_q\left(\mathbb E_{q_\phi}[J_\theta]-\mathbb E_{p_\theta}[J_\theta]\right).
+$$
+
+这就是 zero-mean 被破坏以后最实际的后果之一：**真正描述 token 之间相对好坏的是第一项，但是 mean advantage 又额外乘上了一个 trainer-generator mismatch direction。**
+
+现在再看 Score Function Centering，动机就更直接了。我们不只是想让一个数学 expectation 看起来重新等于 0，更是想把这个由“平均 reward 水平”偷偷控制的 old-policy cloning direction 从 reward gradient 里拿掉。至于 trainer 和 generator 到底应该允许差多远，那是另外一个问题，不应该让 $\bar A_q$ 在这里顺手替我们做决定。
+
 ## 3. Score Function Centering 到底在做什么？
 
 答案呼之欲出了对不对！Score Function Centering 就是想让原本被破坏的 score function 的 zero-mean property 重新被满足，所以我们就又可以愉快地使用 baseline 啦！
@@ -838,7 +912,7 @@ $$
 
 这时候如果我们还把所有 token 都当成普通 Monte Carlo sample 来处理，就有点浪费：明明 $A/B/C$ 几乎每次都很重要，我们却还在随机决定“这次有没有抽到它”。
 
-所以一个很自然的做法是：**高概率的 head 直接精确算，只有 long tail 用 Monte Carlo sample。**
+所以一个很自然的做法是：**高概率的 head 直接精确计算，只有 long tail 用 Monte Carlo sample。**
 
 假设 generator 选出 top-$H$ token 组成 head set：
 
