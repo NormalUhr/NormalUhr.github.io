@@ -39,11 +39,15 @@ const name = titleFor(article, lang)
 // When the body is in the other language, show its own name underneath, so a reader
 // knows what the piece is actually called.
 const original = bodyLang !== lang ? data.title : data.subtitle
-const canonical = 'https://normaluhr.github.io/' + lang + '/p/' + slug
+// The citation is the English one on both pages, so a reader pastes the same entry
+// into the same bibliography whichever side they copied it from. An article that
+// exists only in Chinese cites itself, since there is no English version to point at.
+const cited = bucket.en ?? article
+const canonical = 'https://normaluhr.github.io/' + cited.lang + '/p/' + slug
 const bib = [
   '@misc{zhang' + year + slug.replace(/-/g, '') + ',',
   '  author = {Zhang, Yihua},',
-  '  title  = {' + data.title.replace(/[{}]/g, '') + '},',
+  '  title  = {' + cited.entry.data.title.replace(/[{}]/g, '') + '},',
   '  year   = {' + year + '},',
   '  url    = {' + canonical + '}',
   '}',
