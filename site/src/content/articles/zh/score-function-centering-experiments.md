@@ -295,7 +295,7 @@ SFC+MIS 在这三个模型上的表现很有意思。它都没有 collapse，而
 | AdamW，4-prompt slice | 0.09 | 0.701 | 0.650 | 0.680 | 0.697 | 0.691 | **0.738** |
 | GSM8K，4-prompt slice | 0.39 | 0.645 | 0.691 | 0.838 | 0.393 | **0.842** | 0.803 |
 | Qwen3-4B，1-prompt slice | 0.41 | 0.416 | 0.543 | 0.557 | 0.398 | **0.762** | 0.744 |
-| Qwen3-30B-A3B，1-prompt slice | 0.67 | 训练中 | 0.814 | 0.791 | 0.830 | 0.799 | **0.877** |
+| Qwen3-30B-A3B，1-prompt slice | 0.67 |  | 0.814 | 0.791 | 0.830 | 0.799 | **0.877** |
 
 SFC+KL 在三个 setting 上最高，TOPR 在另外三个 setting 上最高。其中 Countdown 的 2-prompt slice 上两者只差 0.006，可以看成打平。GSM8K 上 TOPR 和 GSPO 都比 SFC+KL 高出 0.035 以上。Qwen3-4B 上 TOPR 比 SFC+KL 高 0.018，不过前面说过，SFC+KL 在这个模型上只做了最后一次 evaluation。稳定性方面，TOPR 在六个 setting 上都训练到了最后，这一点和 SFC+KL 一样。PPO、DAPO 和 DPPO 则都在不止一个 setting 上失败了，有的中途 collapse，有的从头到尾都没有超过训练开始时的成绩。
 

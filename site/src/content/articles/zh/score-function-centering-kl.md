@@ -353,7 +353,7 @@ $$\mathbb E_{v\sim q}[\hat g_j(v)]=q(j)\left(\frac{p_\theta(j)}{q(j)}-1\right)=p
 
 前面全都是 intuition 和推导，所以这一节给一点真实的结果。
 
-为了验证这套方法真的有效，我做了大量的实验，baseline 里也包括了 SFC 以及它已知的几个变种。受篇幅所限，这篇文章里只放其中很小的一部分。完整的实验 setup、结果、分析以及开源的代码，都会放在这个系列的第三篇里。
+为了验证这套方法真的有效，我做了大量的实验，baseline 里也包括了 SFC 以及它已知的几个变种。受篇幅所限，这篇文章里只放其中很小的一部分。完整的实验 setup、结果、分析以及开源的代码，都放在了这个系列的[第三篇](https://normaluhr.github.io/zh/p/score-function-centering-experiments/)里。
 
 下面这张图里的七个 setting 都来自一个真正的异步 pipeline：generator 不停地产生 rollout，trainer 不停地更新，每个 token 都带着自己的 sampler 版本号，所以这里的 staleness 是实际测量出来的。任务是 [Countdown](https://arxiv.org/abs/2404.03683) 和 [GSM8K](https://arxiv.org/abs/2110.14168)，模型是 Qwen3-0.6B、Qwen3-4B、Qwen3-30B-A3B 和 GLM-4.5-Air（总参数 106B，激活参数 12B），context length 最长 4096 个 token，每个 run 跑 3200 个 trainer step，实际测量到的平均 staleness 从 46 个 optimizer step 一直到 367 个。这两个任务的 reward 都只有 0 和 1 两种，比如 Countdown 要求模型用给定的几个数字写出一个结果等于目标值的算术表达式，算对了得 1 分，算错了得 0 分，所以图里的 reward 可以直接读成正确率。
 

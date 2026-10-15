@@ -297,7 +297,7 @@ Compared on its own, SFC+KL is not the best on every setting. The table below gi
 | AdamW, 4-prompt slice | 0.09 | 0.701 | 0.650 | 0.680 | 0.697 | 0.691 | **0.738** |
 | GSM8K, 4-prompt slice | 0.39 | 0.645 | 0.691 | 0.838 | 0.393 | **0.842** | 0.803 |
 | Qwen3-4B, 1-prompt slice | 0.41 | 0.416 | 0.543 | 0.557 | 0.398 | **0.762** | 0.744 |
-| Qwen3-30B-A3B, 1-prompt slice | 0.67 | Still training | 0.814 | 0.791 | 0.830 | 0.799 | **0.877** |
+| Qwen3-30B-A3B, 1-prompt slice | 0.67 |  | 0.814 | 0.791 | 0.830 | 0.799 | **0.877** |
 
 SFC+KL is the highest on three settings, and TOPR on the other three. On the Countdown 2-prompt slice the two differ by only 0.006, which can be seen as a tie. On GSM8K, TOPR and GSPO are both more than 0.035 higher than SFC+KL. On Qwen3-4B, TOPR is 0.018 higher than SFC+KL, though as mentioned before, SFC+KL was evaluated only at the end on this model. In terms of stability, TOPR trained to the end on all six settings, just like SFC+KL. PPO, DAPO and DPPO each failed on more than one setting: some collapsed midway, and some never got above their score at the start of training.
 
