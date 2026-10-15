@@ -355,17 +355,17 @@ $$\mathbb E_{v\sim q}[\hat g_j(v)]=q(j)\left(\frac{p_\theta(j)}{q(j)}-1\right)=p
 
 为了验证这套方法真的有效，我做了大量的实验，baseline 里也包括了 SFC 以及它已知的几个变种。受篇幅所限，这篇文章里只放其中很小的一部分。完整的实验 setup、结果、分析以及开源的代码，都会放在这个系列的第三篇里。
 
-下面这张图里的七个 setting 都来自一个真正的异步 pipeline：generator 不停地产生 rollout，trainer 不停地更新，每个 token 都带着自己的 sampler 版本号，所以这里的 staleness 是实际测量出来的。任务是 [Countdown](https://arxiv.org/abs/2404.03683) 和 [GSM8K](https://arxiv.org/abs/2110.14168)，模型是 Qwen3-0.6B、Qwen3-4B、Qwen3-30B-A3B 和 GLM-4.5-Air（总参数 106B，激活参数 12B），completion budget 是 4096 个 token，每个 run 跑 3200 个 trainer step，实际测量到的平均 staleness 从 46 个 optimizer step 一直到 367 个。这两个任务的 reward 都只有 0 和 1 两种，比如 Countdown 要求模型用给定的几个数字写出一个结果等于目标值的算术表达式，算对了得 1 分，算错了得 0 分，所以图里的 reward 可以直接读成正确率。
+下面这张图里的七个 setting 都来自一个真正的异步 pipeline：generator 不停地产生 rollout，trainer 不停地更新，每个 token 都带着自己的 sampler 版本号，所以这里的 staleness 是实际测量出来的。任务是 [Countdown](https://arxiv.org/abs/2404.03683) 和 [GSM8K](https://arxiv.org/abs/2110.14168)，模型是 Qwen3-0.6B、Qwen3-4B、Qwen3-30B-A3B 和 GLM-4.5-Air（总参数 106B，激活参数 12B），context length 最长 4096 个 token，每个 run 跑 3200 个 trainer step，实际测量到的平均 staleness 从 46 个 optimizer step 一直到 367 个。这两个任务的 reward 都只有 0 和 1 两种，比如 Countdown 要求模型用给定的几个数字写出一个结果等于目标值的算术表达式，算对了得 1 分，算错了得 0 分，所以图里的 reward 可以直接读成正确率。
 
 图里的“4-prompt slice”说的是 trainer 消耗 rollout 的粒度。generator 一次产生 64 个 prompt 的 rollout，trainer 把这一批切成若干个 slice，每个 slice 走一个 optimizer step。4-prompt slice 就是每个 step 用 4 个 prompt，1-prompt slice 就是每个 step 只用 1 个 prompt。切得越细，同一批 rollout 要被消耗掉的 step 数就越多，sampler 相对 trainer 也就越旧，所以 1-prompt 的 setting 要比 4-prompt 的 setting stale 得多。图里每个 setting 下面都标了它实际测量到的平均 staleness。
 
 为了和前面的讨论对齐，这里只放四个方法：只做 centering 的 SFC、SFC+TIS、SFC+MIS，以及本文的 SFC+KL($\beta_t$)，$\beta_0 = 0.3$。SFC+TIS 是在 center 过的 score 上再乘一个被截断的 importance ratio $\min(p_\theta(a)/q_\phi(a),\ 2)$，也就是 [truncated importance sampling](https://fengyao.notion.site/off-policy-rl) 的做法。SFC+MIS 则是只保留 ratio 落在 $[0.5,\ 5]$ 区间里的 token，其余的 token 会被直接 mask 掉，这个做法来自 [IcePop](https://arxiv.org/abs/2510.18855)。把这两种 ratio correction 和 score centering 组合起来，是前面提到的[那篇工作](https://arxiv.org/abs/2609.20807)的做法。
 
-SFC+KL 是这七个 setting 里唯一一个每次都训练到最后的方法，而且在每一个 setting 上，最终的 held-out evaluation reward 也都是它最高。
+图里是每个 run 在整个训练过程中最好的那一次 held-out evaluation reward。SFC+KL 是这七个 setting 里唯一一个每次都训练到最后的方法，在其中五个 setting 上，它的最好成绩也是四个方法里最高的。
 
 <figure data-chart="sfc-methods">
 <noscript>
-<img src="https://normaluhr.github.io/img/in-post/2026-10-11-score-function-centering-kl/methods.png" alt="七个异步 setting 下四个方法最终的 held-out evaluation reward">
+<img src="https://normaluhr.github.io/img/in-post/2026-10-11-score-function-centering-kl/methods.png" alt="七个异步 setting 下四个方法最好的 held-out evaluation reward">
 </noscript>
 </figure>
 <script src="/js/sfc-methods-chart.js" defer></script>

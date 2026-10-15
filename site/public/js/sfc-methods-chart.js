@@ -16,29 +16,30 @@
     { key: 'mis', label: 'SFC+MIS', ink: 'var(--vermilion)' },
   ]
 
-  /* Final held-out evaluation reward of each run, and whether it collapsed.
-   * `null` is an arm that was not run at that setting. */
+  /* Best held-out evaluation reward of each run, and whether it collapsed.
+   * `null` is an arm that was not run at that setting. `start` is the mean
+   * evaluation of the same runs before training, the floor of a best
+   * evaluation. */
   const SETTINGS = [
-    { name: 'Countdown, 4-prompt slices', stale: '46 to 53',
-      runs: { kl: [0.684, false], sc: [0.080, true], tis: [0.000, false], mis: [0.518, true] } },
-    { name: 'Countdown, 2-prompt slices', stale: '92 to 116',
-      runs: { kl: [0.605, false], sc: [0.094, true], tis: [0.086, false], mis: [0.068, true] } },
-    { name: 'AdamW, 4-prompt slices', stale: '50 to 53',
-      runs: { kl: [0.717, false], sc: [0.527, false], tis: [0.455, true], mis: [0.033, true] } },
-    { name: 'GSM8K, 4-prompt slices', stale: '47 to 55',
-      runs: { kl: [0.791, false], sc: [0.393, true], tis: [0.785, false], mis: [0.344, true] } },
-    { name: 'Qwen3-4B, 1-prompt slices', stale: '184 to 367',
-      runs: { kl: [0.744, false], sc: [0.412, true], tis: [0.412, true], mis: [0.668, false] } },
-    { name: 'Qwen3-30B-A3B, 1-prompt slices', stale: '92 to 137',
-      runs: { kl: [0.877, false], sc: null, tis: [0.549, false], mis: [0.760, false] } },
-    { name: 'GLM-4.5-Air, 1-prompt slices', stale: '123 to 225',
-      runs: { kl: [0.750, false], sc: null, tis: [0.246, true], mis: [0.574, false] } },
+    { name: 'Countdown, 4-prompt slices', stale: '46 to 53', start: 0.095,
+      runs: { kl: [0.725, false], sc: [0.080, true], tis: [0.389, false], mis: [0.646, true] } },
+    { name: 'Countdown, 2-prompt slices', stale: '92 to 116', start: 0.091,
+      runs: { kl: [0.670, false], sc: [0.094, true], tis: [0.111, false], mis: [0.068, true] } },
+    { name: 'AdamW, 4-prompt slices', stale: '50 to 53', start: 0.082,
+      runs: { kl: [0.738, false], sc: [0.715, false], tis: [0.725, true], mis: [0.652, true] } },
+    { name: 'GSM8K, 4-prompt slices', stale: '47 to 55', start: 0.389,
+      runs: { kl: [0.803, false], sc: [0.393, true], tis: [0.785, false], mis: [0.668, true] } },
+    { name: 'Qwen3-4B, 1-prompt slices', stale: '184 to 367', start: 0.414,
+      runs: { kl: [0.744, false], sc: [0.412, true], tis: [0.412, true], mis: [0.871, false] } },
+    { name: 'Qwen3-30B-A3B, 1-prompt slices', stale: '92 to 137', start: 0.678,
+      runs: { kl: [0.877, false], sc: null, tis: [0.680, false], mis: [0.850, false] } },
+    { name: 'GLM-4.5-Air, 1-prompt slices', stale: '123 to 225', start: 0.650,
+      runs: { kl: [0.750, false], sc: null, tis: [0.641, true], mis: [0.777, false] } },
   ]
 
   const CSS = `
 .mchart { margin: 1.7rem 0; }
-.mchart-head { display: flex; flex-wrap: wrap; gap: .35rem 1.1rem; align-items: baseline;
-  justify-content: space-between; margin-bottom: .75rem; }
+.mchart-head { display: flex; flex-direction: column; gap: .3rem; margin-bottom: .75rem; }
 .mchart-legend { display: flex; flex-wrap: wrap; gap: .3rem .95rem; list-style: none; margin: 0; padding: 0; }
 .mchart-legend li { display: flex; align-items: center; gap: .4em; cursor: pointer;
   font: 500 .78rem/1.4 var(--sans); color: var(--ink-soft); -webkit-user-select: none; user-select: none; }
@@ -47,12 +48,20 @@
 .mchart-sw { width: 1.5em; height: .6em; flex: none; border-radius: 1px; background: var(--sw, var(--ink-faint)); }
 .mchart-sw.hatch { background-image: repeating-linear-gradient(45deg,
   transparent 0 3px, var(--paper) 3px 5px); }
-.mchart-readout { font: .74rem/1.4 var(--mono); color: var(--ink-soft); min-height: 1.4em;
-  margin-left: auto; text-align: right; }
+.mchart-sw.start { position: relative; height: .9em; background: none; border-radius: 0; }
+.mchart-sw.start::after { content: ''; position: absolute; left: 50%; top: 0; bottom: 0;
+  border-left: 1.5px dashed var(--sw); }
+/* The readout keeps one fixed line, two on a phone, whatever it holds: a
+ * readout that grew on hover would push the bars away from the cursor, end
+ * the hover and shrink again, over and over. */
+.mchart-readout { font: .74rem/1.4 var(--mono); color: var(--ink-soft); height: 1.4em;
+  overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .mchart-plot { position: relative; padding-right: 3.5em; }
 .mchart-rows { position: relative; }
 .mchart-grid { position: absolute; inset: 0; pointer-events: none; }
 .mchart-grid i { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--rule-soft); }
+.mchart-start { position: absolute; top: -3px; bottom: -3px; z-index: 1; width: 0;
+  border-left: 1.5px dashed var(--ink-soft); pointer-events: none; }
 .mchart-group + .mchart-group { margin-top: .85rem; }
 .mchart-name { font: 600 .79rem/1.4 var(--sans); color: var(--ink); margin-bottom: .25rem; }
 .mchart-name span { font-weight: 400; color: var(--ink-faint); }
@@ -64,7 +73,8 @@
   background-color: var(--sw); border-radius: 0 1px 1px 0; }
 .mchart-bar.hatch { background-image: repeating-linear-gradient(45deg,
   transparent 0 3px, var(--paper) 3px 5px); }
-.mchart-val { position: absolute; top: 50%; transform: translateY(-50%);
+.mchart-val { position: absolute; top: 50%; transform: translateY(-50%); z-index: 2;
+  padding: 2px; background: var(--paper);
   font: .72rem/1 var(--mono); color: var(--ink-soft); white-space: nowrap; }
 .mchart-none { position: absolute; top: 50%; left: 2px; transform: translateY(-50%);
   font: italic .72rem/1 var(--sans); color: var(--ink-faint); }
@@ -72,9 +82,10 @@
 .mchart-axis span { position: absolute; top: .25em; font: .7rem/1 var(--mono); color: var(--ink-faint);
   transform: translateX(-50%); }
 .mchart-axis b { position: absolute; left: 0; right: 0; top: 0; height: 1px; background: var(--rule); }
-.mchart-unit { font: .72rem/1.4 var(--sans); color: var(--ink-faint); margin-top: .1rem; }
+.mchart-title { font: 600 .95rem/1.35 var(--sans); color: var(--ink-strong); margin: 0 0 .55rem; }
 @media (max-width: 520px) {
-  .mchart-readout { margin-left: 0; text-align: left; width: 100%; }
+  .mchart-readout { height: 2.8em; white-space: normal; display: -webkit-box;
+    -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
   .mchart-plot { padding-right: 3.2em; }
 }`
 
@@ -156,12 +167,17 @@
           row.append(bar, label)
           row.addEventListener('pointerenter', () => {
             readout.textContent = method.label.replace(/<[^>]+>/g, '') + ' · ' + setting.name +
-              ' · ' + value.toFixed(3) + (collapsed ? ' · collapsed' : '')
+              ' · ' + value.toFixed(3) + (collapsed ? ' · collapsed' : '') +
+              ' · before training ' + setting.start.toFixed(2)
           })
         }
         rows.push(row)
         bars.appendChild(row)
       }
+      const start = document.createElement('i')
+      start.className = 'mchart-start'
+      start.style.left = (setting.start / SCALE) * 100 + '%'
+      bars.appendChild(start)
       plot.appendChild(group)
     }
     plot.addEventListener('pointerleave', () => { readout.textContent = REST })
@@ -178,9 +194,9 @@
     }
     plot.appendChild(axis)
 
-    const unit = document.createElement('div')
-    unit.className = 'mchart-unit'
-    unit.textContent = 'final held-out evaluation reward'
+    const title = document.createElement('div')
+    title.className = 'mchart-title'
+    title.textContent = 'Best held-out evaluation reward'
 
     for (const method of METHODS) {
       const item = document.createElement('li')
@@ -217,8 +233,13 @@
     collapsed.style.cursor = 'default'
     collapsed.innerHTML = '<span class="mchart-sw hatch" style="--sw:var(--ink-faint)"></span><span>collapsed</span>'
     legend.appendChild(collapsed)
+    const before = document.createElement('li')
+    before.setAttribute('aria-disabled', 'true')
+    before.style.cursor = 'default'
+    before.innerHTML = '<span class="mchart-sw start" style="--sw:var(--ink-soft)"></span><span>before training</span>'
+    legend.appendChild(before)
 
-    fig.append(head, plot, unit)
+    fig.append(title, head, plot)
   }
 
   document.querySelectorAll('[data-chart="sfc-methods"]').forEach(build)
