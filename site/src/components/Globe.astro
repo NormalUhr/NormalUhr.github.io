@@ -1,0 +1,338 @@
+---
+import type { Lang } from '../site.config'
+import { t } from '../lib/taxonomy'
+import { placeName, type Country } from '../lib/visitors'
+
+interface Props {
+  /** Countries with their visits, most visited first; the globe starts facing the first. */
+  countries: Country[]
+  lang: Lang
+  /** What the picture shows, for screen readers. */
+  label: string
+  /** Lets readers drag the globe and point at a dot to see its country. */
+  interactive?: boolean
+  /** Selector of an element whose [data-code] rows turn the globe to their country. */
+  rows?: string
+  class?: string
+}
+
+const { countries, lang, label, interactive = false, rows, class: className } = Astro.props
+const L = t(lang)
+const most = countries[0].visits
+const count = (n: number) => n.toLocaleString('en-US')
+const places = countries.map((c) => ({
+  code: c.code,
+  point: c.point,
+  // A dot's area follows its visit count, so its size grows with the square root.
+  size: Number((0.03 + 0.07 * Math.sqrt(c.visits / most)).toFixed(3)),
+  recent: c.recent > 0,
+  ...(interactive && {
+    name: placeName(c, lang),
+    detail: [L.visitsN.replace('{n}', count(c.visits)), c.recent ? L.recentN.replace('{n}', count(c.recent)) : '']
+      .filter(Boolean)
+      .join(' · '),
+  }),
+}))
+---
+<div
+  class:list={['globe', className]}
+  data-globe
+  data-interactive={interactive || undefined}
+  data-rows={rows}
+  data-places={JSON.stringify(places)}
+>
+  <canvas role="img" aria-label={label}></canvas>
+</div>
+
+<script>
+  import type { Marker } from 'cobe'
+
+  type RGB = [number, number, number]
+  type LatLon = [number, number]
+  interface Place {
+    code: string
+    point: LatLon
+    size: number
+    recent: boolean
+    name?: string
+    detail?: string
+  }
+
+  /** Seconds per full turn. */
+  const TURN = 48
+  /** How far the north pole leans toward the viewer, in radians. */
+  const TILT = 0.3
+  /** Seconds per pulse of a dot with visits in the last 24 hours. */
+  const PULSE = 1.6
+  /** Milliseconds to turn toward a country picked in the table. */
+  const FOCUS = 700
+  /** How close the pointer must come to a dot to pick it, in CSS pixels. */
+  const REACH = 14
+  const still = matchMedia('(prefers-reduced-motion: reduce)').matches
+
+  // On a small globe the land dots are sparse, so it gets more of them, and brighter ones,
+  // for the continents to read. 16000 dots at brightness 6 suit a 400-pixel globe.
+  function detail(side: number) {
+    const k = Math.sqrt(400 / side)
+    return { mapSamples: Math.round(Math.min(40000, 16000 * k)), mapBrightness: Math.min(12, 6 * k) }
+  }
+
+  const rgb = (hex: string): RGB => [1, 3, 5].map((i) => parseInt(hex.trim().slice(i, i + 2), 16) / 255) as RGB
+  const token = (name: string) => getComputedStyle(document.documentElement).getPropertyValue(name)
+
+  // The colours are tokens in global.css, beside the rest of the palette, so the theme
+  // switch restyles the globe the same way it restyles the page.
+  function palette() {
+    return {
+      dark: Number(token('--globe-dark')),
+      baseColor: rgb(token('--globe-base')),
+      glowColor: rgb(token('--globe-glow')),
+      markerColor: rgb(token('--accent')),
+    }
+  }
+
+  /** cobe's rotation that turns a point toward the viewer. */
+  const facing = ([lat, lon]: LatLon) => ({ phi: 1.5 * Math.PI - (lon * Math.PI) / 180, theta: (lat * Math.PI) / 180 })
+
+  /** The same angle, moved by whole turns to lie within half a turn of `near`. */
+  const nearest = (angle: number, near: number) => angle - 2 * Math.PI * Math.round((angle - near) / (2 * Math.PI))
+
+  /**
+   * Where a point lands on the canvas, as fractions of its width and height, and whether it
+   * is on the near side. This repeats cobe 2's own marker projection for a square canvas at
+   * scale 1 with markers on the surface, where the sphere's radius is 0.8 of half the width.
+   */
+  function project([lat, lon]: LatLon, phi: number, theta: number) {
+    const la = (lat * Math.PI) / 180
+    const lo = (lon * Math.PI) / 180 - Math.PI
+    const [px, py, pz] = [-Math.cos(la) * Math.cos(lo), Math.sin(la), Math.cos(la) * Math.sin(lo)].map((v) => v * 0.8)
+    const [cp, sp, ct, st] = [Math.cos(phi), Math.sin(phi), Math.cos(theta), Math.sin(theta)]
+    const x = cp * px + sp * pz
+    const y = sp * st * px + ct * py - cp * st * pz
+    const z = -sp * ct * px + st * py + cp * ct * pz
+    return { x: (x + 1) / 2, y: (1 - y) / 2, near: z >= 0 }
+  }
+
+  async function mount(wrap: HTMLElement, canvas: HTMLCanvasElement) {
+    let createGlobe: typeof import('cobe').default
+    try {
+      ;({ default: createGlobe } = await import('cobe'))
+    } catch {
+      wrap.hidden = true
+      return null
+    }
+
+    const places = JSON.parse(wrap.dataset.places!) as Place[]
+    const side = () => canvas.clientWidth
+    let { phi } = facing(places[0].point)
+    let theta = TILT
+    let recentColor = rgb(token('--globe-recent'))
+    /** The country whose label is showing. */
+    let shown: Place | null = null
+    /** A turn toward a country picked in the table. */
+    let turn: { from: number; to: number; fromTheta: number; toTheta: number; start: number } | null = null
+    let drag: { x: number; phi: number; moved: boolean } | null = null
+    /** True while a mouse rests on the globe. The globe stops turning then, and while a label shows. */
+    let hovering = false
+
+    const markers = (now: number): Marker[] =>
+      places.map((p) => {
+        // A dot with visits in the last 24 hours swells and shrinks once every PULSE seconds.
+        const swell = p.recent && !still ? 0.5 - 0.5 * Math.cos((2 * Math.PI * now) / (PULSE * 1000)) : 0
+        const size = p.size * (p === shown ? 1.6 : 1) * (1 + 0.6 * swell)
+        return p.recent ? { location: p.point, size, color: recentColor } : { location: p.point, size }
+      })
+
+    const globe = createGlobe(canvas, {
+      devicePixelRatio: Math.min(2, window.devicePixelRatio),
+      width: side(),
+      height: side(),
+      phi,
+      theta,
+      diffuse: 1.2,
+      // cobe raises markers above the surface by default, which lifts the ones near the
+      // edge off the sphere into empty space.
+      markerElevation: 0,
+      markers: markers(0),
+      ...detail(side()),
+      ...palette(),
+    })
+
+    const tip = wrap.hasAttribute('data-interactive') ? document.createElement('div') : null
+    if (tip) {
+      tip.className = 'globe-tip'
+      tip.hidden = true
+      wrap.append(tip)
+    }
+
+    function show(place: Place | null) {
+      shown = place
+      if (!tip) return
+      tip.hidden = !place
+      if (!place) return
+      tip.replaceChildren(Object.assign(document.createElement('b'), { textContent: place.name! }), place.detail!)
+      placeTip()
+    }
+
+    // The label sits above its dot, kept inside the globe's box so it never pushes the page sideways.
+    function placeTip() {
+      if (!tip || !shown) return
+      const at = project(shown.point, phi, theta)
+      tip.hidden = !at.near
+      const width = side()
+      const half = tip.offsetWidth / 2
+      tip.style.left = `${Math.min(width - half, Math.max(half, at.x * width))}px`
+      tip.style.top = `${at.y * width}px`
+    }
+
+    let last = 0
+    function draw(now: number) {
+      const dt = last ? now - last : 0
+      last = now
+      if (turn) {
+        const k = still ? 1 : Math.min(1, (now - turn.start) / FOCUS)
+        const ease = 1 - (1 - k) ** 3
+        phi = turn.from + (turn.to - turn.from) * ease
+        theta = turn.fromTheta + (turn.toTheta - turn.fromTheta) * ease
+      } else if (!drag && !hovering && !shown && !still) {
+        phi += (dt / 1000) * ((2 * Math.PI) / TURN)
+        // After a turn toward a country, lean back to the usual tilt.
+        theta += (TILT - theta) * Math.min(1, dt / 500)
+      }
+      globe.update({ phi, theta, markers: markers(now) })
+      placeTip()
+    }
+
+    let frame = 0
+    let visible = false
+    let until = 0
+    function tick(now: number) {
+      draw(now)
+      // A still globe draws only when something changes. cobe decodes its map image after the
+      // globe is created, so the first second is drawn in full to be sure the map appears.
+      frame = visible && (!still || now < until) ? requestAnimationFrame(tick) : 0
+    }
+    function wake(ms = 0) {
+      until = Math.max(until, performance.now() + ms)
+      if (visible && !frame) frame = requestAnimationFrame(tick)
+    }
+
+    new ResizeObserver(() => {
+      globe.update({ width: side(), height: side(), ...detail(side()) })
+      wake()
+    }).observe(canvas)
+    new MutationObserver(() => {
+      recentColor = rgb(token('--globe-recent'))
+      globe.update(palette())
+      wake()
+    }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] })
+
+    if (tip) {
+      const pick = (e: PointerEvent) => {
+        const box = canvas.getBoundingClientRect()
+        let best: Place | null = null
+        let reach = REACH
+        for (const p of places) {
+          const at = project(p.point, phi, theta)
+          const d = Math.hypot(at.x * box.width - (e.clientX - box.left), at.y * box.height - (e.clientY - box.top))
+          if (at.near && d < reach) [best, reach] = [p, d]
+        }
+        return best
+      }
+
+      // A touch screen also reports the finger leaving as soon as it lifts, so only a mouse
+      // leaving clears the label. On a touch screen a tap elsewhere clears it.
+      canvas.addEventListener('pointerenter', (e) => {
+        if (e.pointerType === 'mouse') hovering = true
+      })
+      canvas.addEventListener('pointerleave', (e) => {
+        if (e.pointerType !== 'mouse') return
+        hovering = false
+        if (!drag) show(null)
+        wake()
+      })
+      document.addEventListener('pointerdown', (e) => {
+        if (e.pointerType === 'mouse' || !shown || wrap.contains(e.target as Node)) return
+        show(null)
+        wake()
+      })
+      canvas.addEventListener('pointerdown', (e) => {
+        drag = { x: e.clientX, phi, moved: false }
+        turn = null
+        canvas.setPointerCapture(e.pointerId)
+        wrap.classList.add('dragging')
+      })
+      canvas.addEventListener('pointermove', (e) => {
+        if (drag) {
+          // Dragging across the whole width turns the globe half a turn.
+          drag.moved ||= Math.abs(e.clientX - drag.x) > 3
+          phi = drag.phi + ((e.clientX - drag.x) / side()) * Math.PI
+          if (drag.moved) show(null)
+        } else {
+          show(pick(e))
+        }
+        wake()
+      })
+      const release = (e: PointerEvent) => {
+        // A tap that did not drag picks the dot under it, which is how a touch screen points.
+        if (drag && !drag.moved) show(pick(e))
+        drag = null
+        wrap.classList.remove('dragging')
+        wake()
+      }
+      canvas.addEventListener('pointerup', release)
+      canvas.addEventListener('pointercancel', release)
+
+      const rows = wrap.dataset.rows ? document.querySelectorAll<HTMLElement>(`${wrap.dataset.rows} [data-code]`) : []
+      for (const row of rows) {
+        const place = places.find((p) => p.code === row.dataset.code)
+        if (!place) continue
+        // Rows answer only to a mouse. On a phone the table sits below the globe, out of view.
+        row.addEventListener('pointerenter', (e) => {
+          if (e.pointerType !== 'mouse') return
+          const to = facing(place.point)
+          turn = { from: phi, to: nearest(to.phi, phi), fromTheta: theta, toTheta: to.theta, start: performance.now() }
+          show(place)
+          wake()
+        })
+        row.addEventListener('pointerleave', (e) => {
+          if (e.pointerType !== 'mouse') return
+          turn = null
+          show(null)
+          wake()
+        })
+      }
+    }
+
+    canvas.dataset.ready = ''
+    return {
+      start() {
+        visible = true
+        last = 0
+        wake(1000)
+      },
+      stop() {
+        visible = false
+        cancelAnimationFrame(frame)
+        frame = 0
+      },
+    }
+  }
+
+  // Each globe loads cobe the first time it scrolls into view and draws only while visible.
+  function watch(wrap: HTMLElement) {
+    const canvas = wrap.querySelector('canvas')!
+    let globe: ReturnType<typeof mount> | undefined
+    new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) (globe ??= mount(wrap, canvas)).then((g) => g?.start())
+      else globe?.then((g) => g?.stop())
+    }).observe(canvas)
+  }
+
+  const probe = document.createElement('canvas')
+  const webgl = Boolean(probe.getContext('webgl2') ?? probe.getContext('webgl'))
+  for (const wrap of document.querySelectorAll<HTMLElement>('[data-globe]')) {
+    if (webgl) watch(wrap)
+    else wrap.hidden = true
+  }
+</script>

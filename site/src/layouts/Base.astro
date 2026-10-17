@@ -4,6 +4,8 @@ import 'katex/dist/katex.min.css'
 import { getEntry } from 'astro:content'
 import { site, LANGS, type Lang } from '../site.config'
 import { t } from '../lib/taxonomy'
+import { countryVisits } from '../lib/visitors'
+import Globe from '../components/Globe.astro'
 
 interface Props {
   lang: Lang
@@ -24,6 +26,7 @@ const nav = [
   { href: `/${lang}/posts`, label: L.posts, key: 'posts' },
   ...(about?.body?.trim() ? [{ href: `/${lang}/about`, label: L.about, key: 'about' }] : []),
 ]
+const countries = await countryVisits()
 ---
 <!doctype html>
 <html lang={lang === 'zh' ? 'zh-Hans' : 'en'}>
@@ -94,9 +97,17 @@ const nav = [
       <a href="/rss.xml">RSS</a>
     </div>
     <div class="tot">
-      {site.goatcounter
-        ? <span><b id="site-visits" class="tnum">—</b> {L.visits} · {site.since}–</span>
-        : <span>{site.since}–</span>}
+      {countries && (
+        <a class="tot-globe" href={`/${lang}/visitors`} tabindex="-1" aria-hidden="true">
+          <Globe countries={countries} lang={lang} label={L.globeLabel} />
+        </a>
+      )}
+      <div class="tot-lines">
+        {site.goatcounter
+          ? <span><b id="site-visits" class="tnum">—</b> {L.visits} · {site.since}–</span>
+          : <span>{site.since}–</span>}
+        {countries && <a href={`/${lang}/visitors`}>{countries.length} {L.countries}</a>}
+      </div>
     </div>
   </div></footer>
 

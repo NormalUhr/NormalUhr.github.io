@@ -9,6 +9,7 @@
   --ink: #dcd7cb; --ink-strong: #f4f1e8; --ink-soft: #9d9b92; --ink-faint: #71757c;
   --accent: #7fb4f0; --accent-soft: #1b2a3c;
   --vermilion: #e08a76; --moss: #8fb37c;
+  --globe-dark: 1; --globe-base: #4a505c; --globe-glow: #262b35; --globe-recent: var(--vermilion);
   --serif: "Newsreader", Georgia, "Songti SC", "Source Han Serif SC", serif;
   --sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
   --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -22,6 +23,7 @@
   --ink: #1f2522; --ink-strong: #0b100e; --ink-soft: #54605a; --ink-faint: #87938c;
   --accent: #1b4b86; --accent-soft: #e4ecf6;
   --vermilion: #a53a2b; --moss: #40643a;
+  --globe-dark: 0; --globe-base: #ffffff; --globe-glow: #dfe5e1;
   color-scheme: light;
 }
 
@@ -344,11 +346,42 @@ p.lede { font-size: 17.5px; line-height: 1.58; color: var(--ink-soft); margin: 0
 
 /* footer */
 .foot { border-top: 1px solid var(--rule); margin-top: 20px; }
-.footin { max-width: var(--page); margin: 0 auto; padding: 20px 26px 44px; display: flex; gap: 18px; flex-wrap: wrap; align-items: baseline; font-family: var(--sans); font-size: 12px; color: var(--ink-faint); }
+.footin { max-width: var(--page); margin: 0 auto; padding: 20px 26px 44px; display: flex; gap: 18px; flex-wrap: wrap; align-items: center; font-family: var(--sans); font-size: 12px; color: var(--ink-faint); }
 .footin .links { display: flex; gap: 14px; flex-wrap: wrap; }
 .footin .links a { color: var(--ink-soft); }
-.footin .tot { margin-left: auto; font-variant-numeric: tabular-nums; }
+.footin .tot { margin-left: auto; display: flex; align-items: center; gap: 12px; font-variant-numeric: tabular-nums; }
+.footin .tot-lines { display: grid; gap: 3px; }
+.footin .tot-lines a { color: var(--ink-soft); }
+.footin .tot-globe .globe { width: 80px; }
 .footin .tot b { font-family: var(--mono); color: var(--ink-soft); font-weight: 500; }
+
+/* visitor globe */
+.globe { aspect-ratio: 1; position: relative; }
+.globe canvas { display: block; width: 100%; height: 100%; opacity: 0; transition: opacity .8s ease; }
+.globe canvas[data-ready] { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { .globe canvas { transition: none; } }
+/* pan-y leaves vertical swipes to the page, so the globe never traps scrolling on a phone. */
+.globe[data-interactive] canvas { cursor: grab; touch-action: pan-y; }
+.globe.dragging canvas { cursor: grabbing; }
+.globe-tip { position: absolute; transform: translate(-50%, calc(-100% - 10px)); pointer-events: none; white-space: nowrap; padding: 6px 9px; border: 1px solid var(--rule); border-radius: 4px; background: var(--card); font-family: var(--sans); font-size: 12px; line-height: 1.4; color: var(--ink-soft); }
+.globe-tip b { display: block; font-weight: 600; color: var(--ink-strong); }
+.vlede { font-family: var(--sans); font-size: 14px; line-height: 1.6; color: var(--ink-soft); margin: 0 0 28px; max-width: 46em; }
+.visitors { display: grid; grid-template-columns: minmax(0, 400px) minmax(0, 1fr); gap: 56px; align-items: start; }
+.vglobe { position: sticky; top: 24px; }
+.vnote { margin: 0; font-family: var(--sans); font-size: 12.5px; line-height: 1.55; color: var(--ink-faint); text-align: center; }
+.vtab { width: 100%; border-collapse: collapse; font-family: var(--sans); font-size: 13.5px; color: var(--ink); }
+.vtab th { text-align: left; font-size: 11px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-faint); padding: 0 0 9px; border-bottom: 1px solid var(--rule); }
+.vtab thead td { padding: 0; border-bottom: 1px solid var(--rule); }
+.vtab tbody td { padding: 6px 0; border-bottom: 1px solid var(--rule-hair); }
+.vtab .n { text-align: right; padding-right: 16px; white-space: nowrap; font-family: var(--mono); font-variant-numeric: tabular-nums; color: var(--ink-soft); }
+.vtab .r { color: var(--vermilion); }
+.vtab tbody tr:hover td { background: var(--paper-2); }
+.vtab .bar { width: 40%; }
+.vtab .bar span { display: block; height: 5px; min-width: 2px; border-radius: 1px; background: var(--accent); }
+@media (max-width: 760px) {
+  .visitors { grid-template-columns: 1fr; gap: 28px; }
+  .vglobe { position: static; max-width: 300px; margin: 0 auto; }
+}
 
 
 /* On a phone the masthead cannot fit name, nav and controls on one line, so the nav

@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "astro": "^5.18.2",
+    "cobe": "^2.0.1",
     "katex": "0.16.47",
     "rehype-katex": "^7.0.1",
     "rehype-slug": "^6.0.0",

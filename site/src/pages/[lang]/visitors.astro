@@ -1,0 +1,59 @@
+---
+import Base from '../../layouts/Base.astro'
+import Globe from '../../components/Globe.astro'
+import { LANGS, type Lang } from '../../site.config'
+import { t } from '../../lib/taxonomy'
+import { countryVisits, placeName, type Country } from '../../lib/visitors'
+
+// Built only when the build could read GoatCounter, so the page is never published empty.
+export async function getStaticPaths() {
+  return (await countryVisits()) ? LANGS.map((lang) => ({ params: { lang } })) : []
+}
+
+const lang = Astro.params.lang as Lang
+const L = t(lang)
+const countries = (await countryVisits())!
+const name = (c: Country) => placeName(c, lang)
+const rows = [...countries].sort((a, b) => b.visits - a.visits || name(a).localeCompare(name(b), lang))
+const most = rows[0].visits
+const count = (n: number) => n.toLocaleString('en-US')
+
+// The build time, in the site owner's time zone.
+const updated = new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'America/Los_Angeles',
+  year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false,
+}).format(new Date()).replace(', ', ' ')
+// Chinese sentences follow one another with no space after the full stop.
+const lede = [L.visitorsLede.replace('{n}', String(rows.length)), L.updatedOn.replace('{time}', updated)]
+  .join(lang === 'zh' ? '' : ' ')
+---
+<Base lang={lang} title={L.visitors} altPaths={{ en: '/en/visitors', zh: '/zh/visitors' }}>
+  <h1 class="big">{L.visitors}</h1>
+  <p class="vlede">{lede}</p>
+  <div class="visitors">
+    <div class="vglobe">
+      <Globe countries={countries} lang={lang} label={L.globeLabel} interactive rows="#visitor-rows" />
+      <p class="vnote">{L.globeHelp}</p>
+    </div>
+    <table class="vtab">
+      <thead>
+        <tr>
+          <th scope="col">{L.place}</th>
+          <th scope="col" class="n">{L.visitsHead}</th>
+          <th scope="col" class="n">{L.recentHead}</th>
+          <td></td>
+        </tr>
+      </thead>
+      <tbody id="visitor-rows">
+        {rows.map((c) => (
+          <tr data-code={c.code}>
+            <td>{name(c)}</td>
+            <td class="n">{count(c.visits)}</td>
+            <td class="n r">{c.recent ? count(c.recent) : ''}</td>
+            <td class="bar" aria-hidden="true"><span style={`width:${((100 * c.visits) / most).toFixed(1)}%`}></span></td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+</Base>

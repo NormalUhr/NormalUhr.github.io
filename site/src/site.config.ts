@@ -31,6 +31,8 @@ export const site = {
    * GoatCounter site code, i.e. the "yourname" in yourname.goatcounter.com.
    * Setting it turns on the page-view script, the per-article read count and the
    * site total in the footer. Leave null and none of that appears.
+   * A read-only GoatCounter API key in GOATCOUNTER_TOKEN at build time also adds the
+   * visitor globe to the footer and the visitors page (see src/lib/visitors.ts).
    */
   goatcounter: 'normaluhr' as string | null,
 

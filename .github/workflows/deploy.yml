@@ -8,6 +8,10 @@ name: Deploy site
 on:
   push:
     branches: [master]
+  # Hourly rebuild, so the visitor globe picks up the latest GoatCounter numbers. It runs
+  # at 17 minutes past because GitHub delays scheduled runs most at the top of the hour.
+  schedule:
+    - cron: '17 * * * *'
   workflow_dispatch:
 
 permissions:
@@ -39,6 +43,9 @@ jobs:
           ln -sfn ../../videos site/public/videos
       - run: npm run build
         working-directory: site
+        env:
+          # Read-only GoatCounter key for the visitor globe. Without it the globe is left out.
+          GOATCOUNTER_TOKEN: ${{ secrets.GOATCOUNTER_TOKEN }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site/dist
