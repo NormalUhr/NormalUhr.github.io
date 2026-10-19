@@ -44,6 +44,27 @@ It fails the run on a JavaScript error, a dead internal link, a media file that 
 not exist, a page that scrolls sideways, or a page with no title. It also lists any
 media loaded from another host. This is the gate to run before pushing anything.
 
+The postman clock and its town have two checks of their own:
+
+```bash
+npm test             # the shared time, the town's calendar and festivals, and what the postman should show
+npm run clocks       # after a build: what the clock draws, and what the town does
+```
+
+`npm run clocks` loads the site in headless Chrome. It compares what the postman clock on
+the "not found" page draws with what it should show at 00:00, 00:01, 12:00, 14:04, 14:05,
+14:37, 14:59, 15:00, 23:05 and 23:59, while a minute, an hour and midnight pass, and after
+the page comes back from the background. It then opens the town in both languages and
+checks it against the mail in `dist/<lang>/postman.json`: the postman starts at the given
+day, walks to the newest mail when he is clicked, and hands over a paper that carries that
+day's articles and short posts, written in the hand for its language. It checks that each
+Easter egg opens the town on its day, and that the letter leaves the page where the reader
+had scrolled to. It also checks the printed date, the keys, the longest trip between two
+days with mail, that the cats stay on the same roofs while the postman walks, that the
+lampposts at a crossing name its two months and move with the street, reduced motion, and
+that the town and its paper fit 390 and 320 pixels wide. Add `-- --shots` to also save
+screenshots to `shots/clocks/`.
+
 ## Layout
 
 ```
@@ -57,12 +78,103 @@ site/
     content/articles/     en/<slug>.md and zh/<slug>.md
     content/notes/        en/ and zh/, both required per post (currently empty)
     content/pages/        About, one file per language (currently empty)
+    eggs/                 the Easter eggs: when each one appears, on every page
+    clocks/               the postman clock, his town, and his visits to the pages
     layouts/ components/ pages/ styles/
   scripts/
     migrate.mjs           the Jekyll import, re-runnable
-    audit.mjs             the check described above
+    audit.mjs             the page check described above
+    clocks.test.mjs       what the clock should show, and the town's calendar
+    clocks.mjs            what the clock and the town do, in the browser
+    serve.mjs             serves dist/ for the two browser checks
     migration-report.txt  what the import decided, per post
 ```
+
+## Easter eggs
+
+No page links to the postman's town. A visitor finds it in one of these ways:
+
+- **He walks past.** At the turn of each hour on the visitor's clock, and at a random moment
+  on a share of page views, the postman walks along the bottom of the window. Pressing him
+  opens the town at today.
+- **A date.** Pressing any date in a list or under an article title opens the town on that
+  day. Dates show a pointer when the mouse is over them.
+- **The page that does not exist.** The "not found" page shows the postman clock described
+  below. Pressing it opens the town at today.
+- **A letter.** A reader who reaches the end of an article, after spending a share of its
+  reading time on it, gets a letter at the right edge of the window. Pressing it opens the
+  town on the day the article came out.
+
+`src/eggs/index.ts` runs on every page. It only waits for these moments, using the triggers
+in `src/eggs/triggers.ts`, and loads an egg's code when its moment comes. How often the
+walk happens by chance, and how much reading time the letter needs, are set in
+`src/eggs/luck.ts`. A new egg adds its moment to `index.ts`, reusing a trigger where one fits.
+
+## The clock
+
+The Time Postman is a clock. Its town has a street for each hour and a house for each
+minute, and the postman is at the house whose street is the hour and whose number is the
+minute. It stands on the "not found" page.
+
+The clock reads one shared time (`src/clocks/time.ts`) and draws what
+`src/clocks/encode.ts` says it should show, so any moment can be drawn directly. It is
+drawn only while the page is visible. Its folder, `src/clocks/scenes/postman/`, has the
+drawing (`index.ts` and `town.ts`), the styles (`style.css`), its name (`copy.ts`) and the
+rest of its words (`phrases.ts`), all in both languages. `src/clocks/host.ts` puts the clock
+on the page and opens the town, and `src/clocks/visits.ts` draws the walk and the letter.
+
+## The town
+
+The Easter eggs open the same town at the scale of days, with no words around it.
+Each house is a day and each street is a month. A street ends at a crossing, and the next
+month's street starts on the other side. A lamppost stands on each corner of a crossing,
+and its sign names the street on that side by its month and year. The date of the house the
+postman is at is printed in the bottom right corner, the way an old film camera printed the
+date on a photo. Days after today are drawn as blueprints.
+
+The mailbox of a day with an article or a short post has its red flag up. At such a day
+the postman takes the mail out, and clicking him opens that day's newspaper, The Time
+Post, with the article's title, opening lines and a link, or the short post in full.
+Clicking him with empty hands sends him to the nearest earlier day with mail. A reader can
+also click a house, drag the street, scroll, or use the keys: the arrows walk a day, Shift
+with an arrow walks to the next day with mail, Page Up and Page Down walk a month, and Home
+walks back to today. A trip of more than 45 houses is shown as a time lapse.
+
+The paper is written by hand on a sheet with a grain, a fold and darker edges. English is
+written in Grape Nuts. Chinese is written in Ma Shan Zheng, a brush pen, with Caveat Brush
+for the English words and figures in it. The fonts come from Google Fonts like the site's
+own, but only once the postman takes out a day's mail, and for Chinese Google sends only
+the characters on that day's paper. Without Google Fonts the paper falls back to the
+handwriting fonts the system has, such as Bradley Hand and Kaiti.
+
+Each day keeps the same season, weather and festivals every time it is drawn. The date is
+the seed for the weather, and the Spring Festival and the Mid-Autumn Festival come from
+the browser's Chinese calendar. A dog follows the postman, pigeons sit on the sign where
+each street begins, a cat sleeps on the roof of about one house in ten (always the same
+houses), someone reads the paper on a bench on days with an article, and now and then
+someone rides past on a bicycle.
+
+The mail is built into `/<lang>/postman.json` by `src/pages/[lang]/postman.json.ts` and is
+fetched only when the town is first opened. The town's code is in `src/clocks/museum/`:
+the calendar (`days.ts`), the mail and its lookup (`mail.ts`), the town and how it moves
+(`index.ts`), the season and weather (`sky.ts`), the townsfolk (`cast.ts`), the date in the
+corner (`datestamp.ts`), the newspaper
+(`paper.ts`), the styles (`style.css`) and the words in both languages (`copy.ts`).
+
+## Previews
+
+To see any moment, add these to the address of any page. The clock itself is on `/404.html`.
+
+| | |
+| --- | --- |
+| `clock-time=14:37` | the clock reads 14:37 today and runs on from there; also `14:37:50` or `2026-11-01T01:59:50` |
+| `clock-pause` | stop the time |
+| `clock-zone=Asia/Shanghai` | read the time in another zone |
+| `clock-open` | open the town straight away |
+| `eggs=now` | the postman walks past after a second, and the letter comes as soon as the end of an article is reached |
+
+The town takes today's date from the same time, so `/en/?clock-time=2026-02-17T10:00&clock-open`
+opens it on the Spring Festival of 2026, with every later day drawn as a blueprint.
 
 ## Copy you need to write
 

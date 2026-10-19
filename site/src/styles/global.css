@@ -41,7 +41,8 @@ body::before {
   content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: .5;
   background: repeating-linear-gradient(to bottom, transparent 0 33px, var(--rule-hair) 33px 34px);
 }
-body > * { position: relative; z-index: 1; }
+/* Above the ruled lines. A dialog keeps the browser's own position: fixed, so a modal dialog opens over the place the reader has scrolled to. */
+body > :not(dialog) { position: relative; z-index: 1; }
 a { color: var(--accent); text-decoration: none; text-underline-offset: 2px; }
 a:hover { text-decoration: underline; }
 button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
@@ -383,6 +384,9 @@ p.lede { font-size: 17.5px; line-height: 1.58; color: var(--ink-soft); margin: 0
   .vglobe { position: static; max-width: 300px; margin: 0 auto; }
 }
 
+
+/* A date opens the postman's town on that day (src/eggs). */
+main time[datetime] { cursor: pointer; }
 
 /* On a phone the masthead cannot fit name, nav and controls on one line, so the nav
    takes a line of its own rather than pushing the page sideways. */

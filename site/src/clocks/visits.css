@@ -1,0 +1,25 @@
+/* The postman walking past, on a strip along the bottom of the window that lets clicks through to the page. */
+.egg-street { position: fixed; inset: auto 0 0 0; z-index: 50; height: 76px; overflow: hidden; pointer-events: none; }
+.egg-walker {
+  position: absolute; left: 0; bottom: 4px; width: 42px; height: 66px; overflow: visible; pointer-events: auto; cursor: pointer;
+  /* A navy uniform would disappear into the dark page, so a faint light outlines him there. */
+  filter: drop-shadow(0 0 1px rgb(255 255 255 / .5));
+}
+:root[data-theme="light"] .egg-walker { filter: none; }
+.egg-walker.egg-still { left: auto; right: 24px; }
+.egg-walker:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+
+/* A letter slipped in at the right edge of the window. Its strip hides the part still outside. */
+.egg-edge { position: fixed; right: 0; bottom: 22vh; z-index: 50; width: 120px; height: 110px; overflow: hidden; pointer-events: none; }
+.egg-letter {
+  --egg-ink: #1f2b55;
+  position: absolute; right: 0; top: 22px; width: 96px; height: 66px; overflow: visible; pointer-events: auto; cursor: pointer;
+  transform: translateX(34%) rotate(-9deg); transition: transform .35s cubic-bezier(.2, .7, .3, 1);
+  filter: drop-shadow(0 6px 10px rgb(0 0 0 / .35));
+}
+.egg-letter:hover, .egg-letter:focus-visible { transform: translateX(14%) rotate(-6deg); outline: none; }
+.egg-paper { fill: var(--pm-envelope); }
+.egg-fold { fill: none; stroke: var(--pm-shade); stroke-width: .8; opacity: .35; }
+.egg-stamp { fill: var(--pm-stamp); }
+.egg-ink { fill: none; stroke: var(--egg-ink); stroke-width: 1.1; stroke-linecap: round; opacity: .7; }
+@media (prefers-reduced-motion: reduce) { .egg-letter { transition: none; } }

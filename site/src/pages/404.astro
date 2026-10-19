@@ -6,6 +6,7 @@ const L = t(DEFAULT_LANG)
 ---
 <Base lang={DEFAULT_LANG} title={L.notFound}>
   <h1 class="big">{L.notFound}</h1>
+  <button class="lost" type="button" data-egg="lost" hidden></button>
   <p style="margin-top:22px">
     <a class="mini" href={`/${DEFAULT_LANG}/articles`}>{L.articles}</a>
   </p>

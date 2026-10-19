@@ -3,9 +3,9 @@
 //
 //   node scripts/audit.mjs [--shots]
 import fs from 'node:fs'
-import http from 'node:http'
 import path from 'node:path'
 import puppeteer from 'puppeteer-core'
+import { resolver, serve } from './serve.mjs'
 
 const SITE = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..')
 const DIST = path.join(SITE, 'dist')
@@ -15,53 +15,8 @@ const PORT = 4399
 const THIRD_PARTY = /googleapis|gstatic|goatcounter|giscus|gc\.zgo\.at|\/v1\//
 const WANT_SHOTS = process.argv.includes('--shots')
 
-const TYPES = {
-  '.html': 'text/html; charset=utf-8', '.css': 'text/css', '.js': 'text/javascript',
-  '.json': 'application/json', '.xml': 'application/xml', '.svg': 'image/svg+xml',
-  '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.gif': 'image/gif',
-  '.woff2': 'font/woff2', '.woff': 'font/woff', '.ttf': 'font/ttf',
-  '.mp4': 'video/mp4', '.mp3': 'audio/mpeg', '.ico': 'image/x-icon',
-}
-
-function resolveFile(pathname) {
-  const clean = decodeURIComponent(pathname.split('?')[0].split('#')[0])
-  const candidates = [
-    path.join(DIST, clean),
-    path.join(DIST, clean, 'index.html'),
-    path.join(DIST, `${clean}.html`),
-  ]
-  for (const c of candidates) {
-    if (!path.resolve(c).startsWith(DIST)) continue
-    if (fs.existsSync(c) && fs.statSync(c).isFile()) return c
-  }
-  return null
-}
-
-const server = http.createServer((req, res) => {
-  const file = resolveFile(new URL(req.url, 'http://x').pathname)
-  if (!file) {
-    res.writeHead(404, { 'content-type': 'text/plain' })
-    return res.end('404')
-  }
-  const type = TYPES[path.extname(file)] ?? 'application/octet-stream'
-  const size = fs.statSync(file).size
-  // <video> and <audio> ask for byte ranges, so a plain 200 is not enough.
-  const range = /^bytes=(\d*)-(\d*)$/.exec(req.headers.range ?? '')
-  if (range) {
-    const start = range[1] ? Number(range[1]) : 0
-    const end = range[2] ? Number(range[2]) : size - 1
-    res.writeHead(206, {
-      'content-type': type,
-      'accept-ranges': 'bytes',
-      'content-range': `bytes ${start}-${end}/${size}`,
-      'content-length': end - start + 1,
-    })
-    return fs.createReadStream(file, { start, end }).pipe(res)
-  }
-  res.writeHead(200, { 'content-type': type, 'accept-ranges': 'bytes', 'content-length': size })
-  fs.createReadStream(file).pipe(res)
-})
-await new Promise((r) => server.listen(PORT, r))
+const resolveFile = resolver(DIST)
+const server = await serve(DIST, PORT)
 
 /** Every built page, as a site-root path. */
 function pages(dir = DIST, prefix = '') {

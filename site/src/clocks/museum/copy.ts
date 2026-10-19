@@ -1,0 +1,46 @@
+import type { Lang } from '../../site.config'
+
+/** The words of the larger view, in each language. */
+export default {
+  en: {
+    scene:
+      'The postman’s town, where each house is a day and each street a month. The arrow keys walk a day, Shift with an arrow walks to the next day with mail, Page Up and Page Down walk a month, and Home walks back to today.',
+    postman: 'The postman',
+    letter: 'A letter',
+    holding: 'The postman, with the mail from {date}',
+    arrived: '{date}.',
+    mail: '{date}. The postman has the mail from this day.',
+    close: 'Close',
+    paper: 'The Time Post',
+    issue: 'Vol. {vol}, No. {no}',
+    weather: { clear: 'Clear', rain: 'Rain', snow: 'Snow' },
+    article: 'New article',
+    note: 'Short post',
+    minutes: '{n} min read',
+    read: 'Read the article',
+    open: 'Open in Posts',
+    woof: 'Woof',
+    mew: 'Mew',
+    locale: 'en-US',
+  },
+  zh: {
+    scene: '邮差的小镇，每一户人家是一天，每一条街是一个月。方向键往前或往后走一天，按住 Shift 再按方向键会走到下一个有信的日子，Page Up 和 Page Down 走一个月，Home 回到今天。',
+    postman: '邮差',
+    letter: '一封信',
+    holding: '邮差拿着 {date} 的信',
+    arrived: '{date}。',
+    mail: '{date}。邮差拿到了这一天的信。',
+    close: '关闭',
+    paper: '时间邮报',
+    issue: '第 {vol} 卷 · 第 {no} 期',
+    weather: { clear: '晴', rain: '雨', snow: '雪' },
+    article: '新文章',
+    note: '随记',
+    minutes: '{n} 分钟',
+    read: '阅读全文',
+    open: '在随记里打开',
+    woof: '汪',
+    mew: '喵',
+    locale: 'zh-CN',
+  },
+} satisfies Record<Lang, Record<string, string | Record<string, string>>>

@@ -8,7 +8,9 @@
     "preview": "astro preview",
     "migrate": "node scripts/migrate.mjs",
     "verify": "astro build && node scripts/audit.mjs",
-    "shots": "node scripts/audit.mjs --shots"
+    "shots": "node scripts/audit.mjs --shots",
+    "test": "node --test scripts/clocks.test.mjs",
+    "clocks": "node scripts/clocks.mjs"
   },
   "dependencies": {
     "astro": "^5.18.2",

@@ -1,0 +1,232 @@
+/* Evening in the dark theme, with a deep blue sky and lit windows. Daytime in the light theme. */
+.pm {
+  --pm-sky-top: #0c162c;
+  --pm-sky-mid: #1d2d4f;
+  --pm-sky-low: #34456a;
+  --pm-night: 1;
+  --pm-day: 0;
+  --pm-glow: 1;
+  --pm-star: #efe6cc;
+  --pm-moon: #f1e5c4;
+  --pm-far-back: #27375b;
+  --pm-far-front: #1d2a47;
+  --pm-far-tree: #172139;
+  --pm-far-window: #e7b766;
+
+  --pm-wall-0: #9b8059;
+  --pm-wall-1: #a69c86;
+  --pm-wall-2: #956c5c;
+  --pm-wall-3: #7c8568;
+  --pm-wall-4: #708090;
+  --pm-wall-5: #a3815f;
+  --pm-wall-6: #b2ab98;
+  --pm-roof-0: #8b4533;
+  --pm-roof-1: #9c5638;
+  --pm-roof-2: #6f3529;
+  --pm-door-0: #36573f;
+  --pm-door-1: #2f4b69;
+  --pm-door-2: #6b3129;
+  --pm-door-3: #a8833a;
+  --pm-door-4: #39606a;
+  --pm-shade: #070b18;
+  --pm-frame: #b8af9e;
+  --pm-glass: #263049;
+  --pm-lit: #f6c977;
+  --pm-curtain: #d79a52;
+  --pm-enamel: #1d3a66;
+  --pm-enamel-ink: #f4eddc;
+  --pm-box: #34513f;
+  --pm-flap: #1e3127;
+  --pm-peek: #f2ebda;
+  --pm-brass: #d8b45c;
+  --pm-stone: #6c6962;
+  --pm-leaf: #4f6d47;
+  --pm-tree: #33503c;
+  --pm-trunk: #4a3b2d;
+  --pm-pot: #a1573d;
+  --pm-flower: #e2857a;
+  --pm-flower-2: #f0e3c8;
+
+  --pm-pave: #474a54;
+  --pm-joint: #3a3d47;
+  --pm-kerb: #5d6069;
+  --pm-road: #262932;
+  --pm-dash: #62656c;
+
+  --pm-iron: #171b22;
+  --pm-lantern: #f8d690;
+  --pm-sign: #ece4cf;
+  --pm-sign-ink: #1d3a66;
+  --pm-page: #ece4cf;
+  --pm-page-ink: #2b2523;
+
+  --pm-uniform: #2e4068;
+  --pm-uniform-back: #1f2c4b;
+  --pm-red: #c04c3f;
+  --pm-bag: #a86f3e;
+  --pm-bag-flap: #8a5730;
+  --pm-strap: #6f4727;
+  --pm-skin: #e5b691;
+  --pm-skin-shade: #c79373;
+  --pm-hair: #3b2b22;
+  --pm-shoe: #111318;
+  --pm-envelope: #f6efdf;
+  --pm-stamp: #c2483b;
+}
+:root[data-theme="light"] .pm {
+  --pm-sky-top: #b7d1e3;
+  --pm-sky-mid: #d8e5ec;
+  --pm-sky-low: #eef0e8;
+  --pm-night: 0;
+  --pm-day: 1;
+  --pm-glow: 0;
+  --pm-far-back: #b4c5c0;
+  --pm-far-front: #a6b9b1;
+  --pm-far-tree: #92a99e;
+  --pm-far-window: #9fb3ad;
+
+  --pm-wall-0: #ddb97e;
+  --pm-wall-1: #ebe0c7;
+  --pm-wall-2: #dca48c;
+  --pm-wall-3: #bec7a3;
+  --pm-wall-4: #bac9d1;
+  --pm-wall-5: #e7c39d;
+  --pm-wall-6: #f3ecdf;
+  --pm-roof-0: #b9573a;
+  --pm-roof-1: #c96d45;
+  --pm-roof-2: #9e4935;
+  --pm-door-0: #44664f;
+  --pm-door-1: #355a7c;
+  --pm-door-2: #7f3c31;
+  --pm-door-3: #c99a3f;
+  --pm-door-4: #4b7479;
+  --pm-shade: #3a2a18;
+  --pm-frame: #f5f0e6;
+  --pm-glass: #70879a;
+  --pm-lit: #70879a;
+  --pm-enamel: #234a7d;
+  --pm-enamel-ink: #fbf7ee;
+  --pm-box: #3f6250;
+  --pm-flap: #2b4638;
+  --pm-peek: #ffffff;
+  --pm-stone: #c9c1b2;
+  --pm-leaf: #6f8f55;
+  --pm-tree: #5d7d4c;
+  --pm-trunk: #6d5440;
+  --pm-pot: #bc6a48;
+  --pm-flower: #d4584a;
+  --pm-flower-2: #ffffff;
+
+  --pm-pave: #d9d3c6;
+  --pm-joint: #c5beb0;
+  --pm-kerb: #bbb4a6;
+  --pm-road: #8f8b84;
+  --pm-dash: #ede8dc;
+
+  --pm-iron: #2c3036;
+  --pm-lantern: #e3eae8;
+  --pm-sign: #f7f2e6;
+  --pm-sign-ink: #234a7d;
+  --pm-page: #fbf8f1;
+
+  --pm-uniform: #25375d;
+  --pm-uniform-back: #1a2846;
+}
+
+.pm .pm-night { opacity: var(--pm-night); }
+.pm .pm-day { opacity: var(--pm-day); }
+.pm-star { fill: var(--pm-star); }
+.pm-moon { fill: var(--pm-moon); }
+.pm-sun { fill: #fff6dc; }
+.pm-sun-halo { fill: #fff6dc; opacity: .32; }
+.pm-cloud { fill: #fff; opacity: .78; }
+.pm-far-back { fill: var(--pm-far-back); }
+.pm-far-front { fill: var(--pm-far-front); }
+.pm-far-tree { fill: var(--pm-far-tree); }
+.pm-far-window { fill: var(--pm-far-window); }
+
+.pm-pave { fill: var(--pm-pave); }
+.pm-kerb { fill: var(--pm-kerb); }
+.pm-road { fill: var(--pm-road); }
+.pm-gutter { fill: var(--pm-shade); opacity: .3; }
+.pm-joint { fill: none; stroke: var(--pm-joint); stroke-width: .8; }
+.pm-dash { fill: var(--pm-dash); }
+.pm-kerb-edge { fill: none; stroke: var(--pm-kerb); stroke-width: 1.6; }
+.pm-stone { fill: var(--pm-stone); }
+.pm-cap { fill: var(--pm-shade); opacity: .55; }
+
+.pm-shade { fill: var(--pm-shade); opacity: .16; }
+.pm-band { fill: var(--pm-shade); opacity: .12; }
+.pm-eave { fill: var(--pm-shade); opacity: .35; }
+.pm-tile-line { fill: none; stroke: #fff; stroke-width: .7; opacity: .14; }
+.pm-frame { fill: var(--pm-frame); }
+.pm-glass { fill: var(--pm-glass); }
+.pm-glass.pm-lit { fill: var(--pm-lit); }
+.pm-curtain { fill: var(--pm-curtain); opacity: var(--pm-glow); }
+.pm-mullion { fill: none; stroke: var(--pm-frame); stroke-width: 1; }
+.pm-slats { fill: none; stroke: var(--pm-shade); stroke-width: .6; opacity: .35; }
+.pm-rail { fill: none; stroke: var(--pm-iron); stroke-width: .9; }
+.pm-panel { fill: none; stroke: var(--pm-shade); stroke-width: .7; opacity: .35; }
+.pm-brass { fill: var(--pm-brass); }
+.pm-step { fill: var(--pm-stone); }
+.pm-glow { opacity: var(--pm-glow); }
+.pm-porch { opacity: 0; }
+[data-dest] > .pm-porch { opacity: var(--pm-glow); }
+
+.pm-enamel { fill: var(--pm-enamel); }
+.pm-rim { fill: none; stroke: var(--pm-enamel-ink); stroke-width: .7; opacity: .8; }
+.pm-num {
+  fill: var(--pm-enamel-ink); font-family: var(--sans); font-weight: 600; font-size: 13px;
+  text-anchor: middle; font-variant-numeric: tabular-nums; letter-spacing: .02em;
+}
+.pm-box { fill: var(--pm-box); }
+.pm-flap { fill: var(--pm-flap); }
+.pm-peek { fill: var(--pm-peek); opacity: 0; }
+.pm-done .pm-peek, [data-dest] .pm-peek { opacity: 1; }
+
+.pm-leaf { fill: var(--pm-leaf); }
+.pm-tree { fill: var(--pm-tree); }
+.pm-trunk { fill: var(--pm-trunk); }
+.pm-pot { fill: var(--pm-pot); }
+.pm-flower { fill: var(--pm-flower); }
+.pm-flower-2 { fill: var(--pm-flower-2); }
+
+.pm-shadow { fill: #000; opacity: .28; }
+.pm-uniform { fill: var(--pm-uniform); }
+.pm-uniform-back { fill: var(--pm-uniform-back); }
+.pm-shoe { fill: var(--pm-shoe); }
+.pm-belt { fill: var(--pm-uniform-back); }
+.pm-strap { fill: none; stroke: var(--pm-strap); stroke-width: 1.3; stroke-linecap: round; }
+.pm-bag { fill: var(--pm-bag); }
+.pm-bag-flap { fill: var(--pm-bag-flap); }
+.pm-skin { fill: var(--pm-skin); }
+.pm-skin-shade { fill: var(--pm-skin-shade); }
+.pm-hair { fill: var(--pm-hair); }
+.pm-moustache { fill: none; stroke: var(--pm-hair); stroke-width: .9; stroke-linecap: round; }
+.pm-band-red { fill: var(--pm-red); }
+.pm-visor { fill: var(--pm-uniform-back); }
+.pm-envelope { fill: var(--pm-envelope); }
+.pm-envelope-fold { fill: none; stroke: var(--pm-shade); stroke-width: .4; opacity: .4; }
+.pm-stamp { fill: var(--pm-stamp); }
+
+.pm-iron { fill: var(--pm-iron); }
+.pm-iron-line { fill: none; stroke: var(--pm-iron); stroke-width: 1.2; }
+.pm-lantern { fill: var(--pm-lantern); }
+.pm-sign { transform-box: fill-box; transform-origin: center; }
+.pm-calendar { transform-box: fill-box; transform-origin: 50% 0; }
+.pm-sign-plate { fill: var(--pm-sign); }
+.pm-sign-rim { fill: none; stroke: var(--pm-sign-ink); stroke-width: 1; }
+.pm-sign-text {
+  fill: var(--pm-sign-ink); font-family: var(--sans); font-weight: 600; font-size: 8.5px;
+  letter-spacing: .1em; text-transform: uppercase; text-anchor: middle;
+}
+.pm-sign-num { font-size: 15px; font-weight: 700; letter-spacing: .02em; font-variant-numeric: tabular-nums; }
+.pm-cal-page { fill: var(--pm-page); }
+.pm-cal-band { fill: var(--pm-red); }
+.pm-cal-month { fill: var(--pm-page); font-family: var(--sans); font-weight: 700; font-size: 3.9px; letter-spacing: .06em; text-anchor: middle; }
+.pm-cal-day {
+  fill: var(--pm-page-ink); font-family: var(--sans); font-weight: 700; font-size: 9.6px;
+  text-anchor: middle; font-variant-numeric: tabular-nums;
+}
+
+.pm [role="button"] { cursor: pointer; outline: none; }

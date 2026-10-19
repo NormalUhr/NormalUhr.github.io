@@ -113,7 +113,7 @@ const bib = [
         )}
       </div>
 
-      <div class="prose" id="prose" lang={bodyLang}><Content /></div>
+      <div class="prose" id="prose" lang={bodyLang} data-egg="read" data-day={dateISO(data.date)} data-minutes={article.minutes}><Content /></div>
 
       {(data.tags.length > 0 || site.goatcounter || site.likes) && (
         <div class="tally">

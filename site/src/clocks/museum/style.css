@@ -1,0 +1,214 @@
+/* What the larger view adds to the postman's town. Colours are tokens on .mu, like the town's own on .pm. */
+.mu {
+  --mu-note: #f6c977; --mu-cat: #c98443; --mu-cat-dark: #5a3a1c; --mu-dog: #b27b4b; --mu-dog-dark: #4a3020;
+  --mu-bird: #8d949e; --mu-bird-wing: #6f7680; --mu-coat: #6a7b5a; --mu-paper: #efe9da;
+  --mu-drop: #a9bbd1; --mu-flake: #ffffff; --mu-petal: #f2b8c6; --mu-leaf: #c8692e; --mu-firefly: #f8e27a;
+  --mu-shade: #050914; --mu-blueprint: #7d9fcf; --mu-parcel: #b8834d; --mu-twine: #6d4a28;
+  --mu-bike: #8fa3bd; --mu-rider: #b5533f; --mu-rider-back: #84392c; --mu-tyre: #0d0f13;
+  display: block; width: 100%; height: 100%;
+  cursor: grab; touch-action: pan-y pinch-zoom; user-select: none; -webkit-user-select: none; outline: none;
+}
+.mu:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.mu.mu-dragging, .mu.mu-dragging * { cursor: grabbing; }
+:root[data-theme="light"] .mu {
+  --mu-note: #25375d; --mu-bird: #8a919a; --mu-coat: #5d7350;
+  --mu-drop: #6f86a0; --mu-firefly: #c9a53b; --mu-shade: #0c1730; --mu-blueprint: #4a74a8;
+  --mu-bike: #3c4b61; --mu-tyre: #22262d;
+}
+
+/* The trees, and the hills behind the town, follow the seasons. */
+.pm.mu-spring { --pm-tree: #8a5d74; --pm-far-tree: #3a2f45; }
+.pm.mu-autumn { --pm-tree: #8f5326; --pm-leaf: #9c6a2e; --pm-far-tree: #3a2a24; }
+.pm.mu-winter { --pm-tree: #4d5868; --pm-leaf: #566172; --pm-far-back: #3a4766; --pm-far-front: #2f3b58; --pm-far-tree: #273149; }
+:root[data-theme="light"] .pm.mu-spring { --pm-tree: #e2a6ba; --pm-far-tree: #c9a3b2; }
+:root[data-theme="light"] .pm.mu-autumn { --pm-tree: #c9773a; --pm-leaf: #c98b45; --pm-far-tree: #b8916b; }
+:root[data-theme="light"] .pm.mu-winter { --pm-tree: #b8c2cc; --pm-leaf: #c2cad3; --pm-far-back: #d7dfe5; --pm-far-front: #c9d3da; --pm-far-tree: #aab6c0; }
+
+.mu [data-plot] { cursor: pointer; }
+.mu [data-house] { transition: transform .18s ease; }
+.mu:not(.mu-dragging) [data-plot]:hover [data-house] { transform: translateY(-1.5px); }
+.mu [data-dest] .pm-peek { opacity: 0; }
+.mu-man { cursor: pointer; }
+.mu-hit { fill: transparent; }
+.mu-ring { fill: none; stroke: var(--accent); stroke-width: 1.2; opacity: 0; }
+.mu-man:focus-visible .mu-ring { opacity: 1; }
+.mu-say { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+/* The date in the corner, in the orange that old cameras printed on their photos. */
+.mu-datestamp { fill: #ff9b45; opacity: .92; pointer-events: none; }
+
+/* The mailbox flag is up while a day's mail waits to be collected. */
+.mu-pole { fill: var(--pm-iron); }
+.mu-flag-cloth { fill: var(--pm-red); }
+.mu-flag { transform-box: fill-box; transform-origin: 0 100%; transition: transform .45s cubic-bezier(.3, .6, .4, 1.3); }
+.mu-flag.mu-down { transform: rotate(90deg); }
+.mu-parcel { fill: var(--mu-parcel); }
+.mu-twine { fill: none; stroke: var(--mu-twine); stroke-width: .55; }
+
+/* A day after today is not built yet, so its house is only a drawing. */
+.mu .mu-future * { fill: none; stroke: var(--mu-blueprint); stroke-width: .55; stroke-dasharray: 1.8 1.4; }
+.mu .mu-future text { fill: var(--mu-blueprint); stroke: none; }
+.mu .mu-future .pm-glow, .mu .mu-future .pm-porch, .mu .mu-future .pm-shade { display: none; }
+
+.mu-dog { cursor: pointer; }
+.mu-dog-fur { fill: var(--mu-dog); }
+.mu-dog-dark { fill: var(--mu-dog-dark); }
+.mu-collar { fill: var(--pm-red); }
+.mu-dog-leg { fill: var(--mu-dog); transform-box: fill-box; transform-origin: 50% 0; }
+.mu-dog-tail { fill: none; stroke: var(--mu-dog); stroke-width: 1.6; stroke-linecap: round; transform-box: fill-box; transform-origin: 100% 100%; }
+
+.mu-cat { cursor: pointer; }
+.mu-cat-fur { fill: var(--mu-cat); }
+.mu-cat-tail { fill: none; stroke: var(--mu-cat); stroke-width: 1.5; stroke-linecap: round; transform-box: fill-box; transform-origin: 0% 50%; }
+.mu-cat-lid { fill: none; stroke: var(--mu-cat-dark); stroke-width: .5; }
+.mu-cat-eyes { fill: #24301f; opacity: 0; }
+.mu-cat.awake .mu-cat-eyes { opacity: 1; }
+.mu-cat.awake .mu-cat-lid, .mu-cat.awake .mu-z { display: none; }
+.mu-z { font: 600 5px var(--sans); fill: var(--pm-star); }
+
+.mu-birds { cursor: pointer; }
+.mu-bird { fill: var(--mu-bird); }
+.mu-wing { fill: var(--mu-bird-wing); transform-box: fill-box; transform-origin: 30% 70%; }
+.mu-beak { fill: #d9a441; }
+.mu-bird-leg { stroke: #d17a5a; stroke-width: .5; }
+
+.mu-reader { cursor: pointer; }
+.mu-bench { fill: #6b4d33; }
+.mu-bench-leg { stroke: var(--pm-iron); stroke-width: 1; }
+.mu-coat { fill: var(--mu-coat); }
+.mu-trousers { stroke: #2c3138; stroke-width: 1.7; stroke-linecap: round; }
+.mu-paper { fill: var(--mu-paper); }
+.mu-paper-ink { stroke: #8a8577; stroke-width: .55; }
+.mu-headline { stroke: #34302c; stroke-width: 1.2; }
+.mu-paper-fold { stroke: #c9c2b0; stroke-width: .4; }
+.mu-note { font: 600 9px var(--sans); fill: var(--mu-note); }
+
+.mu-cyclist { pointer-events: none; }
+.mu-tyre { fill: none; stroke: var(--mu-tyre); stroke-width: 1.3; }
+.mu-spoke { fill: none; stroke: var(--mu-tyre); stroke-width: .4; opacity: .7; }
+.mu-frame { fill: none; stroke: var(--mu-bike); stroke-width: 1.2; stroke-linejoin: round; stroke-linecap: round; }
+.mu-frame-line { fill: none; stroke: var(--pm-iron); stroke-width: 1.4; stroke-linecap: round; }
+.mu-rider { fill: var(--mu-rider); }
+.mu-rider-back { fill: var(--mu-rider-back); }
+.mu-arm { fill: none; stroke: var(--mu-rider); stroke-width: 1.8; stroke-linecap: round; }
+.mu-cap { fill: var(--pm-uniform-back); }
+
+.mu-red { fill: #d23c2c; }
+.mu-gold { fill: #e3b74f; }
+.mu-rib { fill: none; stroke: #9e2a1f; stroke-width: .4; }
+.mu-tassel { stroke: #e3b74f; stroke-width: .8; }
+.mu-string { stroke: var(--pm-iron); stroke-width: .5; }
+.mu-swing { transform-box: fill-box; transform-origin: 50% 0; }
+.mu-pumpkin { fill: #d9782d; }
+.mu-stem { fill: #4f6d47; }
+.mu-carve { fill: #ffd27a; opacity: var(--pm-glow); }
+.mu-wreath { fill: none; stroke: #3f7a45; stroke-width: 1.7; }
+.mu-bow { fill: #d23c2c; }
+.mu-big-moon { display: none; }
+.mu-moonday .mu-big-moon { display: inline; }
+.mu-moon-disc { fill: #f3d98b; }
+.mu-moon-halo { fill: #f3d98b; opacity: .16; }
+.mu-moonday .pm-sun, .mu-moonday .pm-sun-halo { display: none; }
+.mu-spark { fill: none; stroke-width: 1.1; stroke-linecap: round; }
+
+.mu-overcast { fill: #3c4656; opacity: 0; }
+.mu-rain .mu-overcast { opacity: .34; }
+.mu-snow .mu-overcast { opacity: .16; }
+:root[data-theme="light"] .mu-rain .mu-overcast { opacity: .22; }
+.mu-shade { fill: var(--mu-shade); opacity: 0; }
+.mu-fx { pointer-events: none; }
+.mu-drop { stroke: var(--mu-drop); stroke-width: .7; opacity: .75; }
+.mu-flake { fill: var(--mu-flake); }
+:root[data-theme="light"] .mu-flake { stroke: #9fb0be; stroke-width: .3; }
+.mu-petal { fill: var(--mu-petal); }
+.mu-fall { fill: var(--mu-leaf); }
+.mu-firefly { fill: var(--mu-firefly); }
+.mu-summer .mu-fx { opacity: var(--pm-night); }
+
+.mu-umbrella, .mu-scarf { display: none; }
+.mu-rain .mu-umbrella { display: inline; }
+.mu-cold .mu-scarf { display: inline; }
+.mu-canopy { fill: var(--pm-red); }
+.mu-handle { fill: none; stroke: var(--pm-iron); stroke-width: .9; }
+.mu-wool { fill: var(--pm-red); }
+
+.mu-bubble { pointer-events: none; }
+.mu-bubble rect { fill: var(--pm-sign); stroke: var(--pm-sign-ink); stroke-width: .5; }
+.mu-bubble text { font: 600 6px var(--sans); fill: var(--pm-sign-ink); text-anchor: middle; }
+
+/* ---------- the day's newspaper ---------- */
+/* Written by hand on a sheet of paper that stays paper whatever the page around it. paper.ts
+   fetches the hands named here; until they arrive, or if they cannot, the system's own hands write it. */
+.np {
+  --np-paper: #e7e0ce; --np-ink: rgb(30 42 86 / .92); --np-soft: rgb(56 66 110 / .85); --np-faint: rgb(80 82 104 / .75);
+  --np-red: rgb(166 50 40 / .9);
+  --np-line: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 6' preserveAspectRatio='none'%3E%3Cpath d='M2 3.6C70 2.4 140 4.2 210 3.1S330 2.6 398 3.4' fill='none' stroke='%23000' stroke-width='1.3' stroke-linecap='round' vector-effect='non-scaling-stroke'/%3E%3C/svg%3E");
+  --np-head: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M2.2 1.8 8.6 5 2.2 8.2' fill='none' stroke='%23000' stroke-width='1.3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  --np-lines: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 9' preserveAspectRatio='none'%3E%3Cpath d='M2 2.6C90 1.6 170 3.4 260 2.4S360 2 398 2.8' fill='none' stroke='%23000' stroke-width='1.6' stroke-linecap='round' vector-effect='non-scaling-stroke'/%3E%3Cpath d='M3 6.8C80 6 190 7.6 280 6.6S370 6.4 397 7' fill='none' stroke='%23000' stroke-width='1' stroke-linecap='round' vector-effect='non-scaling-stroke'/%3E%3C/svg%3E");
+  width: min(640px, calc(100vw - 24px)); max-width: none; max-height: calc(100dvh - 40px);
+  padding: 0; border: 0; border-radius: 2px; overflow: auto; overscroll-behavior: contain;
+  color: var(--np-ink); background: var(--np-paper);
+  box-shadow: 0 28px 70px -24px #000c, 0 4px 14px -6px #0007;
+  font-family: "Grape Nuts", "Ma Shan Zheng", "Bradley Hand", "Segoe Print", cursive;
+  font-size: 20px; line-height: 1.5; font-synthesis: none;
+  /* Ink spreads a little into the paper. */
+  text-shadow: 0 0 .7px currentColor;
+}
+.np:lang(zh) { font-family: "Caveat Brush", "Ma Shan Zheng", "Kaiti SC", STKaiti, KaiTi, serif; font-size: 18px; line-height: 1.85; }
+:root[data-theme="light"] .np { --np-paper: #f4eee0; }
+.np::backdrop { background: rgb(8 10 14 / .42); }
+.np-sheet {
+  position: relative; padding: 22px 30px 28px; outline: none; background-color: var(--np-paper);
+  /* The crease where it was folded in half, edges darkened by handling, the clouding of the pulp, and its grain. */
+  background-image:
+    linear-gradient(to bottom, rgb(0 0 0 / 0) calc(50% - 60px), rgb(0 0 0 / .022) calc(50% - 2px), rgb(0 0 0 / .06) calc(50% - .5px),
+      rgb(255 255 255 / .3) calc(50% + .5px), rgb(255 255 255 / .1) calc(50% + 6px), rgb(255 255 255 / 0) calc(50% + 40px)),
+    radial-gradient(130% 100% at 50% 40%, rgb(0 0 0 / 0) 62%, rgb(120 90 40 / .12) 100%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='640' height='640'%3E%3Cfilter id='c' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.006' numOctaves='4' seed='9' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .5 0 0 0 0 .4 0 0 0 0 .25 .32 0 0 0 -.134'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23c)'/%3E%3C/svg%3E"),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='g' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' seed='3' stitchTiles='stitch'/%3E%3CfeDiffuseLighting lighting-color='%23fff' surfaceScale='1' diffuseConstant='1.1'%3E%3CfeDistantLight azimuth='225' elevation='58'/%3E%3C/feDiffuseLighting%3E%3CfeComponentTransfer%3E%3CfeFuncR type='linear' slope='.45' intercept='.595'/%3E%3CfeFuncG type='linear' slope='.45' intercept='.595'/%3E%3CfeFuncB type='linear' slope='.45' intercept='.595'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
+  background-size: auto, auto, 640px 640px, 220px 220px;
+  background-blend-mode: normal, multiply, multiply, multiply;
+}
+.np-close {
+  position: absolute; top: 9px; right: 9px; width: 28px; height: 28px; display: grid; place-items: center;
+  border-radius: 50%; color: var(--np-soft);
+}
+.np-close:hover { color: var(--np-ink); background: rgb(0 0 0 / .06); }
+.np-close path { fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; }
+.np-mast { text-align: center; margin-bottom: 16px; }
+.np-ears { display: flex; justify-content: space-between; gap: 12px; margin: 0 30px 2px; font-size: .72em; color: var(--np-soft); }
+.np-name { margin: 0; font-size: 2.7em; font-weight: 400; line-height: 1.1; transform: rotate(-.6deg); }
+.np-date { margin: 4px 0 0; font-size: .85em; color: var(--np-soft); }
+/* Rules drawn by hand: one over the date, two under the masthead, a faint one between stories, and an arrow under each link out. */
+.np-date::before, .np-mast::after, .np-story + .np-story::before, .np-go::after {
+  content: ""; display: block; height: 6px; background: var(--np-ink);
+  -webkit-mask: var(--np-line) 0 0 / 100% 100% no-repeat; mask: var(--np-line) 0 0 / 100% 100% no-repeat;
+}
+.np-date::before { margin-bottom: 2px; }
+.np-mast::after { height: 9px; margin-top: 6px; -webkit-mask-image: var(--np-lines); mask-image: var(--np-lines); }
+.np-story + .np-story { margin-top: 18px; }
+.np-story + .np-story::before { margin-bottom: 14px; opacity: .35; }
+.np-kicker { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 2px; font-size: .8em; color: var(--np-red); }
+.np-kicker span + span::before, .np-meta span + span::before { content: "\00b7"; margin-right: 8px; }
+.np-head { margin: 0; font-size: 1.5em; font-weight: 400; line-height: 1.2; text-wrap: balance; }
+.np-head a { color: inherit; }
+.np-head a:hover { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: .15em; }
+.np-deck { margin: 6px 0 0; font-size: 1.05em; line-height: 1.35; color: var(--np-soft); }
+.np-lede { margin: 10px 0 0; }
+.np-meta { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 0; font-size: .8em; color: var(--np-soft); }
+.np-xlat { margin: 8px 0 0; font-size: .72em; color: var(--np-faint); }
+.np-go { display: inline-block; margin-top: 12px; padding-right: .9em; font-size: .95em; line-height: 1.3; color: var(--np-ink); }
+.np-go::after {
+  height: 10px; background: currentColor;
+  -webkit-mask: var(--np-head) right center / 10px 10px no-repeat, var(--np-line) 0 center / 100% 6px no-repeat;
+  mask: var(--np-head) right center / 10px 10px no-repeat, var(--np-line) 0 center / 100% 6px no-repeat;
+}
+.np-go:hover { color: var(--np-red); text-decoration: none; }
+.np-go.np-quiet { font-size: .85em; }
+.np-body p { margin: 0 0 .6em; }
+.np-body > :last-child, .np-body > :last-child > :last-child { margin-bottom: 0; }
+.np-body blockquote { margin: 0 0 .6em; padding-left: 14px; border-left: 1.5px solid var(--np-red); }
+/* Handwriting has no italics, so emphasis and titles are underlined. */
+.np-body em, .np-body a { font-style: normal; color: inherit; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: .18em; }
+.np-body code { font-family: var(--mono); font-size: .8em; }
+@media (max-width: 480px) { .np-sheet { padding: 18px 18px 22px; } .np-ears { margin: 0 26px 2px; } }
+@media (prefers-reduced-motion: reduce) { .mu-flag, .mu [data-house] { transition: none; } }

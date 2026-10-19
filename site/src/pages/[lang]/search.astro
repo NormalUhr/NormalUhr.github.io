@@ -55,7 +55,7 @@ const index = [
       const hits = index.filter((r) => r.hay.includes(needle))
       count.textContent = hits.length ? `${hits.length}` : nothing
       out.innerHTML = hits.map((r) =>
-        '<div class="item"><div class="when">' + r.date + '</div><div>' +
+        '<div class="item"><div class="when"><time datetime="' + r.date + '">' + r.date + '</time></div><div>' +
         '<a class="t" href="' + r.href + '">' + esc(r.title) + '</a>' +
         (r.sub ? '<p class="sub">' + esc(r.sub) + '</p>' : '') +
         '<div class="row"><span>' + esc(r.meta) + '</span></div></div></div>'
