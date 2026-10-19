@@ -48,22 +48,26 @@ The postman clock and its town have two checks of their own:
 
 ```bash
 npm test             # the shared time, the town's calendar and festivals, and what the postman should show
-npm run clocks       # after a build: what the clock draws, and what the town does
+npm run clocks       # after a build: what the clock draws, what the town does, and the woodland
 ```
 
 `npm run clocks` loads the site in headless Chrome. It compares what the postman clock on
 the "not found" page draws with what it should show at 00:00, 00:01, 12:00, 14:04, 14:05,
 14:37, 14:59, 15:00, 23:05 and 23:59, while a minute, an hour and midnight pass, and after
-the page comes back from the background. It then opens the town in both languages and
-checks it against the mail in `dist/<lang>/postman.json`: the postman starts at the given
-day, walks to the newest mail when he is clicked, and hands over a paper that carries that
-day's articles and short posts, written in the hand for its language. It checks that each
-Easter egg opens the town on its day, and that the letter leaves the page where the reader
-had scrolled to. It also checks the printed date, the keys, the longest trip between two
-days with mail, that the cats stay on the same roofs while the postman walks, that the
-lampposts at a crossing name its two months and move with the street, reduced motion, and
-that the town and its paper fit 390 and 320 pixels wide. Add `-- --shots` to also save
-screenshots to `shots/clocks/`.
+the page comes back from the background. It then opens the town in both languages and checks
+it against the mail in `dist/<lang>/postman.json`: the postman starts at the given day,
+walks to the newest mail when he is clicked, and hands over a paper that carries that day's
+articles and short posts, written in the hand for its language. It checks that each Easter
+egg opens the town on its day and counts itself once in GoatCounter, and that the letter
+leaves the page where the reader had scrolled to. It also checks the printed date, the keys,
+the longest trip between two days with mail, that the cats stay on the same roofs while the
+postman walks, that the lampposts at a crossing name its two months and move with the
+street, reduced motion, and that the town and its paper fit 390 and 320 pixels wide. Last,
+it checks that the clock in the masthead shows the visitor's local time, that pressing it
+opens the woodland in the page's language with the ants keeping the same time and counts it
+once, that Escape and the close button close it without moving the page, and that phones 320
+pixels wide do not show the clock. Add `-- --shots` to also save screenshots to
+`shots/clocks/`.
 
 ## Layout
 
@@ -80,12 +84,13 @@ site/
     content/pages/        About, one file per language (currently empty)
     eggs/                 the Easter eggs: when each one appears, on every page
     clocks/               the postman clock, his town, and his visits to the pages
+    woodland/             the woodland clock, which the clock in the masthead opens
     layouts/ components/ pages/ styles/
   scripts/
     migrate.mjs           the Jekyll import, re-runnable
     audit.mjs             the page check described above
     clocks.test.mjs       what the clock should show, and the town's calendar
-    clocks.mjs            what the clock and the town do, in the browser
+    clocks.mjs            what the clock, the town and the woodland do, in the browser
     serve.mjs             serves dist/ for the two browser checks
     migration-report.txt  what the import decided, per post
 ```
@@ -104,6 +109,19 @@ No page links to the postman's town. A visitor finds it in one of these ways:
 - **A letter.** A reader who reaches the end of an article, after spending a share of its
   reading time on it, gets a letter at the right edge of the window. Pressing it opens the
   town on the day the article came out.
+
+No page links to the woodland clock either. The masthead of every page shows the visitor's
+local time, such as 01:30, just before the search button, with nothing to say what it is.
+Pressing it opens the woodland over the page, where ants lay out the same time in stones.
+Phones narrower than 360 pixels do not show the time, because it would push the masthead's
+controls onto a row of their own.
+
+Each egg counts itself in GoatCounter when a visitor opens it, as an event named
+`egg-postman-walk`, `egg-postman-date`, `egg-postman-lost`, `egg-postman-letter` or
+`egg-woodland` (`src/eggs/found.ts`). The GoatCounter dashboard lists these events with the
+pages. GoatCounter counts each event at most once per visit, and the events also add to the
+site total in the footer. A preview such as `clock-open` counts nothing, and GoatCounter's
+script counts nothing on a local address.
 
 `src/eggs/index.ts` runs on every page. It only waits for these moments, using the triggers
 in `src/eggs/triggers.ts`, and loads an egg's code when its moment comes. How often the
@@ -161,6 +179,39 @@ the calendar (`days.ts`), the mail and its lookup (`mail.ts`), the town and how 
 corner (`datestamp.ts`), the newspaper
 (`paper.ts`), the styles (`style.css`) and the words in both languages (`copy.ts`).
 
+## The woodland clock
+
+The woodland clock is a 3D woodland where worker ants carry stones to lay out the visitor's
+local time. A visitor can turn the view, zoom, and drop a stone with a right-click or a long
+press. Day and night, the seasons and the weather follow the visitor's clock. It needs WebGL 2
+and WebAssembly, and without them the clock in the masthead stays a plain clock.
+
+It is a page of its own, `/<lang>/woodland/` (`src/pages/[lang]/woodland.astro`), which no page
+links to and which asks search engines to leave it out. The woodland takes over its whole window
+and has no way to stop itself, so `src/woodland/host.ts` opens the page in a frame that fills the
+window, with a close button in the top right corner. Escape inside the woodland asks the site to
+close it. Closing removes the frame, which stops the woodland and frees its graphics memory.
+
+`src/woodland/app/` is the woodland's own program, taken from the source of its single-file
+version 5 and built with the versions it was written for, Three.js 0.180.0 and Rapier 0.21.0.
+This copy differs from that source in four ways:
+
+- The six Poly Haven textures are image files in `src/woodland/textures/`, so browsers cache
+  them. The source has them as text inside the script.
+- Every word the woodland shows is in `app/words.js`, in Chinese as written and in English.
+  The language of the page picks one.
+- In the site's frame, the woodland leaves the top right corner to the close button, and Escape
+  asks the site to close it.
+- The markup and styles of its `shell.html` are now in `woodland.astro`.
+
+Its `README.md`, in Chinese, explains how the program works. Its tests, its build script and
+the tool that bakes its reflection data stay with the original project and are not copied here.
+
+A visitor who opens the woodland downloads about 5.6 MB the first time, most of it the physics
+engine and the textures. The licences of Three.js (MIT) and Rapier (Apache 2.0) and the sources
+of the textures (CC0) are in `src/woodland/licenses/` and `src/woodland/textures/`, and the page
+carries them in its `third-party-notices` element.
+
 ## Previews
 
 To see any moment, add these to the address of any page. The clock itself is on `/404.html`.
@@ -175,6 +226,8 @@ To see any moment, add these to the address of any page. The clock itself is on 
 
 The town takes today's date from the same time, so `/en/?clock-time=2026-02-17T10:00&clock-open`
 opens it on the Spring Festival of 2026, with every later day drawn as a blueprint.
+
+The woodland clock opens on its own at `/en/woodland/` and `/zh/woodland/`.
 
 ## Copy you need to write
 

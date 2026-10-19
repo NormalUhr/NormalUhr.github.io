@@ -1,0 +1,7 @@
+Poly Haven textures: Brown Mud, Bark Brown 02
+Author: Rob Tuytel
+License: CC0-1.0
+https://polyhaven.com/license
+https://polyhaven.com/a/brown_mud
+https://polyhaven.com/a/bark_brown_02
+See assets/texture_sources.json for original file hashes and source URLs.

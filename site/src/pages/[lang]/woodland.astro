@@ -1,0 +1,91 @@
+---
+/**
+ * The woodland clock, a page of its own that the clock in the masthead opens in a frame
+ * (src/woodland/host.ts). No page links to it. Its program is src/woodland/app.
+ */
+import { LANGS, site, type Lang } from '../../site.config'
+import { WORDS } from '../../woodland/app/words.js'
+import three from '../../woodland/licenses/three-MIT.txt?raw'
+import rapier from '../../woodland/licenses/rapier-Apache-2.0.txt?raw'
+import textures from '../../woodland/textures/texture_sources.json'
+
+export function getStaticPaths() {
+  return LANGS.map((lang) => ({ params: { lang } }))
+}
+
+const lang = Astro.params.lang as Lang
+const W = WORDS[lang]
+const notices = JSON.stringify({ three, rapier, textures }).replace(/</g, '\\u003c')
+---
+<!doctype html>
+<html lang={lang === 'zh' ? 'zh-CN' : 'en'}>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#20291e">
+<link rel="icon" href={site.favicon ?? 'data:,'}>
+<title>{W.title}</title>
+<style is:inline>
+:root{color-scheme:dark;--ink:#eef0df;--gold:#dec393;font-family:"PingFang SC","Noto Sans CJK SC",system-ui,sans-serif;font-synthesis:none}
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#242c21;color:var(--ink)}
+button{font:inherit;color:inherit;cursor:pointer;border:1px solid #edf0d52b;background:#1e281ead;border-radius:9px;padding:11px 14px;min-height:40px;backdrop-filter:blur(12px);transition:background .18s,border-color .18s,transform .18s}
+button:hover{background:#586149c9;border-color:#f2e1b077}
+button:active{transform:translateY(1px)}
+button:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+button[aria-pressed=true]{background:#cfdbb8;color:#263024;border-color:#cfdbb8}
+#app{width:100%;height:100%;position:relative;isolation:isolate}
+#scene{display:block;width:100%;height:100%;touch-action:none;cursor:grab;outline:none}
+#scene:active{cursor:grabbing}
+#scene:focus-visible{outline:2px solid #dec3938c;outline-offset:-5px}
+#scene.dropping{cursor:crosshair}
+.frame-shade{position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg,#07120755 0%,transparent 19%,transparent 78%,#10191070 100%);z-index:1}
+.scene-status{position:absolute;top:max(25px,env(safe-area-inset-top));left:max(30px,env(safe-area-inset-left));right:max(30px,env(safe-area-inset-right));display:flex;align-items:center;justify-content:space-between;gap:18px;z-index:2;pointer-events:none;text-shadow:0 1px 12px #0d170a99;transition:opacity .25s}
+#clockValue{font-family:Georgia,"Times New Roman",serif;font-size:29px;letter-spacing:-.7px;font-variant-numeric:tabular-nums;line-height:1;color:#f1ebd8}
+.weather{display:flex;align-items:baseline;gap:12px;font-size:11px;letter-spacing:.04em;color:#e0e4d0}
+#temperature{font-family:Georgia,"Times New Roman",serif;font-size:20px;letter-spacing:0}
+.observation{position:absolute;left:max(28px,env(safe-area-inset-left));bottom:max(25px,env(safe-area-inset-bottom));display:flex;gap:7px;z-index:3}
+.observation button{font-size:11px;letter-spacing:.03em;white-space:nowrap}
+.quiet .scene-status{opacity:0}
+.quiet #closeViewBtn,.quiet #resetBtn{display:none}
+.quiet .frame-shade{opacity:.5}
+#loading{position:absolute;inset:0;z-index:20;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:16px;background:radial-gradient(ellipse at 50% 45%,#3f4934,#182119 75%);transition:opacity .25s;pointer-events:auto;text-align:center;padding:30px}
+#loading.finished{opacity:0;pointer-events:none}
+#loadingText{font-family:"Songti SC","Noto Serif CJK SC",serif;font-size:28px;font-weight:400;letter-spacing:.07em;color:#f2ead0;line-height:1.7;margin:0;max-width:560px;text-wrap:balance}
+#loadingDetail{font-size:12px;color:#cbd3bd;max-width:560px;line-height:1.8;overflow-wrap:anywhere}
+#loadingDetail:empty{display:none}
+.seed{width:6px;height:6px;background:#d8dca6;border-radius:50%;box-shadow:-17px 2px 0 #a5b881,17px -2px 0 #7d9566;margin:0 0 13px;animation:breathe 2s ease-in-out infinite}
+@keyframes breathe{50%{opacity:.3;transform:scale(.85)}}
+@media(prefers-reduced-motion:reduce){.seed{animation:none}button,.scene-status,#loading{transition:none}}
+@media(max-width:700px){.scene-status{top:max(20px,env(safe-area-inset-top));left:max(20px,env(safe-area-inset-left));right:max(20px,env(safe-area-inset-right))}#clockValue{font-size:26px}.weather{font-size:10px;gap:9px}#temperature{font-size:18px}.observation{left:max(18px,env(safe-area-inset-left));bottom:max(20px,env(safe-area-inset-bottom));gap:6px}.observation button{padding:10px 12px;font-size:11px}#loadingText{font-size:24px;letter-spacing:.04em}}
+@media(max-width:350px){.scene-status{left:16px;right:16px}.observation{left:14px;gap:5px}.observation button{padding:10px;font-size:10px}#loadingText{font-size:21px}}
+/* English reads better in a Latin face than in the Latin letters of a Chinese one. */
+html:lang(en){font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+html:lang(en) #loadingText{font-family:Georgia,"Times New Roman",serif;letter-spacing:.01em}
+/* In the site's frame, the site's close button takes the top right corner. */
+.embedded .scene-status{right:max(72px,env(safe-area-inset-right))}
+@media(max-width:700px){.embedded .scene-status{right:max(62px,env(safe-area-inset-right))}}
+</style>
+<script type="application/json" id="third-party-notices" set:html={notices}></script>
+</head>
+<body>
+<main id="app">
+<canvas id="scene" aria-label={W.scene} tabindex="0"></canvas>
+<div class="frame-shade" aria-hidden="true"></div>
+<header class="scene-status" aria-label={W.now}>
+<time id="clockValue" aria-label={W.time}>--:--</time>
+<div class="weather" aria-label={W.climate}><span id="weatherSummary">{W.seasons[2]} · {W.place}</span><span id="temperature">{W.degrees(18)}</span></div>
+</header>
+<nav class="observation" aria-label={W.views}>
+<button id="closeViewBtn" type="button" aria-label={W.closerLabel}>{W.closer}</button>
+<button id="resetBtn" type="button" aria-label={W.resetLabel}>{W.reset}</button>
+<button id="quietBtn" type="button" aria-label={W.quietLabel} aria-pressed="false">{W.quiet}</button>
+</nav>
+<div id="loading"><div class="seed" aria-hidden="true"></div><p id="loadingText" role="status" aria-live="polite" aria-atomic="true">{W.greetings[0]}</p><div id="loadingDetail"></div></div>
+</main>
+<script>
+  import '../../woodland/app/main.js'
+</script>
+</body>
+</html>

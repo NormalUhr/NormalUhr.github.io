@@ -6,6 +6,7 @@
  * work and simply shows the right time again when the visitor comes back.
  */
 import type { Lang } from '../site.config'
+import { found, type Egg } from '../eggs/found'
 import { adopt, fill, html, svg, type Scene } from './scene'
 import { TimeSource, civilToTs, localZone, type Snapshot } from './time'
 import type { Day } from './museum/days'
@@ -177,11 +178,12 @@ async function enter({ dialog, stage }: Shell, lang: Lang, start?: Day) {
   town = create({ root: stage, lang, today: time.snapshot().date, mail: letters, still: motion.matches, start })
 }
 
-/** Opens the postman's town over the page, with him at `start`, or at today. */
-export function openTown(lang: Lang, start?: Day) {
+/** Opens the postman's town over the page, with him at `start`, or at today. `via` is the Easter egg that opened it. */
+export function openTown(lang: Lang, start?: Day, via?: Egg) {
   const opened = (shell ??= build(lang))
   if (opened.dialog.open) return
   opened.dialog.showModal()
+  if (via) found(via)
   enter(opened, lang, start).catch(() => opened.dialog.close())
 }
 
@@ -205,7 +207,7 @@ export function mountClock(face: HTMLElement, lang: Lang) {
   // Without its drawing code the clock would be an empty frame, so it stays hidden.
   const fail = () => (face.hidden = true)
 
-  face.addEventListener('click', () => openTown(lang))
+  face.addEventListener('click', () => openTown(lang, undefined, 'egg-postman-lost'))
   time.onChange(() => clock.jump())
   document.addEventListener('visibilitychange', sync)
   motion.addEventListener('change', () => clock.show().catch(fail))

@@ -40,7 +40,7 @@ export function walkPast(lang: Lang) {
   }
   asButton(figure, copy[lang].postman, () => {
     gone()
-    openTown(lang)
+    openTown(lang, undefined, 'egg-postman-walk')
   })
   if (motion.matches) {
     figure.classList.add('egg-still')
@@ -74,7 +74,7 @@ export function slipLetter(lang: Lang, day: Day) {
   document.body.append(edge)
   asButton(letter, copy[lang].letter, () => {
     edge.remove()
-    openTown(lang, day)
+    openTown(lang, day, 'egg-postman-letter')
   })
   if (!motion.matches) letter.animate([{ transform: 'translateX(120%) rotate(-20deg)' }], { duration: 900, easing: 'cubic-bezier(.2, .7, .3, 1)' })
 }

@@ -3,6 +3,7 @@
  * script runs on every page and only waits for their moments. An egg's own code loads when its
  * moment comes.
  */
+import { keepTime } from './clock'
 import { READ_SHARE, WALK_AFTER, WALK_CHANCE } from './luck'
 import { afterReading, byChance, lang, onDate, onHourTurn, onMark } from './triggers'
 
@@ -11,6 +12,7 @@ const params = new URLSearchParams(location.search)
 const now = params.get('eggs') === 'now'
 const host = () => import('../clocks/host')
 const visits = () => import('../clocks/visits')
+const woodland = () => import('../woodland/host')
 /** An egg that cannot load its code stays hidden. */
 const quietly = (egg: Promise<unknown>) => void egg.catch(() => {})
 
@@ -20,7 +22,7 @@ onHourTurn(walk)
 byChance(now ? 1 : WALK_CHANCE, now ? [1, 1] : WALK_AFTER, walk)
 
 // A date opens his town on that day.
-onDate((day) => quietly(host().then((h) => h.openTown(lang, day))))
+onDate((day) => quietly(host().then((h) => h.openTown(lang, day, 'egg-postman-date'))))
 
 // On the page that does not exist he stands in his street, where the house number is the minute.
 onMark('lost', (face) => quietly(host().then((h) => h.mountClock(face, lang))))
@@ -29,6 +31,12 @@ onMark('lost', (face) => quietly(host().then((h) => h.mountClock(face, lang))))
 onMark('read', (prose) => {
   const wait = now ? 0 : READ_SHARE * Number(prose.dataset.minutes) * 60_000
   afterReading(prose, wait, () => quietly(visits().then((v) => v.slipLetter(lang, prose.dataset.day!))))
+})
+
+// The visitor's local time in the masthead opens the woodland, where ants lay out the same time in stones.
+onMark('woodland', (face) => {
+  keepTime(face, face.dataset.label!)
+  face.addEventListener('click', () => quietly(woodland().then((w) => w.openWoodland(lang))))
 })
 
 if (params.has('clock-open')) quietly(host().then((h) => h.openTown(lang)))

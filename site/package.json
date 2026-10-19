@@ -13,12 +13,14 @@
     "clocks": "node scripts/clocks.mjs"
   },
   "dependencies": {
+    "@dimforge/rapier3d-compat": "0.21.0",
     "astro": "^5.18.2",
     "cobe": "^2.0.1",
     "katex": "0.16.47",
     "rehype-katex": "^7.0.1",
     "rehype-slug": "^6.0.0",
     "remark-math": "^6.0.0",
+    "three": "0.180.0",
     "unist-util-visit": "^5.1.0"
   },
   "devDependencies": {

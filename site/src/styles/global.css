@@ -73,6 +73,12 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .nav a:hover { background: var(--paper-3); color: var(--ink-strong); text-decoration: none; }
 .nav a[aria-current] { color: var(--ink-strong); background: var(--paper-3); }
 .act { display: flex; align-items: center; gap: 7px; flex: none; }
+/* The visitor's local time, filled in by src/eggs. It opens the woodland clock. */
+.ltime { min-width: 4.6ch; margin-right: 5px; padding: 0; font-family: var(--serif); font-size: 14px; color: var(--ink-faint); font-variant-numeric: tabular-nums; text-align: right; }
+.ltime:empty { visibility: hidden; }
+.ltime:hover { color: var(--ink-soft); }
+/* On the narrowest phones the clock would push the controls onto a row of their own. */
+@media (max-width: 359px) { .ltime { display: none; } }
 .mini {
   font-family: var(--sans); font-size: 11.5px; color: var(--ink-soft);
   border: 1px solid var(--rule); border-radius: 5px; padding: 3px 9px;

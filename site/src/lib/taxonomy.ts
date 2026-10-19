@@ -97,6 +97,7 @@ export const UI = {
     noPosts: 'Nothing here yet.',
     langName: { en: 'English', zh: 'Chinese' },
     skipToContent: 'Skip to content',
+    localTime: 'Local time',
     notFound: 'That page is not here',
   },
   zh: {
@@ -120,6 +121,7 @@ export const UI = {
     noPosts: '还没有内容。',
     langName: { en: '英文', zh: '中文' },
     skipToContent: '跳到正文',
+    localTime: '本地时间',
     notFound: '这个页面不在这里',
   },
 } as const

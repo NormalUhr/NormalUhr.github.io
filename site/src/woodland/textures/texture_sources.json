@@ -1,0 +1,60 @@
+{
+  "license": "CC0-1.0",
+  "license_url": "https://polyhaven.com/license",
+  "author": "Rob Tuytel",
+  "assets": {
+    "brown_mud": "https://polyhaven.com/a/brown_mud",
+    "bark_brown_02": "https://polyhaven.com/a/bark_brown_02"
+  },
+  "files": [
+    {
+      "asset": "brown_mud",
+      "channel": "Diffuse",
+      "filename": "brown_mud_diff_1k.jpg",
+      "bytes": 501955,
+      "sha256": "df3f135c899f10a3b018738343b222cbc67d13e7c76c5d8da834a3d34c984417",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/brown_mud/brown_mud_diff_1k.jpg"
+    },
+    {
+      "asset": "brown_mud",
+      "channel": "nor_gl",
+      "filename": "brown_mud_nor_gl_1k.jpg",
+      "bytes": 1011780,
+      "sha256": "ac517ca39eb507ae0f27e2b3db431c60888f9b5c3c52bec49d2c0775da0920cb",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/brown_mud/brown_mud_nor_gl_1k.jpg"
+    },
+    {
+      "asset": "brown_mud",
+      "channel": "arm",
+      "filename": "brown_mud_arm_1k.jpg",
+      "bytes": 224431,
+      "sha256": "40a5ac438f23ea454ff45f3f62f0fe4ac5b89c42fd070d10e7d41c51252caf88",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/brown_mud/brown_mud_arm_1k.jpg"
+    },
+    {
+      "asset": "bark_brown_02",
+      "channel": "Diffuse",
+      "filename": "bark_brown_02_diff_1k.jpg",
+      "bytes": 659592,
+      "sha256": "920fa0bed0c9d78c1d530e99795113afd532d7db746de440f4a85d7c83ed0f1a",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/bark_brown_02/bark_brown_02_diff_1k.jpg"
+    },
+    {
+      "asset": "bark_brown_02",
+      "channel": "nor_gl",
+      "filename": "bark_brown_02_nor_gl_1k.jpg",
+      "bytes": 1015623,
+      "sha256": "0d5e691e8ad8bcd093a3587887fda2a6b4a948b5708a4f256f7919584c6eb857",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/bark_brown_02/bark_brown_02_nor_gl_1k.jpg"
+    },
+    {
+      "asset": "bark_brown_02",
+      "channel": "arm",
+      "filename": "bark_brown_02_arm_1k.jpg",
+      "bytes": 232742,
+      "sha256": "6bd86d37b3b9b40cc30a4b661e382ec41fa7463a8b1144ff44708b19fa675af1",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/bark_brown_02/bark_brown_02_arm_1k.jpg"
+    }
+  ],
+  "use": "Offline embedded PBR material maps; no runtime API calls."
+}

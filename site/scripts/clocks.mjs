@@ -3,7 +3,9 @@
 // compared with src/clocks/encode.ts at the moments where clocks usually go wrong. The town is
 // checked against the mail the site built into dist/<lang>/postman.json: where the postman
 // starts, which day he walks to, and that the paper he hands over is that day's. Each egg must
-// open the town on its day, and the town must fit a phone without scrolling sideways.
+// open the town on its day, and the town must fit a phone without scrolling sideways. The clock
+// in the masthead must show the visitor's local time and open the woodland clock in the page's
+// language, where the ants keep the same time.
 //
 //   node scripts/clocks.mjs [--shots]
 import path from 'node:path'
@@ -14,6 +16,7 @@ import * as E from '../src/clocks/encode.ts'
 import * as D from '../src/clocks/museum/days.ts'
 import { sorter } from '../src/clocks/museum/mail.ts'
 import phrases from '../src/clocks/scenes/postman/phrases.ts'
+import { WORDS } from '../src/woodland/app/words.js'
 
 const SITE = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..')
 const DIST = path.join(SITE, 'dist')
@@ -41,8 +44,13 @@ const check = (ok, what) => {
   if (!ok) problems.push(what)
 }
 
-async function open(query, { width = 1280, height = 900, theme = 'dark', lang = 'en', still = false, path = `/${lang}/`, before } = {}) {
+async function open(query, { width = 1280, height = 900, theme = 'dark', lang = 'en', still = false, path = `/${lang}/`, before, counts = false } = {}) {
   const page = await browser.newPage()
+  // GoatCounter's script is replaced by one that keeps the events the page asks it to count.
+  if (counts) {
+    await page.setRequestInterception(true)
+    page.on('request', (r) => (/gc\.zgo\.at\/count\.js/.test(r.url()) ? r.respond({ status: 200, contentType: 'text/javascript', body: COUNTER }) : r.continue()))
+  }
   await page.setViewport({ width, height, deviceScaleFactor: WANT_SHOTS ? 2 : 1 })
   if (still) await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'reduce' }])
   const errors = []
@@ -62,6 +70,11 @@ async function open(query, { width = 1280, height = 900, theme = 'dark', lang = 
   await page.goto(`http://localhost:${PORT}${path}?${query}`, { waitUntil: 'load' })
   return { page, errors }
 }
+
+/** Stands in for GoatCounter's script and keeps the name of every event it is asked to count. */
+const COUNTER = 'window.goatcounter = { count: (v) => v.event && (window.counted = window.counted || []).push(v.path) }'
+/** The events a page opened with `counts` has counted, in order. */
+const counted = (page) => page.evaluate(() => window.counted ?? [])
 
 const noErrors = (errors, where) => check(errors.length === 0, `${where}: ${[...new Set(errors)].join(' | ')}`)
 
@@ -182,8 +195,9 @@ for (const lang of ['en', 'zh']) {
   // A day a few days after the newest mail, so the postman starts with empty hands.
   const newest = post.days.at(-1)
   const today = D.shift(newest, 4)
-  const { page, errors } = await open(`clock-open&clock-time=${today}T10:00&clock-pause`, { lang })
+  const { page, errors } = await open(`clock-open&clock-time=${today}T10:00&clock-pause`, { lang, counts: true })
   await arrival(page, today)
+  check((await counted(page)).length === 0, `${lang}: opening the town with clock-open counted ${await counted(page)}`)
   const start = await where(page)
   check(start.holding === false, `${lang}: the postman starts at ${today} with something in his hands`)
   check(start.date === today, `${lang}: the town opened at ${today} prints the date ${start.date}`)
@@ -326,13 +340,18 @@ function nearTheHour() {
 
 // By chance, the postman walks along the bottom of the window, and pressing him opens the town at today.
 {
-  const { page, errors } = await open(`eggs=now&clock-time=${DAY}T10:00&clock-pause`)
+  const { page, errors } = await open(`eggs=now&clock-time=${DAY}T10:00&clock-pause`, { counts: true })
   const walking = await page
     .waitForSelector('.egg-walker', { timeout: 4000 })
     .then(() => page.$eval('.egg-street', (s) => s.getAnimations({ subtree: true }).length > 0), () => false)
   check(walking, 'with ?eggs=now the postman did not walk past')
-  if (walking) await page.click('.egg-walker')
+  if (walking) {
+    // He comes in from beyond the left edge of the window, and cannot be pressed before he is in it.
+    await page.waitForFunction(() => document.querySelector('.egg-walker').getBoundingClientRect().left >= 0, { timeout: 4000 })
+    await page.click('.egg-walker')
+  }
   check((await opened(page)) === DAY, `the postman who walked past did not open the town at ${DAY}`)
+  check(String(await counted(page)) === 'egg-postman-walk', `the postman who walked past counted ${await counted(page)}`)
   noErrors(errors, 'with the postman walking past')
   await page.close()
 }
@@ -348,20 +367,22 @@ function nearTheHour() {
 
 // A date on a page opens the town on that day.
 {
-  const { page, errors } = await open(`clock-time=${DAY}T10:00&clock-pause`, { path: '/en/articles/' })
+  const { page, errors } = await open(`clock-time=${DAY}T10:00&clock-pause`, { path: '/en/articles/', counts: true })
   const day = await page.$eval('main time[datetime]', (t) => t.getAttribute('datetime'))
   await page.click('main time[datetime]')
   check((await opened(page)) === day, `the date ${day} did not open the town on that day`)
+  check(String(await counted(page)) === 'egg-postman-date', `the date counted ${await counted(page)}`)
   noErrors(errors, 'with a date clicked')
   await page.close()
 }
 
 // The postman clock on the page that does not exist opens the town at today.
 {
-  const { page, errors } = await open(`clock-time=${DAY}T10:00&clock-pause`, { path: LOST })
+  const { page, errors } = await open(`clock-time=${DAY}T10:00&clock-pause`, { path: LOST, counts: true })
   await clock(page)
   await page.click('.lost')
   check((await opened(page)) === DAY, `the clock on the missing page did not open the town at ${DAY}`)
+  check(String(await counted(page)) === 'egg-postman-lost', `the clock on the missing page counted ${await counted(page)}`)
   noErrors(errors, 'with the clock on the missing page pressed')
   await page.close()
 }
@@ -371,7 +392,7 @@ function nearTheHour() {
   const post = sorter(MAIL.en)
   const day = post.days.findLast((d) => MAIL.en[d].some((s) => s.kind === 'article'))
   const { href } = MAIL.en[day].find((s) => s.kind === 'article')
-  const { page, errors } = await open(`eggs=now&clock-time=${DAY}T10:00&clock-pause`, { path: href })
+  const { page, errors } = await open(`eggs=now&clock-time=${DAY}T10:00&clock-pause`, { path: href, counts: true })
   await wait(1500)
   check(!(await page.$('.egg-letter')), 'the letter came before the reader reached the end of the article')
   // One jump to the bottom of the page passes the end of the article without stopping at it.
@@ -383,6 +404,7 @@ function nearTheHour() {
     const top = await page.evaluate(() => scrollY)
     await page.click('.egg-letter')
     check((await opened(page)) === day, `the letter did not open the town on ${day}, the day of the article`)
+    check(String(await counted(page)) === 'egg-postman-letter', `the letter counted ${await counted(page)}`)
     // The town opens over the place the reader has scrolled to.
     await wait(800)
     const moved = await page.evaluate((y) => Math.round(scrollY - y), top)
@@ -399,6 +421,68 @@ function nearTheHour() {
   const moving = await page.$eval('.egg-street', (s) => s.getAnimations({ subtree: true }).length).catch(() => -1)
   check(moving === 0, `with reduced motion the postman who comes by has ${moving} animations`)
   noErrors(errors, 'with reduced motion and the postman coming by')
+  await page.close()
+}
+
+// ---------- the woodland clock ----------
+
+/** Opens the woodland from the clock in the masthead, and returns its frame once it has drawn its first frame. */
+async function woodland(page) {
+  await page.click('.ltime')
+  const frame = await page.waitForSelector('dialog.wooddlg[open] iframe', { timeout: 5000 }).then((h) => h.contentFrame(), () => null)
+  const ready = frame && (await frame.waitForFunction(() => window.__ANTKEEPERS__?.system?.ready, { timeout: 60000 }).then(() => true, () => false))
+  return ready ? frame : null
+}
+
+// The clock in the masthead shows the visitor's local time. Pressing it opens the woodland over the
+// page in the page's language, where the ants lay out the same time. Escape in the woodland and its
+// close button both close it, and the page stays where the reader was.
+for (const lang of ['en', 'zh']) {
+  const { page, errors } = await open('', { lang, counts: true })
+  const shown = await page.waitForFunction(() => document.querySelector('.ltime')?.textContent, { timeout: 5000 }).then((h) => h.jsonValue(), () => null)
+  const local = await page.evaluate(() => {
+    const d = new Date()
+    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+  })
+  check(shown === local, `${lang}: the clock in the masthead shows ${shown}, expected the local time ${local}`)
+  await page.evaluate(() => window.scrollTo({ top: 600, behavior: 'instant' }))
+  const top = await page.evaluate(() => scrollY)
+  const frame = await woodland(page)
+  check(frame, `${lang}: pressing the clock in the masthead did not open the woodland`)
+  check(String(await counted(page)) === 'egg-woodland', `${lang}: opening the woodland counted ${await counted(page)}`)
+  if (frame) {
+    // The two clocks may read either side of the turn of a minute, so a difference is read again a second later.
+    const differ = async () => {
+      const pair = [await page.$eval('.ltime', (b) => b.textContent), await frame.$eval('#clockValue', (c) => c.textContent)]
+      return pair[0] === pair[1] ? null : pair.join(' and ')
+    }
+    const twice = (await differ()) && (await wait(1200), await differ())
+    check(!twice, `${lang}: the clock in the masthead and the ants show different times, ${twice}`)
+    const label = await frame.$eval('#resetBtn', (b) => b.textContent)
+    check(label === WORDS[lang].reset, `${lang}: the woodland's button reads "${label}", expected "${WORDS[lang].reset}"`)
+    await page.keyboard.press('Escape')
+    const closed = await page
+      .waitForFunction(() => !document.querySelector('dialog.wooddlg')?.open && !document.querySelector('dialog.wooddlg iframe'), { timeout: 3000 })
+      .then(() => true, () => false)
+    check(closed, `${lang}: Escape in the woodland did not close it`)
+    const moved = await page.evaluate((y) => Math.round(scrollY - y), top)
+    check(moved === 0, `${lang}: the woodland moved the page under it by ${moved}px`)
+    const again = await woodland(page)
+    check(again, `${lang}: the woodland did not open a second time`)
+    if (again) {
+      await page.click('.wd-close')
+      const shut = await page.waitForFunction(() => !document.querySelector('dialog.wooddlg')?.open, { timeout: 3000 }).then(() => true, () => false)
+      check(shut, `${lang}: the close button did not close the woodland`)
+    }
+  }
+  noErrors(errors, `in the ${lang} woodland`)
+  await page.close()
+}
+
+// On the narrowest phones the clock is left out, so the masthead keeps its two rows.
+{
+  const { page } = await open('', { width: 320, height: 640 })
+  check((await page.$eval('.ltime', (b) => getComputedStyle(b).display)) === 'none', 'at 320px the clock in the masthead is shown')
   await page.close()
 }
 
@@ -473,6 +557,14 @@ if (WANT_SHOTS) {
     await page.waitForSelector('.egg-letter')
     await wait(1500)
     await page.screenshot({ path: path.join(SHOTS, 'letter.png') })
+    await page.close()
+  }
+  for (const [name, lang, opts] of [['woodland', 'en', {}], ['woodland-phone', 'zh', { width: 390, height: 844 }]]) {
+    const { page } = await open('', { lang, ...opts })
+    if (await woodland(page)) {
+      await wait(2500)
+      await page.screenshot({ path: path.join(SHOTS, `${name}.png`) })
+    }
     await page.close()
   }
   console.log(`screenshots -> ${path.relative(process.cwd(), SHOTS)}`)
