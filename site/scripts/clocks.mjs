@@ -5,7 +5,9 @@
 // starts, which day he walks to, and that the paper he hands over is that day's. Each egg must
 // open the town on its day, and the town must fit a phone without scrolling sideways. The clock
 // in the masthead must show the visitor's local time and open the woodland clock in the page's
-// language, where the ants keep the same time.
+// language, where the ants keep the same time. The years in the footer and the dish of raked sand
+// beside them must open the karesansui garden, which keeps the same time and keeps what the
+// visitor rakes.
 //
 //   node scripts/clocks.mjs [--shots]
 import path from 'node:path'
@@ -16,7 +18,8 @@ import * as E from '../src/clocks/encode.ts'
 import * as D from '../src/clocks/museum/days.ts'
 import { sorter } from '../src/clocks/museum/mail.ts'
 import phrases from '../src/clocks/scenes/postman/phrases.ts'
-import { WORDS } from '../src/woodland/app/words.js'
+import { WORDS as WOODLAND } from '../src/woodland/app/words.js'
+import { WORDS as GARDEN } from '../src/garden/app/words.js'
 
 const SITE = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..')
 const DIST = path.join(SITE, 'dist')
@@ -429,7 +432,7 @@ function nearTheHour() {
 /** Opens the woodland from the clock in the masthead, and returns its frame once it has drawn its first frame. */
 async function woodland(page) {
   await page.click('.ltime')
-  const frame = await page.waitForSelector('dialog.wooddlg[open] iframe', { timeout: 5000 }).then((h) => h.contentFrame(), () => null)
+  const frame = await page.waitForSelector('dialog.frdlg[open] iframe', { timeout: 5000 }).then((h) => h.contentFrame(), () => null)
   const ready = frame && (await frame.waitForFunction(() => window.__ANTKEEPERS__?.system?.ready, { timeout: 60000 }).then(() => true, () => false))
   return ready ? frame : null
 }
@@ -458,11 +461,13 @@ for (const lang of ['en', 'zh']) {
     }
     const twice = (await differ()) && (await wait(1200), await differ())
     check(!twice, `${lang}: the clock in the masthead and the ants show different times, ${twice}`)
+    const lit = await frame.evaluate(() => window.__ANTKEEPERS__.system.moonlight?.debug.materialCount ?? 0)
+    check(lit > 0, `${lang}: the woodland's moonlight reaches no material`)
     const label = await frame.$eval('#resetBtn', (b) => b.textContent)
-    check(label === WORDS[lang].reset, `${lang}: the woodland's button reads "${label}", expected "${WORDS[lang].reset}"`)
+    check(label === WOODLAND[lang].reset, `${lang}: the woodland's button reads "${label}", expected "${WOODLAND[lang].reset}"`)
     await page.keyboard.press('Escape')
     const closed = await page
-      .waitForFunction(() => !document.querySelector('dialog.wooddlg')?.open && !document.querySelector('dialog.wooddlg iframe'), { timeout: 3000 })
+      .waitForFunction(() => !document.querySelector('dialog.frdlg'), { timeout: 3000 })
       .then(() => true, () => false)
     check(closed, `${lang}: Escape in the woodland did not close it`)
     const moved = await page.evaluate((y) => Math.round(scrollY - y), top)
@@ -470,8 +475,8 @@ for (const lang of ['en', 'zh']) {
     const again = await woodland(page)
     check(again, `${lang}: the woodland did not open a second time`)
     if (again) {
-      await page.click('.wd-close')
-      const shut = await page.waitForFunction(() => !document.querySelector('dialog.wooddlg')?.open, { timeout: 3000 }).then(() => true, () => false)
+      await page.click('.fr-close')
+      const shut = await page.waitForFunction(() => !document.querySelector('dialog.frdlg'), { timeout: 3000 }).then(() => true, () => false)
       check(shut, `${lang}: the close button did not close the woodland`)
     }
   }
@@ -479,10 +484,116 @@ for (const lang of ['en', 'zh']) {
   await page.close()
 }
 
-// On the narrowest phones the clock is left out, so the masthead keeps its two rows.
+// On the narrowest phones the clock is left out, so the masthead keeps its two rows. The years in
+// the footer stay, and nothing scrolls sideways.
 {
   const { page } = await open('', { width: 320, height: 640 })
   check((await page.$eval('.ltime', (b) => getComputedStyle(b).display)) === 'none', 'at 320px the clock in the masthead is shown')
+  check((await page.$eval('.since', (b) => b.getBoundingClientRect().width)) > 0, 'at 320px the years in the footer are missing')
+  check(!(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1)), 'at 320px the page scrolls sideways')
+  await page.close()
+}
+
+// ---------- the karesansui garden ----------
+
+/** Opens the garden from one of its doors in the footer, and returns its frame once it has drawn its first frame. */
+async function garden(page, door = '.since') {
+  await page.click(door)
+  const frame = await page.waitForSelector('dialog.frdlg[open] iframe', { timeout: 5000 }).then((h) => h.contentFrame(), () => null)
+  const ready = frame && (await frame.waitForFunction(() => window.__GARDEN__?.snapshot().ready, { timeout: 60000 }).then(() => true, () => false))
+  return ready ? frame : null
+}
+
+/** A stroke across open sand, away from the stones and the spiral, one for each language. */
+const STROKE = { en: -4.5, zh: 2.5 }
+const stroke = (lang) => Array.from({ length: 12 }, (_, i) => ({ x: STROKE[lang] + i * 0.12, z: -3.3 }))
+/** The height of the sand along a stroke, in millimetres. */
+const sand = (frame, line) => frame.evaluate((pts) => pts.map((p) => __GARDEN__.sand.heightAt(p.x, p.z) * 1000), line)
+const deepest = (a, b) => Math.max(...a.map((h, i) => Math.abs(h - b[i])))
+
+// The years at the foot of every page open the garden in the page's language, and its own clock
+// shows the same time as the one in the masthead. Escape first ends raking and only then closes
+// the garden, and the page stays where the reader was. A stroke raked just before the garden
+// closes is still in the sand when it opens again, because the garden saves before its frame goes.
+for (const lang of ['en', 'zh']) {
+  const { page, errors } = await open('', { lang, counts: true })
+  await page.evaluate(() => window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'instant' }))
+  const top = await page.evaluate(() => scrollY)
+  const frame = await garden(page)
+  check(frame, `${lang}: pressing the years in the footer did not open the garden`)
+  check(String(await counted(page)) === 'egg-garden-years', `${lang}: opening the garden counted ${await counted(page)}`)
+  if (frame) {
+    const label = await frame.$eval('#homeBtn span', (s) => s.textContent)
+    check(label === GARDEN[lang].home, `${lang}: the garden's button reads "${label}", expected "${GARDEN[lang].home}"`)
+    await frame.click('#clockBtn')
+    // The two clocks may read either side of the turn of a minute, so a difference is read again a second later.
+    const differ = async () => {
+      const pair = [await page.$eval('.ltime', (b) => b.textContent), await frame.$eval('#timeLabel', (t) => t.textContent)]
+      return pair[0] === pair[1] ? null : pair.join(' and ')
+    }
+    await wait(300)
+    const twice = (await differ()) && (await wait(1200), await differ())
+    check(!twice, `${lang}: the clock in the masthead and the garden's clock show different times, ${twice}`)
+
+    const line = stroke(lang)
+    check(await frame.evaluate((pts) => pts.every((p) => __GARDEN__.world.allowed(p.x, p.z)), line), `${lang}: the test stroke crosses ground the garden does not let a visitor rake`)
+    const before = await sand(frame, line)
+    await frame.evaluate((pts) => __GARDEN__.mark(pts), line)
+    const raked = await sand(frame, line)
+    check(deepest(raked, before) > 1, `${lang}: the test stroke left no mark in the sand`)
+
+    await page.keyboard.press('d')
+    const raking = await frame.$eval('#drawBtn', (b) => b.getAttribute('aria-pressed'))
+    await page.keyboard.press('Escape')
+    await wait(400)
+    const after = await frame.$eval('#drawBtn', (b) => b.getAttribute('aria-pressed'))
+    const still = await page.evaluate(() => !!document.querySelector('dialog.frdlg')?.open)
+    check(raking === 'true' && after === 'false' && still, `${lang}: Escape while raking should end the raking and keep the garden open (raking ${raking}, then ${after}, open ${still})`)
+    await page.keyboard.press('Escape')
+    const closed = await page.waitForFunction(() => !document.querySelector('dialog.frdlg'), { timeout: 4000 }).then(() => true, () => false)
+    check(closed, `${lang}: Escape in the garden did not close it`)
+    const moved = await page.evaluate((y) => Math.round(scrollY - y), top)
+    check(moved === 0, `${lang}: the garden moved the page under it by ${moved}px`)
+
+    const again = await garden(page)
+    check(again, `${lang}: the garden did not open a second time`)
+    if (again) {
+      const kept = await sand(again, line)
+      check(deepest(kept, raked) < 0.5, `${lang}: the stroke raked before closing changed by ${deepest(kept, raked).toFixed(2)} mm after reopening`)
+      await page.click('.fr-close')
+      const shut = await page.waitForFunction(() => !document.querySelector('dialog.frdlg'), { timeout: 4000 }).then(() => true, () => false)
+      check(shut, `${lang}: the close button did not close the garden`)
+    }
+  }
+  noErrors(errors, `in the ${lang} garden`)
+  await page.close()
+}
+
+// The dish of raked sand beside the years shows a stone for each hour of the twelve-hour clock,
+// as the garden does, and opens the garden too.
+for (const lang of ['en', 'zh']) {
+  const { page, errors } = await open('', { lang, counts: true })
+  const dish = await page
+    .waitForFunction(() => document.querySelector('.dish')?.dataset.hours, { timeout: 5000 })
+    .then(() => page.$eval('.dish', (d) => ({ stones: d.querySelectorAll('.dish-stone.on').length })), () => null)
+  const hours = await page.evaluate(() => new Date().getHours() % 12 || 12)
+  check(dish?.stones === hours, `${lang}: the sand dish shows ${dish?.stones} stones at ${hours} o'clock`)
+  // The dish and the clock in the masthead may read either side of the turn of a minute, so a difference is read again a second later.
+  const named = async () => {
+    const [label, time] = [await page.$eval('.dish', (d) => d.getAttribute('aria-label')), await page.$eval('.ltime', (b) => b.textContent)]
+    return label?.endsWith(time) ? null : `"${label}" and ${time}`
+  }
+  const misnamed = (await named()) && (await wait(1200), await named())
+  check(!misnamed, `${lang}: the sand dish and the clock in the masthead disagree, ${misnamed}`)
+  await page.evaluate(() => window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'instant' }))
+  const frame = await garden(page, '.dish')
+  check(frame, `${lang}: pressing the sand dish did not open the garden`)
+  check(String(await counted(page)) === 'egg-garden-dish', `${lang}: opening the garden from the sand dish counted ${await counted(page)}`)
+  if (frame) {
+    await page.click('.fr-close')
+    await page.waitForFunction(() => !document.querySelector('dialog.frdlg'), { timeout: 4000 }).catch(() => {})
+  }
+  noErrors(errors, `with the ${lang} sand dish`)
   await page.close()
 }
 
@@ -562,6 +673,14 @@ if (WANT_SHOTS) {
   for (const [name, lang, opts] of [['woodland', 'en', {}], ['woodland-phone', 'zh', { width: 390, height: 844 }]]) {
     const { page } = await open('', { lang, ...opts })
     if (await woodland(page)) {
+      await wait(2500)
+      await page.screenshot({ path: path.join(SHOTS, `${name}.png`) })
+    }
+    await page.close()
+  }
+  for (const [name, lang, opts] of [['garden', 'en', {}], ['garden-phone', 'zh', { width: 390, height: 844 }]]) {
+    const { page } = await open('', { lang, ...opts })
+    if (await garden(page)) {
       await wait(2500)
       await page.screenshot({ path: path.join(SHOTS, `${name}.png`) })
     }

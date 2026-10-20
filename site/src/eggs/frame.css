@@ -1,0 +1,15 @@
+/* An egg's page fills the window over the page, with a way back in its top right corner. */
+.frdlg {
+  position: fixed; inset: 0; width: 100%; height: 100%; max-width: none; max-height: none;
+  margin: 0; padding: 0; border: 0; overflow: hidden; background: var(--ground);
+}
+.frdlg::backdrop { background: var(--ground); }
+.fr-frame { display: block; width: 100%; height: 100%; border: 0; }
+.fr-close {
+  position: absolute; top: max(16px, env(safe-area-inset-top)); right: max(16px, env(safe-area-inset-right));
+  width: 38px; height: 38px; display: grid; place-items: center; border-radius: 50%;
+  color: #eef0df; background: #1e281ead; border: 1px solid #edf0d52b; backdrop-filter: blur(12px);
+}
+.fr-close:hover { background: #586149c9; border-color: #f2e1b077; }
+.fr-close:focus-visible { outline: 2px solid #dec393; outline-offset: 3px; }
+.fr-close path { fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; }

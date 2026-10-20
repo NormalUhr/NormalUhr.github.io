@@ -98,6 +98,8 @@ export const UI = {
     langName: { en: 'English', zh: 'Chinese' },
     skipToContent: 'Skip to content',
     localTime: 'Local time',
+    since: 'Since {year}',
+    sandGarden: 'Sand garden',
     notFound: 'That page is not here',
   },
   zh: {
@@ -122,6 +124,8 @@ export const UI = {
     langName: { en: '英文', zh: '中文' },
     skipToContent: '跳到正文',
     localTime: '本地时间',
+    since: '自 {year} 年起',
+    sandGarden: '沙庭',
     notFound: '这个页面不在这里',
   },
 } as const

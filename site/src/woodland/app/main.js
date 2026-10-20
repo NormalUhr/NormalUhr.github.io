@@ -3,6 +3,7 @@ import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import RAPIER from '@dimforge/rapier3d-compat';
 import {createHabitat} from './habitat.js';
 import {createAtmosphere,prepareEnvironment} from './atmosphere.js';
+import {createMoonlight} from './moonlight.js';
 import {createAntColony} from './ants.js';
 import {createStoneRenderer} from './rocks.js';
 import {WoodlandSimulation} from './simulation.js';
@@ -13,7 +14,7 @@ const $=id=>document.getElementById(id),canvas=$('scene');
 // Opened in the site's frame, the woodland leaves the top right corner to the site's close button,
 // and Escape asks the site to close it.
 const embedded=window.parent!==window;if(embedded)document.documentElement.classList.add('embedded');
-const system={renderer:null,scene:null,camera:null,controls:null,sim:null,habitat:null,atmosphere:null,colony:null,ready:false,frame:0,needsRender:true};
+const system={renderer:null,scene:null,camera:null,controls:null,sim:null,habitat:null,atmosphere:null,moonlight:null,colony:null,ready:false,frame:0,needsRender:true};
 const view={dropMode:false,paused:false,weather:'auto',season:'auto',lightMode:'live',hours:12,targetHours:12,cycleSpeed:360,quality:'auto',quiet:false,cameraTween:null,lastNotice:''};
 const now=new Date();view.hours=view.targetHours=now.getHours()+now.getMinutes()/60+now.getSeconds()/3600;
 const prefersReduced=window.matchMedia?.('(prefers-reduced-motion: reduce)').matches||false;
@@ -43,7 +44,7 @@ async function boot(){
  rapierReady.catch(()=>{});
  await nextFrame();
  const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:false,powerPreference:'high-performance'});
- renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.05;
+ renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.16;
  renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.setPixelRatio(Math.min(devicePixelRatio||1,mobile?1.5:1.65));
  const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(mobile?60:44,1,.055,180);
  camera.position.set(0,mobile?25:16,mobile?29:19.5);
@@ -77,6 +78,8 @@ async function boot(){
  markStage('ants-end');
  setupInteraction();setupUI();setupCrumbs(scene);setupCursor(scene);
  system.stoneRenderer=stoneRenderer;
+ const moonlight=createMoonlight(scene,camera,{heightAt:habitat.heightAt,quality:initialQuality});
+ system.moonlight=moonlight;moonlight.installMaterials([sugarMaterial]);moonlight.update(atmosphere.state);
  // The complete scene stays behind the greeting until textures and programs
  // are ready. Nothing is appended or repositioned after the first visible frame.
  sim.render(1);updateUI();
@@ -103,7 +106,7 @@ function frame(nowMs){
  requestAnimationFrame(frame);if(!system.ready)return;
  const raw=last?Math.max(0,(nowMs-last)/1000):1/60;last=nowMs;
  if(document.hidden)return;
- const dt=Math.min(raw,.055),{renderer,scene,camera,controls,sim,habitat,atmosphere,stoneRenderer}=system;
+ const dt=Math.min(raw,.055),{renderer,scene,camera,controls,sim,habitat,atmosphere,moonlight,stoneRenderer}=system;
  const real=new Date();
  if(sim.live)sim.requestTime(clockLabel(real));
  if(view.lightMode==='live')view.targetHours=real.getHours()+real.getMinutes()/60+real.getSeconds()/3600;
@@ -112,6 +115,7 @@ function frame(nowMs){
  view.hours=(view.hours+delta*(1-Math.exp(-dt*.85))+24)%24;
  const season=view.season==='auto'?seasonForMonth(real.getMonth()):Number(view.season);
  atmosphere.update(view.paused?0:dt,{hours:view.hours,dayOfYear:view.season==='auto'?realDay():seasonDays[season],season,weather:view.weather,timeScale:view.lightMode==='cycle'?view.cycleSpeed:1});
+ moonlight.update(atmosphere.state);
  sim.environment=atmosphere.state;habitat.update(view.paused?0:dt,atmosphere.state);stoneRenderer.update(atmosphere.state);
  if(!view.paused){accumulator+=dt;let n=0;while(accumulator>=1/90&&n<5){sim.step(1/90);accumulator-=1/90;n++}if(n===5)accumulator=Math.min(accumulator,1/90)}else accumulator=0;
  sim.render(1);updateCrumbs(dt);
@@ -201,7 +205,7 @@ function setupUI(){
  document.addEventListener('keydown',e=>{
   if(e.ctrlKey||e.metaKey||e.altKey||e.repeat||/^(INPUT|SELECT|TEXTAREA)$/.test(e.target?.tagName))return;
   if(e.key==='Escape'&&view.quiet){$('quietBtn').click();return}
-  if(e.key==='Escape'&&embedded){window.parent.postMessage('woodland:close',location.origin);return}
+  if(e.key==='Escape'&&embedded){window.parent.postMessage('frame:close',location.origin);return}
   if(e.key.toLowerCase()==='h'){e.preventDefault();resetCamera()}
  });
 }

@@ -378,10 +378,11 @@ export function createAtmosphere(scene, renderer, camera, options = {}) {
     simulation: true
   };
   const targetSun = new THREE.Vector3(), targetMoon = new THREE.Vector3(), lightDirection = new THREE.Vector3();
+  const sunLightDirection = new THREE.Vector3(), moonLightDirection = new THREE.Vector3();
   const normal = new THREE.Vector3(), zAxis = new THREE.Vector3(0, 0, 1);
   const targetLight = new THREE.Color(), targetSky = new THREE.Color(), targetBounce = new THREE.Color();
   const targetHorizon = new THREE.Color(), size = new THREE.Vector2();
-  const lunarColor = new THREE.Color(.46, .61, .88), overcastColor = new THREE.Color(.53, .56, .57);
+  const lunarColor = new THREE.Color(.70, .80, 1), overcastColor = new THREE.Color(.63, .67, .70);
   const warmHorizon = new THREE.Color(.56, .33, .17), cloudyHorizon = new THREE.Color(.31, .35, .35);
   const dummy = new THREE.Object3D();
   let initialized = false, disposed = false;
@@ -464,25 +465,35 @@ export function createAtmosphere(scene, renderer, camera, options = {}) {
 
     const solarStrength = Math.pow(Math.max(0, state.sunDirection.y), .55);
     const dayShadow = smooth(-.045, .10, state.sunDirection.y);
-    const cloudTransmission = 1 - state.cloud * .77;
-    const daylightPower = solarStrength * 3.65 * cloudTransmission;
-    // A readable, dark-adapted night exposure: the camera's exposure stays
-    // fixed, so a modest blue sky fill preserves ants against the dark soil.
-    const moonPower = .58 * (1 - state.daylight) * (1 - state.cloud * .55);
+    const cloudTransmission = 1 - state.cloud * .72;
+    const daylightPower = solarStrength * 4.25 * cloudTransmission;
+    // The moon is set bright for the opening above the clock. Elsewhere the
+    // canopy in moonlight.js passes only part of it.
+    const moonPower = 1.65 * (1 - state.daylight) * (1 - state.cloud * .6);
     sun.intensity = mix(sun.intensity, daylightPower + moonPower, skyAlpha);
     const sunWarmth = smooth(.02, .55, state.sunDirection.y);
     targetLight.setRGB(mix(1, 1, sunWarmth), mix(.40, .91, sunWarmth), mix(.16, .73, sunWarmth));
     targetLight.lerp(lunarColor, 1 - dayShadow);
     sun.color.lerp(targetLight, skyAlpha);
-    lightDirection.copy(state.moonDirection).lerp(state.sunDirection, dayShadow);
-    lightDirection.y = Math.max(.085, lightDirection.y); lightDirection.normalize();
+    // At dusk and dawn the light turns from the moon to the sun at an even pace
+    // along the arc between them.
+    moonLightDirection.copy(state.moonDirection); sunLightDirection.copy(state.sunDirection);
+    moonLightDirection.y = Math.max(.085, moonLightDirection.y); sunLightDirection.y = Math.max(.085, sunLightDirection.y);
+    moonLightDirection.normalize(); sunLightDirection.normalize();
+    const lightAngle = Math.acos(clamp(moonLightDirection.dot(sunLightDirection), -1, 1));
+    if (lightAngle < 1e-4) lightDirection.copy(moonLightDirection).lerp(sunLightDirection, dayShadow).normalize();
+    else {
+      const inverseSine = 1 / Math.sin(lightAngle);
+      lightDirection.copy(moonLightDirection).multiplyScalar(Math.sin((1 - dayShadow) * lightAngle) * inverseSine)
+        .addScaledVector(sunLightDirection, Math.sin(dayShadow * lightAngle) * inverseSine).normalize();
+    }
     sun.position.copy(lightDirection).multiplyScalar(65);
-    targetSky.setRGB(mix(.32, .59, state.daylight), mix(.43, .72, state.daylight), mix(.66, .84, state.daylight));
-    targetSky.lerp(overcastColor, state.cloud * state.daylight * .6);
-    targetBounce.setRGB(mix(.10, .22, state.daylight), mix(.13, .18, state.daylight), mix(.18, .095, state.daylight));
+    targetSky.setRGB(mix(.38, .68, state.daylight), mix(.47, .79, state.daylight), mix(.66, .88, state.daylight));
+    targetSky.lerp(overcastColor, state.cloud * (.12 + state.daylight * .48));
+    targetBounce.setRGB(mix(.17, .31, state.daylight), mix(.19, .27, state.daylight), mix(.25, .18, state.daylight));
     hemisphere.color.lerp(targetSky, skyAlpha); hemisphere.groundColor.lerp(targetBounce, skyAlpha);
-    hemisphere.intensity = mix(hemisphere.intensity, .70 + state.daylight * .37 + state.cloud * state.daylight * .12, skyAlpha);
-    scene.environmentIntensity = mix(scene.environmentIntensity, .25 + state.daylight * .25 - state.cloud * .055, skyAlpha);
+    hemisphere.intensity = mix(hemisphere.intensity, .88 + state.daylight * .74 + state.cloud * (.12 + state.daylight * .3), skyAlpha);
+    scene.environmentIntensity = mix(scene.environmentIntensity, .32 + state.daylight * .36 - state.cloud * .015, skyAlpha);
     targetHorizon.setRGB(mix(.012, .41, state.daylight), mix(.023, .46, state.daylight), mix(.040, .43, state.daylight));
     targetHorizon.lerp(warmHorizon, twilight * .38);
     targetHorizon.lerp(cloudyHorizon, state.cloud * state.daylight * .50);

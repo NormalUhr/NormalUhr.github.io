@@ -9,6 +9,8 @@ const EGGS = {
   'egg-postman-lost': 'Postman town, from the clock on the missing page',
   'egg-postman-letter': 'Postman town, from the letter after an article',
   'egg-woodland': 'Woodland clock, from the clock in the masthead',
+  'egg-garden-dish': 'Karesansui garden, from the sand dish in the footer',
+  'egg-garden-years': 'Karesansui garden, from the years in the footer',
 } as const
 
 export type Egg = keyof typeof EGGS

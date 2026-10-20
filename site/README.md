@@ -48,7 +48,7 @@ The postman clock and its town have two checks of their own:
 
 ```bash
 npm test             # the shared time, the town's calendar and festivals, and what the postman should show
-npm run clocks       # after a build: what the clock draws, what the town does, and the woodland
+npm run clocks       # after a build: what the clock draws, what the town does, the woodland and the garden
 ```
 
 `npm run clocks` loads the site in headless Chrome. It compares what the postman clock on
@@ -62,12 +62,17 @@ egg opens the town on its day and counts itself once in GoatCounter, and that th
 leaves the page where the reader had scrolled to. It also checks the printed date, the keys,
 the longest trip between two days with mail, that the cats stay on the same roofs while the
 postman walks, that the lampposts at a crossing name its two months and move with the
-street, reduced motion, and that the town and its paper fit 390 and 320 pixels wide. Last,
-it checks that the clock in the masthead shows the visitor's local time, that pressing it
-opens the woodland in the page's language with the ants keeping the same time and counts it
-once, that Escape and the close button close it without moving the page, and that phones 320
-pixels wide do not show the clock. Add `-- --shots` to also save screenshots to
-`shots/clocks/`.
+street, reduced motion, and that the town and its paper fit 390 and 320 pixels wide. It then
+checks that the clock in the masthead shows the visitor's local time, that pressing it opens
+the woodland in the page's language with the ants keeping the same time and counts it once,
+that Escape and the close button close it without moving the page, and that phones 320 pixels
+wide do not show the clock. It also checks that the woodland's moonlight reaches its
+materials. Last, it checks that the years in the footer open the garden in the page's language
+and count it once, and that the garden's clock shows the same time as the masthead. Escape must
+first end raking and only then close the garden, and a stroke raked just before the garden
+closes must still be in the sand when it opens again. The sand dish must show a stone for each
+hour of the twelve-hour clock and open the garden with a count of its own. Add `-- --shots` to
+also save screenshots to `shots/clocks/`.
 
 ## Layout
 
@@ -85,12 +90,13 @@ site/
     eggs/                 the Easter eggs: when each one appears, on every page
     clocks/               the postman clock, his town, and his visits to the pages
     woodland/             the woodland clock, which the clock in the masthead opens
+    garden/               the karesansui garden, which the sand dish and the years in the footer open
     layouts/ components/ pages/ styles/
   scripts/
     migrate.mjs           the Jekyll import, re-runnable
     audit.mjs             the page check described above
     clocks.test.mjs       what the clock should show, and the town's calendar
-    clocks.mjs            what the clock, the town and the woodland do, in the browser
+    clocks.mjs            what the clock, the town, the woodland and the garden do, in the browser
     serve.mjs             serves dist/ for the two browser checks
     migration-report.txt  what the import decided, per post
 ```
@@ -116,9 +122,14 @@ Pressing it opens the woodland over the page, where ants lay out the same time i
 Phones narrower than 360 pixels do not show the time, because it would push the masthead's
 controls onto a row of their own.
 
+The karesansui garden is in the footer. The footer of every page ends with the years the site
+has been kept, such as 2019–, and a small dish of raked sand. The dish keeps the hour the way
+the garden does, with a stone for each hour of the twelve-hour clock and a groove in the middle
+that grows one turn an hour. Pressing the dish or the years opens the garden over the page.
+
 Each egg counts itself in GoatCounter when a visitor opens it, as an event named
-`egg-postman-walk`, `egg-postman-date`, `egg-postman-lost`, `egg-postman-letter` or
-`egg-woodland` (`src/eggs/found.ts`). The GoatCounter dashboard lists these events with the
+`egg-postman-walk`, `egg-postman-date`, `egg-postman-lost`, `egg-postman-letter`,
+`egg-woodland`, `egg-garden-dish` or `egg-garden-years` (`src/eggs/found.ts`). The GoatCounter dashboard lists these events with the
 pages. GoatCounter counts each event at most once per visit, and the events also add to the
 site total in the footer. A preview such as `clock-open` counts nothing, and GoatCounter's
 script counts nothing on a local address.
@@ -183,18 +194,21 @@ corner (`datestamp.ts`), the newspaper
 
 The woodland clock is a 3D woodland where worker ants carry stones to lay out the visitor's
 local time. A visitor can turn the view, zoom, and drop a stone with a right-click or a long
-press. Day and night, the seasons and the weather follow the visitor's clock. It needs WebGL 2
+press. Day and night, the seasons and the weather follow the visitor's clock. At night the
+moonlight falls through an opening in the trees onto the clock and the nest. It needs WebGL 2
 and WebAssembly, and without them the clock in the masthead stays a plain clock.
 
 It is a page of its own, `/<lang>/woodland/` (`src/pages/[lang]/woodland.astro`), which no page
 links to and which asks search engines to leave it out. The woodland takes over its whole window
-and has no way to stop itself, so `src/woodland/host.ts` opens the page in a frame that fills the
+and has no way to stop itself, so `src/eggs/frame.ts` opens the page in a frame that fills the
 window, with a close button in the top right corner. Escape inside the woodland asks the site to
 close it. Closing removes the frame, which stops the woodland and frees its graphics memory.
 
 `src/woodland/app/` is the woodland's own program, taken from the source of its single-file
 version 5 and built with the versions it was written for, Three.js 0.180.0 and Rapier 0.21.0.
-This copy differs from that source in four ways:
+A later single-file build brought the moonlight (`app/moonlight.js`) and a stronger light, but
+no source. Those changes were written back into this source, and the source with them builds
+into the same program as that file. This copy differs from that source in four ways:
 
 - The six Poly Haven textures are image files in `src/woodland/textures/`, so browsers cache
   them. The source has them as text inside the script.
@@ -212,6 +226,44 @@ engine and the textures. The licences of Three.js (MIT) and Rapier (Apache 2.0) 
 of the textures (CC0) are in `src/woodland/licenses/` and `src/woodland/textures/`, and the page
 carries them in its `third-party-notices` element.
 
+## The karesansui garden
+
+The karesansui garden is a 3D dry garden beside a small house. A spiral raked into the sand
+grows by one turn each hour, and stones set around it at the positions of a clock face count
+the hours of a twelve-hour clock. A family takes turns coming out of the house to keep the
+spiral and to smooth whatever a visitor or a passing animal has marked. A visitor can turn
+the view, zoom, rake the sand with a right-click drag or the Rake button, preview the light,
+the weather and the seasons, and turn on sound. It needs WebGL 2, and without it the dish and
+the years in the footer open nothing.
+
+Like the woodland, it is a page of its own, `/<lang>/garden/` (`src/pages/[lang]/garden.astro`),
+that no page links to and that `src/eggs/frame.ts` opens in a frame over the page. The garden
+saves itself in the visitor's browser, so it carries on from where it was when the visitor
+comes back. Removing the frame would cut short a save that starts at the close, so the garden
+asks the site to hold its frame, and the site removes the frame once the garden has saved.
+That takes about a tenth of a second.
+
+`src/garden/app/` is the garden's own program, taken from the source of its version 1.6.0 and
+built with Three.js 0.180.0, the version it was written for. This copy differs from that source
+in three ways:
+
+- Every word the garden shows is in `app/words.js`, in Chinese as written and in English.
+  The language of the page picks one.
+- In the site's frame, the garden leaves the top right corner to the close button. Escape asks
+  the site to close it when there is no raking or open panel for Escape to end, and the garden
+  saves before its frame goes.
+- The markup and styles of its `shell.html` are now in `garden.astro`, and the page loads the
+  font for its Chinese words as a file instead of carrying it inside.
+
+Its `README.md`, in Chinese, explains how the program works. Its tests and its build script stay
+with the original project and are not copied here.
+
+A visitor who opens the garden downloads about 1 MB the first time. Half of it is Three.js,
+which the woodland uses too, so a visitor who has opened one of them already has it. The
+licences of Three.js (MIT) and of the font, a subset of Noto Sans SC (OFL), are in
+`src/garden/licenses/` and `src/garden/assets/`, and the page carries them in its
+`third-party-notices` element.
+
 ## Previews
 
 To see any moment, add these to the address of any page. The clock itself is on `/404.html`.
@@ -227,7 +279,9 @@ To see any moment, add these to the address of any page. The clock itself is on 
 The town takes today's date from the same time, so `/en/?clock-time=2026-02-17T10:00&clock-open`
 opens it on the Spring Festival of 2026, with every later day drawn as a blueprint.
 
-The woodland clock opens on its own at `/en/woodland/` and `/zh/woodland/`.
+The woodland clock opens on its own at `/en/woodland/` and `/zh/woodland/`, and the garden at
+`/en/garden/` and `/zh/garden/`. Adding `?fresh` to the garden's address opens a new garden and
+leaves the saved one as it was.
 
 ## Copy you need to write
 

@@ -4,6 +4,7 @@
    prefers. Light applies only when a reader asks for it.
    ============================================================ */
 :root {
+  --sand: #2a2924; --sand-rake: #45423a; --stone: #a9a598;
   --paper: #14161b; --paper-2: #1a1d24; --paper-3: #212630; --card: #171a20;
   --rule: #2d323c; --rule-soft: #232833; --rule-hair: #1c2028;
   --ink: #dcd7cb; --ink-strong: #f4f1e8; --ink-soft: #9d9b92; --ink-faint: #71757c;
@@ -18,6 +19,7 @@
   color-scheme: dark;
 }
 :root[data-theme="light"] {
+  --sand: #ebe5d7; --sand-rake: #d2c8b2; --stone: #5b625d;
   --paper: #f8faf8; --paper-2: #eff2f0; --paper-3: #e6eae7; --card: #ffffff;
   --rule: #d3dad5; --rule-soft: #e2e7e3; --rule-hair: #ecf0ed;
   --ink: #1f2522; --ink-strong: #0b100e; --ink-soft: #54605a; --ink-faint: #87938c;
@@ -361,6 +363,19 @@ p.lede { font-size: 17.5px; line-height: 1.58; color: var(--ink-soft); margin: 0
 .footin .tot-lines a { color: var(--ink-soft); }
 .footin .tot-globe .globe { width: 80px; }
 .footin .tot b { font-family: var(--mono); color: var(--ink-soft); font-weight: 500; }
+/* The years the site has been kept, and the dish of raked sand beside them that keeps the hour in
+   stones (src/eggs/dish.ts). Both open the karesansui garden. */
+.footin .since { padding: 0; }
+.footin .since:hover { color: var(--ink-soft); }
+.dish { flex: none; width: 34px; height: 34px; padding: 0; border-radius: 50%; }
+.dish:not([data-hours]) { visibility: hidden; }
+.dish svg { display: block; width: 100%; height: 100%; }
+.dish-sand { fill: var(--sand); stroke: var(--sand-rake); stroke-width: 1; }
+.dish-rake, .dish-groove { fill: none; stroke: var(--sand-rake); stroke-width: 1.1; stroke-linecap: round; }
+.dish-stone { fill: var(--stone); opacity: 0; }
+.dish-stone.on { opacity: 1; }
+.dish:hover { --sand-rake: var(--ink-faint); }
+.dish:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 
 /* visitor globe */
 .globe { aspect-ratio: 1; position: relative; }

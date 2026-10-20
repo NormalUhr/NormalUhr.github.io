@@ -1,0 +1,133 @@
+---
+/**
+ * The karesansui garden, a page of its own that the years at the foot of every page open in a
+ * frame (src/garden/host.ts). No page links to it. Its program is src/garden/app.
+ */
+import { LANGS, site, type Lang } from '../../site.config'
+import { WORDS } from '../../garden/app/words.js'
+import three from '../../garden/licenses/three-MIT.txt?raw'
+import notoSansSC from '../../garden/assets/NotoSansSC-OFL.txt?raw'
+import font from '../../garden/assets/garden-ui.woff?url'
+
+export function getStaticPaths() {
+  return LANGS.map((lang) => ({ params: { lang } }))
+}
+
+const lang = Astro.params.lang as Lang
+const W = WORDS[lang]
+/** The hours of morning, daytime, dusk and night, which the light buttons preview. */
+const HOURS = [7.5, 13.4, 17.5, 22]
+// The Chinese words are set in a subset of Noto Sans SC that carries only the garden's own characters.
+const fontFace = `@font-face{font-family:"Garden UI";font-style:normal;font-weight:400;src:url(${font}) format("woff");font-display:swap}`
+const notices = JSON.stringify({
+  three,
+  notoSansSC,
+  artwork: '庭院、人物、纹理与声音为程序化创作。未使用外部照片、模型或在线服务。',
+}).replace(/</g, '\\u003c')
+---
+<!doctype html>
+<html lang={lang === 'zh' ? 'zh-CN' : 'en'}>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#253429">
+<link rel="icon" href={site.favicon ?? 'data:,'}>
+<title>{W.title}</title>
+<style is:inline set:html={fontFace}></style>
+<style is:inline>
+:root{color-scheme:dark;font-family:"Garden UI","PingFang SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;color:#f4f0e4;background:#222d24}
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden}
+button,select{font:inherit}
+button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+#scene{display:block;width:100%;height:100%;touch-action:none;cursor:grab;outline:none}
+#scene:active{cursor:grabbing}
+body.drawing #scene{cursor:crosshair}
+.veil{position:fixed;inset:0;pointer-events:none;background:linear-gradient(180deg,#111e1312,transparent 20%,transparent 72%,#0b170f3a)}
+button{border:1px solid #e9eee01f;color:#f2efe4;background:#23302785;backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);cursor:pointer;transition:background .22s,border-color .22s,transform .22s}
+button:hover{background:#3a4c3bba;border-color:#eff2da50}
+button:active{transform:scale(.96)}
+button:focus-visible,select:focus-visible{outline:2px solid #f4e2ae;outline-offset:4px}
+button svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.45;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.toolbar{position:fixed;bottom:calc(25px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);display:flex;gap:7px;align-items:center}
+.toolbar button{display:flex;align-items:center;justify-content:center;gap:8px;height:43px;padding:0 17px;border-radius:24px;font-size:12px;letter-spacing:.08em;white-space:nowrap;box-shadow:0 5px 22px #0a190f20}
+.toolbar button[aria-pressed=true]{background:#dce3ca;color:#27372a;border-color:#dce3ca}
+.corner{position:fixed;top:calc(20px + env(safe-area-inset-top));display:flex;gap:8px;align-items:center}
+.corner.left{left:24px}
+.corner.right{right:24px}
+.round{width:37px;height:37px;border-radius:50%;display:grid;place-items:center}
+.time{font-variant-numeric:tabular-nums;font-size:12px;font-weight:400;letter-spacing:.12em;padding:9px 12px;border-radius:22px;color:#f4f0e4;background:#1c291d65;backdrop-filter:blur(12px)}
+.time[hidden]{display:none}
+.settings{position:fixed;left:24px;top:calc(68px + env(safe-area-inset-top));width:238px;padding:16px;border:1px solid #e9eee02a;border-radius:18px;background:#1e2d24e8;backdrop-filter:blur(25px);box-shadow:0 12px 50px #00140833}
+.settings[hidden]{display:none}
+.settings label{display:flex;align-items:center;justify-content:space-between;font-size:12px;color:#e3e4d6;gap:14px;margin-top:15px}
+.settings select{background:#ffffff0b;color:#f2f2e5;border:1px solid #ffffff20;border-radius:9px;padding:7px 9px;width:134px;outline:none}
+.settings select option{background:#26382a}
+.light-picks{display:grid;grid-template-columns:repeat(2,1fr);gap:7px}
+.light-picks button{padding:8px 5px;border-radius:10px;font-size:12px;backdrop-filter:none}
+.light-picks button.active{background:#dee5cc;color:#29382b}
+.settings .now{width:100%;padding:9px;margin-top:8px;border-radius:10px;font-size:12px}
+.loading{position:fixed;inset:0;z-index:10;display:grid;place-items:center;background:#273b2e;transition:opacity .65s;pointer-events:none}
+.loading.out{opacity:0}
+.loading-inner{text-align:center;color:#e9e6d4}
+.loading p{font-size:14px;letter-spacing:.12em;font-weight:350;margin:22px 0 0;line-height:1.8;min-height:28px}
+.rings{width:70px;height:70px;position:relative;margin:auto;opacity:.72}
+.rings i{position:absolute;border:1px solid #d5dec4;border-radius:50%;inset:calc(var(--i)*7px);transform:scaleY(.55) rotate(-8deg);animation:breathe 3s ease-in-out infinite alternate;animation-delay:calc(var(--i)*.16s)}
+@keyframes breathe{from{opacity:.25}
+to{opacity:.9}
+}
+.error{max-width:420px;padding:24px;line-height:1.9}
+.error button{padding:9px 17px;border-radius:20px;margin-top:12px}
+.sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.toast{position:fixed;bottom:87px;left:50%;transform:translateX(-50%);font-size:12px;letter-spacing:.04em;background:#223429ce;border:1px solid #ffffff17;border-radius:20px;padding:9px 16px;pointer-events:none;opacity:0;transition:opacity .3s;white-space:nowrap}
+.toast.on{opacity:1}
+@media(max-width:600px){.toolbar{bottom:calc(19px + env(safe-area-inset-bottom));gap:5px}
+.toolbar button{height:42px;padding:0 13px;gap:6px;font-size:11px;letter-spacing:0}
+.corner{top:calc(14px + env(safe-area-inset-top))}
+.corner.left{left:14px}
+.corner.right{right:14px}
+.settings{left:14px;top:calc(60px + env(safe-area-inset-top))}
+.round{width:34px;height:34px}
+.toast{max-width:92vw;font-size:11px}
+}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}
+}
+/* English reads better in a Latin face than in the Latin letters of a Chinese one. */
+html:lang(en){font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+/* In the site's frame, the site's close button takes the top right corner. */
+.embedded .corner.right{right:70px}
+@media(max-width:600px){.embedded .corner.right{right:62px}}
+</style>
+<script type="application/json" id="third-party-notices" set:html={notices}></script>
+</head>
+<body>
+<canvas id="scene" tabindex="0" aria-label={W.scene}></canvas>
+<div class="veil"></div>
+<div class="corner left">
+<button class="round" id="lightBtn" aria-label={W.light} title={W.light} aria-expanded="false"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.5"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/></svg></button>
+<button class="round" id="soundBtn" aria-label={W.listen} title={W.listen} aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4zM17 8c2 2 2 6 0 8"/><path id="mutedLine" d="m18 3 3 3"/></svg></button>
+</div>
+<div class="corner right">
+<span class="time" id="timeLabel" hidden></span>
+<button class="round" id="clockBtn" aria-label={W.clock} title={W.clock} aria-pressed="false"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/></svg></button>
+</div>
+<section id="settings" class="settings" hidden aria-label={W.light}>
+<div class="light-picks">{HOURS.map((hour, i) => <button data-hour={hour}>{W.times[i]}</button>)}</div>
+<button id="liveLight" class="now">{W.now}</button>
+<label>{W.weather}<select id="weather">{Object.entries(W.weathers).map(([value, name]) => <option value={value}>{name}</option>)}</select></label>
+<label>{W.season}<select id="season"><option value="auto">{W.seasonNow}</option>{W.seasons.map((name, i) => <option value={i}>{name}</option>)}</select></label>
+</section>
+<nav class="toolbar" aria-label={W.views}>
+<button id="nearBtn"><svg viewBox="0 0 24 24"><circle cx="10" cy="10" r="5"/><path d="m14 14 6 6M7.5 10h5M10 7.5v5"/></svg><span>{W.closer}</span></button>
+<button id="homeBtn"><svg viewBox="0 0 24 24"><path d="M4 10 12 4l8 6v10H4zM9 20v-7h6v7"/></svg><span>{W.home}</span></button>
+<button id="drawBtn" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="m5 19 13-13m-2-2 4 4M4 17l3 3M3 21h8M13 16l6 4m-4-7 6 4"/></svg><span>{W.rake}</span></button>
+</nav>
+<div id="toast" class="toast" role="status"></div>
+<div id="loading" class="loading"><div class="loading-inner"><div class="rings" aria-hidden="true"><i style="--i:0"></i><i style="--i:1"></i><i style="--i:2"></i><i style="--i:3"></i></div><p id="greeting">{W.greetings[0]}</p></div></div>
+<noscript><div class="loading"><p class="error">{W.noScript}</p></div></noscript>
+<script>
+  import '../../garden/app/main.js'
+</script>
+</body>
+</html>

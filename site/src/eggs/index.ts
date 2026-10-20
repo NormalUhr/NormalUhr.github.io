@@ -4,6 +4,8 @@
  * moment comes.
  */
 import { keepTime } from './clock'
+import { keepDish } from './dish'
+import type { Egg } from './found'
 import { READ_SHARE, WALK_AFTER, WALK_CHANCE } from './luck'
 import { afterReading, byChance, lang, onDate, onHourTurn, onMark } from './triggers'
 
@@ -13,6 +15,7 @@ const now = params.get('eggs') === 'now'
 const host = () => import('../clocks/host')
 const visits = () => import('../clocks/visits')
 const woodland = () => import('../woodland/host')
+const garden = () => import('../garden/host')
 /** An egg that cannot load its code stays hidden. */
 const quietly = (egg: Promise<unknown>) => void egg.catch(() => {})
 
@@ -37,6 +40,15 @@ onMark('read', (prose) => {
 onMark('woodland', (face) => {
   keepTime(face, face.dataset.label!)
   face.addEventListener('click', () => quietly(woodland().then((w) => w.openWoodland(lang))))
+})
+
+// The years at the foot of every page open the garden, where a family keeps the time in raked sand.
+// So does the dish of raked sand beside them, which keeps the hour in stones as the garden does.
+const toGarden = (door: Egg) => quietly(garden().then((g) => g.openGarden(lang, door)))
+onMark('garden-years', (years) => years.addEventListener('click', () => toGarden('egg-garden-years')))
+onMark('garden-dish', (dish) => {
+  keepDish(dish, dish.dataset.label!)
+  dish.addEventListener('click', () => toGarden('egg-garden-dish'))
 })
 
 if (params.has('clock-open')) quietly(host().then((h) => h.openTown(lang)))

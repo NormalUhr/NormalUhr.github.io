@@ -3,7 +3,7 @@ import '../styles/global.css'
 import 'katex/dist/katex.min.css'
 import { getEntry } from 'astro:content'
 import { site, LANGS, type Lang } from '../site.config'
-import { t } from '../lib/taxonomy'
+import { fill, t } from '../lib/taxonomy'
 import { countryVisits } from '../lib/visitors'
 import Globe from '../components/Globe.astro'
 
@@ -27,6 +27,11 @@ const nav = [
   ...(about?.body?.trim() ? [{ href: `/${lang}/about`, label: L.about, key: 'about' }] : []),
 ]
 const countries = await countryVisits()
+/** The twelve hour stones of the sand dish in the footer, clockwise from one o'clock, each a little different in size. */
+const STONES = [1.9, 1.6, 1.8, 1.5, 1.7, 2, 1.6, 1.8, 1.5, 1.9, 1.7, 1.6].map((r, i) => {
+  const angle = ((i + 1) / 12) * 2 * Math.PI
+  return [(20 + 13.4 * Math.sin(angle)).toFixed(2), (20 - 13.4 * Math.cos(angle)).toFixed(2), r]
+})
 ---
 <!doctype html>
 <html lang={lang === 'zh' ? 'zh-Hans' : 'en'}>
@@ -104,11 +109,20 @@ const countries = await countryVisits()
         </a>
       )}
       <div class="tot-lines">
-        {site.goatcounter
-          ? <span><b id="site-visits" class="tnum">—</b> {L.visits} · {site.since}–</span>
-          : <span>{site.since}–</span>}
+        <span>
+          {site.goatcounter && <><b id="site-visits" class="tnum">—</b> {L.visits} · </>}
+          <button class="since" type="button" data-egg="garden-years" aria-label={fill(L.since, { year: site.since })}>{site.since}–</button>
+        </span>
         {countries && <a href={`/${lang}/visitors`}>{countries.length} {L.countries}</a>}
       </div>
+      <button class="dish" type="button" data-egg="garden-dish" data-label={L.sandGarden}>
+        <svg viewBox="0 0 40 40" aria-hidden="true">
+          <circle class="dish-sand" cx="20" cy="20" r="18.5" />
+          <circle class="dish-rake" cx="20" cy="20" r="16.4" />
+          <path class="dish-groove" d="" />
+          {STONES.map(([x, y, r]) => <circle class="dish-stone" cx={x} cy={y} r={r} />)}
+        </svg>
+      </button>
     </div>
   </div></footer>
 

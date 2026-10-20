@@ -1,0 +1,5 @@
+const DB_NAME='庭间·枯山水',STORE='garden',KEY='family-garden-v1';
+let dbPromise;
+function db(){if(!dbPromise)dbPromise=new Promise(resolve=>{try{const request=indexedDB.open(DB_NAME,1);request.onupgradeneeded=()=>request.result.createObjectStore(STORE);request.onsuccess=()=>resolve(request.result);request.onerror=()=>resolve(null);request.onblocked=()=>resolve(null);}catch{resolve(null);}});return dbPromise;}
+export async function loadGarden(){const database=await db();if(!database)return null;return new Promise(resolve=>{try{const tx=database.transaction(STORE,'readonly'),r=tx.objectStore(STORE).get(KEY);r.onsuccess=()=>resolve(r.result||null);r.onerror=()=>resolve(null);}catch{resolve(null);}});}
+export async function saveGarden(data){const database=await db();if(!database)return false;return new Promise(resolve=>{try{const tx=database.transaction(STORE,'readwrite');tx.objectStore(STORE).put(data,KEY);tx.oncomplete=()=>resolve(true);tx.onerror=()=>resolve(false);tx.onabort=()=>resolve(false);}catch{resolve(false);}});}
