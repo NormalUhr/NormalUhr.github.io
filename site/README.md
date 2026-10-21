@@ -71,8 +71,12 @@ materials. Last, it checks that the years in the footer open the garden in the p
 and count it once, and that the garden's clock shows the same time as the masthead. Escape must
 first end raking and only then close the garden, and a stroke raked just before the garden
 closes must still be in the sand when it opens again. The sand dish must show a stone for each
-hour of the twelve-hour clock and open the garden with a count of its own. Add `-- --shots` to
-also save screenshots to `shots/clocks/`.
+hour of the twelve-hour clock and open the garden with a count of its own. The clock beside
+the reading time of an article must show the time in the masthead with its two bridges, and open
+the cloister clock tower in the page's language with a count of its own, where the tower keeps
+the same time. Escape must first close the tower's settings and only then the tower, and a
+setting changed just before the tower closes must be there when it opens again. Add
+`-- --shots` to also save screenshots to `shots/clocks/`.
 
 ## Layout
 
@@ -91,6 +95,7 @@ site/
     clocks/               the postman clock, his town, and his visits to the pages
     woodland/             the woodland clock, which the clock in the masthead opens
     garden/               the karesansui garden, which the sand dish and the years in the footer open
+    tower/                the cloister clock tower, which the clock beside an article's reading time opens
     layouts/ components/ pages/ styles/
   scripts/
     migrate.mjs           the Jekyll import, re-runnable
@@ -127,9 +132,14 @@ has been kept, such as 2019–, and a small dish of raked sand. The dish keeps t
 the garden does, with a stone for each hour of the twelve-hour clock and a groove in the middle
 that grows one turn an hour. Pressing the dish or the years opens the garden over the page.
 
+The cloister clock tower is at the top of every article. The reading time there has a small
+clock beside it, which is the tower seen from above. Its hands are the tower's two bridges, a
+short, wide copper one for the hour and a long, narrow blue-grey one for the minute, and they
+show the visitor's local time. Pressing the reading time opens the tower over the page.
+
 Each egg counts itself in GoatCounter when a visitor opens it, as an event named
 `egg-postman-walk`, `egg-postman-date`, `egg-postman-lost`, `egg-postman-letter`,
-`egg-woodland`, `egg-garden-dish` or `egg-garden-years` (`src/eggs/found.ts`). The GoatCounter dashboard lists these events with the
+`egg-woodland`, `egg-garden-dish`, `egg-garden-years` or `egg-tower` (`src/eggs/found.ts`). The GoatCounter dashboard lists these events with the
 pages. GoatCounter counts each event at most once per visit, and the events also add to the
 site total in the footer. A preview such as `clock-open` counts nothing, and GoatCounter's
 script counts nothing on a local address.
@@ -264,6 +274,60 @@ licences of Three.js (MIT) and of the font, a subset of Noto Sans SC (OFL), are 
 `src/garden/licenses/` and `src/garden/assets/`, and the page carries them in its
 `third-party-notices` element.
 
+## The cloister clock tower
+
+The cloister clock tower is a 3D library of seven levels, built as rings of cloisters around a
+central lift. Two bridges turn about the lift like the hands of a clock. The short, wide hour
+bridge and the long, narrow minute bridge join the lift to the cloisters at different levels,
+and twelve Roman numerals on the roof show where twelve o'clock is. Residents read, talk and
+work in the cloisters, cross the bridges, ride the lifts and walk in the gardens around the
+tower, and more of them come in by day. A reader sometimes stops on a chair on the hour bridge,
+a librarian walks a lantern round at night, residents open umbrellas in the rain, and a cat lives
+on the ground level. A visitor can circle the tower, look down on it, explore it freely and follow
+a resident or the cat. A right-click or a long press drops a few books on open floor, which a
+resident then takes to a return desk. It leaves a letter on a desk for a resident to read, sets a
+paper boat on the water court, and sends a paper plane from anywhere else. It needs WebGL 2, and
+without it the clock beside the reading time opens nothing.
+
+Like the woodland and the garden, it is a page of its own, `/<lang>/tower/`
+(`src/pages/[lang]/tower.astro`), that no page links to and that `src/eggs/frame.ts` opens in
+a frame over the page. The tower saves itself in the visitor's browser every 15 seconds and when
+its page goes away, so it carries on from where it was when the visitor comes back. It saves
+with `localStorage`, which finishes at once, and Chrome runs `pagehide` in a frame that the site
+removes, so the save at a close completes and, unlike the garden, the tower needs no hold on its
+frame. A browser that skips `pagehide` there loses at most the last 15 seconds.
+
+`src/tower/app/` is the tower's own program, version 1.7.1, built with Three.js 0.180.0, the
+version it was written for. Version 1.6.0 came with its source, which rebuilds its delivered
+single file byte for byte. Versions 1.7.0 and 1.7.1 came only as single built files. Their changes
+to the old modules and their new code were written back as source from those files, with new names
+and comments. The new code is in `life_plan.js`, `life_tasks.js`, `life_view.js`, `cat_plan.js`,
+`library_cat.js`, `paper_view.js`, `paper_interactions.js` and, from 1.7.1, `paper_desks.js`. A
+check proves that this source builds into the same program as the delivered 1.7.1 file. All
+327,107 nodes of the two syntax trees match, and each of the 89,375 uses of a variable points to
+the declaration in the same place. Only the minifier's short names differ. This copy differs from
+that source in four ways:
+
+- Every word the tower shows is in `app/words.js`, in Chinese as written and in English. The
+  language of the page picks one. In English the residents' names are in pinyin, and the cat
+  栗子 is Chestnut. One Chinese sentence changed, so that the message for a failed load no longer
+  asks the visitor to reopen "the file".
+- The tower saves its residents' names and errands with the rest of its state, so each language
+  keeps a tower of its own, under `clockstairs-world-v1-en` and `clockstairs-world-v1-zh`.
+- In the site's frame, the tower moves its list of levels away from the close button in the top
+  right corner. Escape asks the site to close it when there is no settings panel, followed
+  resident or change of view for Escape to end.
+- The markup and styles of its `shell.html` are now in `tower.astro`.
+
+Its `README.md`, in Chinese, explains how version 1.6.0 works. Its design notes, its checks and
+their records, and its build script stay with the original project and are not copied here.
+So does `people.js`, which only those older checks use.
+
+A visitor who opens the tower downloads about 1.0 MB the first time, or about 290 KB as
+compressed in transfer. More than half of it is Three.js, which the woodland and the garden use
+too. The licence of Three.js (MIT) is in `src/tower/licenses/`, and the page carries it in its
+`third-party-notices` element.
+
 ## Previews
 
 To see any moment, add these to the address of any page. The clock itself is on `/404.html`.
@@ -279,8 +343,8 @@ To see any moment, add these to the address of any page. The clock itself is on 
 The town takes today's date from the same time, so `/en/?clock-time=2026-02-17T10:00&clock-open`
 opens it on the Spring Festival of 2026, with every later day drawn as a blueprint.
 
-The woodland clock opens on its own at `/en/woodland/` and `/zh/woodland/`, and the garden at
-`/en/garden/` and `/zh/garden/`. Adding `?fresh` to the garden's address opens a new garden and
+The woodland clock opens on its own at `/en/woodland/` and `/zh/woodland/`, the garden at
+`/en/garden/` and `/zh/garden/`, and the tower at `/en/tower/` and `/zh/tower/`. Adding `?fresh` to the garden's address opens a new garden and
 leaves the saved one as it was.
 
 ## Copy you need to write

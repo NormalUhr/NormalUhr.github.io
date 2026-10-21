@@ -7,7 +7,8 @@
 // in the masthead must show the visitor's local time and open the woodland clock in the page's
 // language, where the ants keep the same time. The years in the footer and the dish of raked sand
 // beside them must open the karesansui garden, which keeps the same time and keeps what the
-// visitor rakes.
+// visitor rakes. The clock beside the reading time of an article must open the cloister clock
+// tower, which keeps the same time and keeps its settings.
 //
 //   node scripts/clocks.mjs [--shots]
 import path from 'node:path'
@@ -20,6 +21,7 @@ import { sorter } from '../src/clocks/museum/mail.ts'
 import phrases from '../src/clocks/scenes/postman/phrases.ts'
 import { WORDS as WOODLAND } from '../src/woodland/app/words.js'
 import { WORDS as GARDEN } from '../src/garden/app/words.js'
+import { WORDS as TOWER } from '../src/tower/app/words.js'
 
 const SITE = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..')
 const DIST = path.join(SITE, 'dist')
@@ -597,6 +599,85 @@ for (const lang of ['en', 'zh']) {
   await page.close()
 }
 
+// ---------- the cloister clock tower ----------
+
+/** The newest article in each language, where the clock beside the reading time opens the tower. */
+const ARTICLE = Object.fromEntries(['en', 'zh'].map((lang) => [lang, sorter(MAIL[lang]).days.flatMap((d) => MAIL[lang][d]).findLast((s) => s.kind === 'article').href]))
+
+/** Opens the tower from the clock beside the reading time, and returns its frame once it has drawn its first frame. */
+async function tower(page) {
+  await page.click('.minread')
+  const frame = await page.waitForSelector('dialog.frdlg[open] iframe', { timeout: 5000 }).then((h) => h.contentFrame(), () => null)
+  const ready = frame && (await frame.waitForFunction(() => window.__CLOCKSTAIRS__?.snapshot.ready, { timeout: 60000 }).then(() => true, () => false))
+  return ready ? frame : null
+}
+
+// The reading time of every article sits beside a small clock, the cloister clock tower seen from
+// above, whose two bridges show the visitor's time. Pressing it opens the tower in the page's
+// language, where the bridges keep the same time. Escape first closes the tower's settings and only
+// then the tower, and a setting changed just before the tower closes is there when it opens again.
+for (const lang of ['en', 'zh']) {
+  const { page, errors } = await open('', { lang, counts: true, path: ARTICLE[lang] })
+  const face = await page
+    .waitForFunction(() => document.querySelector('.minread')?.dataset.time, { timeout: 5000 })
+    .then(() => page.$eval('.minread', (b) => ({ time: b.dataset.time, hour: b.querySelector('.tower-hour').getAttribute('transform'), minute: b.querySelector('.tower-minute').getAttribute('transform') })), () => null)
+  const [h, m] = (face?.time ?? '').split(':').map(Number)
+  check(face?.hour === `rotate(${((h * 60 + m) / 2) % 360} 8 8)` && face?.minute === `rotate(${m * 6} 8 8)`, `${lang}: the clock beside the reading time draws ${JSON.stringify(face)}`)
+  // The two clocks may read either side of the turn of a minute, so a difference is read again a second later.
+  const apart = async (read) => {
+    const pair = [await page.$eval('.ltime', (b) => b.textContent), await read()]
+    return pair[0] === pair[1] ? null : pair.join(' and ')
+  }
+  const beside = () => page.$eval('.minread', (b) => b.dataset.time)
+  const off = (await apart(beside)) && (await wait(1200), await apart(beside))
+  check(!off, `${lang}: the clock in the masthead and the clock beside the reading time show different times, ${off}`)
+  const top = await page.evaluate(() => scrollY)
+  const frame = await tower(page)
+  check(frame, `${lang}: pressing the clock beside the reading time did not open the tower`)
+  check(String(await counted(page)) === 'egg-tower', `${lang}: opening the tower counted ${await counted(page)}`)
+  if (frame) {
+    const words = await frame.evaluate(() => [document.querySelector('h1').textContent, document.getElementById('orbitBtn').textContent])
+    check(words.join() === [TOWER[lang].title, TOWER[lang].orbit].join(), `${lang}: the tower reads ${words.join(' and ')}`)
+    const inside = () => frame.evaluate(() => window.__CLOCKSTAIRS__.snapshot.time)
+    const late = (await apart(inside)) && (await wait(1200), await apart(inside))
+    check(!late, `${lang}: the clock in the masthead and the tower show different times, ${late}`)
+
+    await frame.$eval('#settingsBtn', (b) => b.click())
+    await frame.select('#weatherSelect', 'snow')
+    await page.keyboard.press('Escape')
+    await wait(300)
+    const settings = await frame.$eval('#settings', (s) => s.hidden)
+    const still = await page.evaluate(() => !!document.querySelector('dialog.frdlg')?.open)
+    check(settings && still, `${lang}: Escape should close the tower's settings and keep the tower open (settings hidden ${settings}, open ${still})`)
+    await page.keyboard.press('Escape')
+    const closed = await page.waitForFunction(() => !document.querySelector('dialog.frdlg'), { timeout: 4000 }).then(() => true, () => false)
+    check(closed, `${lang}: Escape in the tower did not close it`)
+    const moved = await page.evaluate((y) => Math.round(scrollY - y), top)
+    check(moved === 0, `${lang}: the tower moved the page under it by ${moved}px`)
+
+    const again = await tower(page)
+    check(again, `${lang}: the tower did not open a second time`)
+    if (again) {
+      const weather = await again.$eval('#weatherSelect', (s) => s.value)
+      check(weather === 'snow', `${lang}: the weather chosen just before the tower closed came back as ${weather}`)
+      await again.select('#weatherSelect', 'auto')
+      await page.click('.fr-close')
+      const shut = await page.waitForFunction(() => !document.querySelector('dialog.frdlg'), { timeout: 4000 }).then(() => true, () => false)
+      check(shut, `${lang}: the close button did not close the tower`)
+    }
+  }
+  noErrors(errors, `in the ${lang} tower`)
+  await page.close()
+}
+
+// On the narrowest phones the clock beside the reading time stays, and the article does not scroll sideways.
+{
+  const { page } = await open('', { width: 320, height: 640, path: ARTICLE.en })
+  check((await page.$eval('.minread .tower', (s) => s.getBoundingClientRect().width)) > 0, 'at 320px the clock beside the reading time is missing')
+  check(!(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1)), 'at 320px the article scrolls sideways')
+  await page.close()
+}
+
 // On a phone the town and its paper fit without scrolling sideways.
 for (const width of [390, 320]) {
   const post = sorter(MAIL.en)
@@ -682,6 +763,14 @@ if (WANT_SHOTS) {
     const { page } = await open('', { lang, ...opts })
     if (await garden(page)) {
       await wait(2500)
+      await page.screenshot({ path: path.join(SHOTS, `${name}.png`) })
+    }
+    await page.close()
+  }
+  for (const [name, lang, opts] of [['tower', 'en', {}], ['tower-phone', 'zh', { width: 390, height: 844 }]]) {
+    const { page } = await open('', { lang, path: ARTICLE[lang], ...opts })
+    if (await tower(page)) {
+      await wait(4000)
       await page.screenshot({ path: path.join(SHOTS, `${name}.png`) })
     }
     await page.close()

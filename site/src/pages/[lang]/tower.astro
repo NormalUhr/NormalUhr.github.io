@@ -1,0 +1,101 @@
+---
+/**
+ * The cloister clock tower, a page of its own that the clock beside the reading time of every
+ * article opens in a frame (src/tower/host.ts). No page links to it. Its program is src/tower/app.
+ */
+import { LANGS, site, type Lang } from '../../site.config'
+import { WORDS } from '../../tower/app/words.js'
+import three from '../../tower/licenses/three-MIT.txt?raw'
+
+export function getStaticPaths() {
+  return LANGS.map((lang) => ({ params: { lang } }))
+}
+
+const lang = Astro.params.lang as Lang
+const W = WORDS[lang]
+const notices = JSON.stringify({
+  three,
+  artwork: '源程序和模型为本项目制作，没有下载影视或游戏的场景资产。',
+}).replace(/</g, '\\u003c')
+---
+<!doctype html>
+<html lang={lang === 'zh' ? 'zh-CN' : 'en'}>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#eae7df">
+<meta name="application-version" content="1.7.1">
+<link rel="icon" href={site.favicon ?? 'data:,'}>
+<title>{W.title}</title>
+<style is:inline>
+:root{color-scheme:light;--paper:#eee9df;--ink:#35413f;--muted:#72796f;--line:rgba(70,79,66,.18);--glass:rgba(248,244,234,.88);--hour:#9a6c3c;--minute:#5b7b8c}
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden}body{background:var(--paper);color:var(--ink);font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif;-webkit-font-smoothing:antialiased}button,input,select{font:inherit;color:inherit}button{cursor:pointer;-webkit-tap-highlight-color:transparent}button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid #638286;outline-offset:3px}button:disabled{opacity:.5;cursor:default}button svg{display:block;width:18px;height:18px;stroke:currentColor;stroke-width:1.5;fill:none;stroke-linecap:round;stroke-linejoin:round}button[hidden],[hidden]{display:none!important}#stage{position:fixed;inset:0}canvas{width:100%;height:100%;display:block;touch-action:none}
+.heading{position:absolute;left:30px;top:27px;z-index:2;pointer-events:none}h1{font-size:19px;letter-spacing:.15em;font-weight:500;margin:0;color:var(--ink);text-shadow:0 1px 16px rgba(248,244,233,.4)}.small-time{pointer-events:auto;background:var(--glass);border:1px solid var(--line);border-radius:50px;padding:7px 11px;font-size:11px;margin-top:12px;letter-spacing:.05em;font-variant-numeric:tabular-nums;backdrop-filter:blur(14px)}.small-time span{margin-right:6px;color:var(--muted)}
+.bottom{position:absolute;bottom:max(23px,env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:3px;padding:5px;background:var(--glass);border:1px solid var(--line);backdrop-filter:blur(16px);z-index:4;white-space:nowrap;border-radius:9px;box-shadow:0 7px 30px rgba(51,52,43,.06)}.bottom button{height:39px;background:none;border:0;padding:0 17px;border-radius:5px;font-size:12px;letter-spacing:.04em;transition:background .2s,color .2s}.bottom button:hover{background:rgba(102,116,101,.10)}.bottom button[aria-pressed=true],.bottom button[aria-expanded=true]{background:#5b6c63;color:#faf7ef}.bottom button.icon{padding:0;width:39px;display:grid;place-items:center}.bottom .divider{height:19px;width:1px;background:var(--line);margin:0 4px}
+.panel{position:absolute;right:24px;bottom:87px;width:255px;padding:18px;background:var(--glass);border:1px solid var(--line);backdrop-filter:blur(20px);z-index:5;border-radius:10px;box-shadow:0 10px 50px rgba(45,54,47,.12);max-height:calc(100dvh - 120px);overflow:auto}.panel-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:17px}.panel-head h2{margin:0;font-size:13px;letter-spacing:.10em;font-weight:500}.close{border:0;background:none;padding:4px;display:grid;place-items:center}.time-row{display:flex;gap:12px;align-items:center}.time-row input{min-width:0;flex:1;width:110px;background:transparent;border:0;border-bottom:1px solid var(--line);font-size:26px;font-weight:300;padding:0 0 5px;font-variant-numeric:tabular-nums;letter-spacing:.02em}.quiet-button{font-size:12px;border:1px solid var(--line);background:none;border-radius:5px;padding:7px 10px}.mode{font-size:10px;color:var(--muted);margin:9px 0 18px;min-height:15px}.control-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:13px 0;font-size:12px}.control-row label{display:flex;align-items:center;gap:8px}.control-row select{background:transparent;border:0;border-bottom:1px solid var(--line);max-width:127px;font-size:12px;padding:4px;cursor:pointer}.swatch{width:7px;height:7px;background:var(--hour);border-radius:50%}.swatch.minute{background:var(--minute)}.panel hr{border:0;border-top:1px solid var(--line);margin:17px 0}.tour-button{border:1px solid var(--line);background:none;border-radius:5px;width:100%;font-size:12px;padding:10px;margin-top:8px}.tour-button[aria-pressed=true]{background:#5b6c63;color:#faf7ef}.bridge-state{font-size:10px;color:var(--muted);line-height:1.8;margin-top:-5px;margin-left:15px}.panel .fine{font-size:10px;line-height:1.65;color:var(--muted);margin:12px 0 1px}
+#hint,#toast{position:absolute;left:50%;transform:translateX(-50%);bottom:92px;z-index:3;font-size:11px;letter-spacing:.05em;line-height:1.7;white-space:nowrap;pointer-events:none;transition:opacity 1s;color:var(--ink);background:var(--glass);padding:7px 12px;border-radius:5px}#toast{bottom:145px;opacity:0;transition:opacity .25s}.person{position:absolute;left:30px;bottom:28px;z-index:3;display:flex;align-items:center;gap:16px;padding:9px 10px 9px 13px;background:var(--glass);border:1px solid var(--line);border-radius:7px;backdrop-filter:blur(16px);font-size:12px}.person small{font-size:10px;color:var(--muted);display:block;margin-top:4px}.person button{border:0;background:none;padding:6px;font-size:16px;line-height:1}.person-name{letter-spacing:.04em}
+#loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:23px;background:var(--paper);z-index:20;transition:opacity .5s}#loading p{margin:0;font-size:14px;letter-spacing:.12em;color:#687466}#loading .orbit-mark{width:43px;height:43px;position:relative;border:1px solid #bcb9a8;border-radius:50%;animation:turn 9s linear infinite}.orbit-mark:before,.orbit-mark:after{content:"";position:absolute;left:20px;bottom:20px;width:1px;transform-origin:50% 100%}.orbit-mark:before{height:16px;background:#718783;transform:rotate(48deg)}.orbit-mark:after{height:12px;background:#ac8450;transform:rotate(-60deg)}@keyframes turn{to{transform:rotate(360deg)}}#fatal{position:absolute;inset:0;display:grid;place-content:center;gap:18px;padding:24px;background:var(--paper);z-index:30;font-size:14px;line-height:1.9;text-align:center}#fatal p{max-width:450px;margin:0 auto}#retryBtn{justify-self:center}noscript{position:absolute;inset:40% 20%;z-index:50;background:var(--paper);font-size:15px;line-height:1.9}
+body[data-night=true] h1{color:#f2ebda;text-shadow:0 1px 14px rgba(20,28,37,.25)}
+.explore-tools{position:absolute;right:25px;top:25px;display:flex;align-items:center;gap:7px;padding:6px;background:var(--glass);border:1px solid var(--line);border-radius:8px;z-index:4;backdrop-filter:blur(16px)}.explore-tools select{font-size:12px;border:0;background:transparent;max-width:175px;padding:7px 4px}.explore-tools button{font-size:11px;padding:7px 9px;border:0;border-left:1px solid var(--line);background:transparent}.explore-tools button:hover{background:rgba(102,116,101,.10)}
+.move-controls{position:absolute;left:25px;bottom:94px;display:flex;align-items:center;gap:12px;z-index:3;user-select:none;-webkit-user-select:none;touch-action:none}.move-pad{width:92px;height:92px;border:1px solid var(--line);border-radius:50%;background:var(--glass);position:relative;backdrop-filter:blur(14px);touch-action:none;cursor:grab;opacity:.8}.move-pad.active{cursor:grabbing;opacity:1}.move-pad:before{content:"";position:absolute;inset:11px;border:1px solid var(--line);border-radius:50%}.move-pad .stick{position:absolute;left:31px;top:31px;width:28px;height:28px;border-radius:50%;background:#60756b;pointer-events:none;box-shadow:0 2px 8px rgba(25,40,34,.16)}.pad-arrow{position:absolute;font-size:11px;line-height:1;pointer-events:none;color:var(--muted)}.pad-arrow.n{top:6px;left:41px}.pad-arrow.s{bottom:6px;left:41px}.pad-arrow.w{left:7px;top:39px}.pad-arrow.e{right:7px;top:39px}.height-controls{display:flex;flex-direction:column;gap:7px}.height-controls button{width:35px;height:35px;border:1px solid var(--line);border-radius:50%;background:var(--glass);backdrop-filter:blur(14px);font-size:18px;touch-action:none}.height-controls button:active{background:#5b6c63;color:#fff}.explore-tools small{font-size:10px;color:var(--muted)}
+#viewVeil{position:absolute;inset:0;background:var(--paper);opacity:0;z-index:1;pointer-events:none}.navigation-help{font-size:11px;line-height:1.9;color:var(--muted);margin:0}.navigation-help kbd{font:inherit;color:var(--ink)}body[data-view=explore] #hint,body[data-view=follow] #hint{max-width:calc(100vw - 40px);white-space:normal;text-align:center;bottom:91px}body[data-view=follow] .person{bottom:201px;left:25px}canvas:focus{outline:none}canvas:focus-visible{outline:2px solid #638286;outline-offset:-3px}
+@media(max-width:760px){.heading{left:18px;top:20px}h1{font-size:17px}.bottom{bottom:max(15px,env(safe-area-inset-bottom));gap:1px;max-width:calc(100% - 22px)}.bottom button{padding:0 12px;font-size:11px;height:38px}.bottom button.icon{width:34px}.bottom .divider{margin:0 2px}.panel{right:12px;bottom:80px;width:248px;max-height:calc(100dvh - 103px)}.person{left:17px;bottom:82px;font-size:11px;padding:7px 8px 7px 10px}.person small{font-size:10px}#hint{bottom:81px;font-size:10px}#toast{bottom:132px;font-size:10px}.small-time{font-size:10px}}
+@media(max-width:760px){.explore-tools{right:13px;top:98px;padding:4px}.explore-tools select{font-size:11px;max-width:170px}.explore-tools button{font-size:10px}.move-controls{left:17px;bottom:max(113px,calc(env(safe-area-inset-bottom) + 96px));gap:9px}.move-pad{width:84px;height:84px}.move-pad .stick{left:27px;top:27px}.pad-arrow.n,.pad-arrow.s{left:37px}.pad-arrow.w,.pad-arrow.e{top:35px}body[data-view=follow] .person{bottom:216px;left:17px}body[data-view=explore] #hint,body[data-view=follow] #hint{bottom:77px;font-size:10px;max-width:92vw}body[data-view=explore] #toast,body[data-view=follow] #toast{bottom:216px;max-width:88vw;white-space:normal;text-align:center}}
+@media(max-width:360px){.bottom button{padding:0 9px}.bottom button.icon{width:31px}}
+@media(prefers-reduced-motion:reduce){#loading .orbit-mark{animation:none}*{scroll-behavior:auto}}
+/* English reads better in a Latin face than in the Latin letters of a Chinese one, and with less spacing in the title. */
+html:lang(en) body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+html:lang(en) h1{letter-spacing:.05em}
+@media(min-width:761px){html:lang(en) .explore-tools select{max-width:240px}}
+/* In the site's frame, the site's close button takes the top right corner. */
+.embedded .explore-tools{right:72px}
+.embedded .panel{max-height:calc(100dvh - 151px)}
+@media(max-width:760px){.embedded .explore-tools{right:13px}.embedded .panel{max-height:calc(100dvh - 142px)}}
+</style>
+<script type="application/json" id="third-party-notices" set:html={notices}></script>
+</head>
+<body>
+<main id="stage" aria-label={W.stage}></main>
+<div id="viewVeil" aria-hidden="true"></div>
+<header class="heading"><h1>{W.title}</h1><button id="previewBadge" class="small-time" hidden aria-label={W.previewBadge}><span id="previewLabel">{W.demo}</span><b id="previewTime"></b></button></header>
+<aside class="panel" id="settings" hidden aria-labelledby="settingsTitle">
+  <div class="panel-head"><h2 id="settingsTitle">{W.settings}</h2><button class="close" id="closeSettings" aria-label={W.closeSettings}><svg viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div>
+  <div class="time-row"><input type="time" id="timeInput" aria-label={W.viewingTime}><button class="quiet-button" id="nowBtn">{W.now}</button></div>
+  <p class="mode" id="timeMode">{W.timeMode.live}</p>
+  <div class="control-row"><label for="hourLevel"><i class="swatch"></i>{W.hourBridge}</label><select id="hourLevel">{[1, 2, 3].map((level) => <option value={level} selected={level === 2}>{W.levels[level]}</option>)}</select></div>
+  <p class="bridge-state" id="hourState"></p>
+  <div class="control-row"><label for="minuteLevel"><i class="swatch minute"></i>{W.minuteBridge}</label><select id="minuteLevel">{[4, 5, 6].map((level) => <option value={level} selected={level === 5}>{W.levels[level]}</option>)}</select></div>
+  <p class="bridge-state" id="minuteState"></p>
+  <button id="demoBtn" class="tour-button" aria-pressed="false">{W.tour}</button>
+  <hr>
+  <div class="control-row"><label for="weatherSelect">{W.outside}</label><select id="weatherSelect">{Object.entries(W.weathers).map(([value, name]) => <option value={value}>{name}</option>)}</select></div>
+  <div class="control-row"><label for="seasonSelect">{W.season}</label><select id="seasonSelect">{Object.entries(W.seasons).map(([value, name]) => <option value={value}>{name}</option>)}</select></div>
+  <div class="control-row"><label for="qualitySelect">{W.picture}</label><select id="qualitySelect">{Object.entries(W.qualities).map(([value, name]) => <option value={value}>{name}</option>)}</select></div>
+  <p class="fine" set:html={W.fine}></p>
+  <hr>
+  <p class="navigation-help" set:html={W.help}></p>
+</aside>
+<div class="explore-tools" id="exploreTools" hidden><select id="viewFloor" aria-label={W.goToLevel}></select><button id="galleryBtn" title={W.galleryTitle}>{W.gallery}</button></div>
+<div class="move-controls" id="moveControls" hidden>
+  <div class="move-pad" id="movePad" role="group" aria-label={W.movePad}>
+    <span class="pad-arrow n" aria-hidden="true">⌃</span><span class="pad-arrow s" aria-hidden="true">⌄</span><span class="pad-arrow w" aria-hidden="true">‹</span><span class="pad-arrow e" aria-hidden="true">›</span><span id="moveStick" class="stick" aria-hidden="true"></span>
+  </div>
+  <div class="height-controls"><button id="riseBtn" aria-label={W.rise} title={W.riseTitle}>↑</button><button id="descendBtn" aria-label={W.descend} title={W.descendTitle}>↓</button></div>
+</div>
+<nav class="bottom" aria-label={W.views}>
+  <button id="orbitBtn" title={W.orbitTitle}>{W.orbit}</button><button id="topBtn" title={W.topTitle}>{W.top}</button><button id="insideBtn" title={W.insideTitle}>{W.inside}</button><span class="divider"></span>
+  <button id="sectionBtn" class="icon" aria-pressed="true" aria-label={W.section} title={W.sectionTitle}><svg viewBox="0 0 24 24"><path d="m12 3 8 5v9l-8 4-8-4V8l8-5Zm0 0v18M4 8l8 5 8-5M8 5.5v7M16 5.5v7"/></svg></button>
+  <button id="soundBtn" class="icon" aria-pressed="false" aria-label={W.soundOn} title={W.soundTitle}><svg viewBox="0 0 24 24"><path d="M11 5 6 9H3v6h3l5 4V5Z"/><path id="soundWaves" d="m16 9 6 6m0-6-6 6"/></svg></button>
+  <button id="settingsBtn" class="icon" aria-expanded="false" aria-controls="settings" aria-label={W.settingsButton} title={W.settingsTitle}><svg viewBox="0 0 24 24"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="2.6" fill="currentColor" stroke="none"/><circle cx="16" cy="17" r="2.6" fill="currentColor" stroke="none"/></svg></button>
+</nav>
+<div id="personInfo" class="person" hidden><div><span id="personName" class="person-name"></span><small id="personActivity"></small></div><button id="stopFollow" aria-label={W.stopFollow} title={W.stopFollowTitle}>×</button></div>
+<div id="hint">{W.hint}</div><div id="toast" role="status" aria-live="polite"></div>
+<div id="loading"><div class="orbit-mark" aria-hidden="true"></div><p id="loadingText">{W.greetings[0]}</p></div>
+<div id="fatal" hidden role="alert"><p id="fatalText"></p><button class="quiet-button" id="retryBtn">{W.retry}</button></div>
+<noscript>{W.noScript}</noscript>
+<script>
+  import '../../tower/app/main.js'
+</script>
+</body>
+</html>

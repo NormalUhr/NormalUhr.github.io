@@ -3,6 +3,7 @@
  * script runs on every page and only waits for their moments. An egg's own code loads when its
  * moment comes.
  */
+import { keepBridges } from './bridges'
 import { keepTime } from './clock'
 import { keepDish } from './dish'
 import type { Egg } from './found'
@@ -16,6 +17,7 @@ const host = () => import('../clocks/host')
 const visits = () => import('../clocks/visits')
 const woodland = () => import('../woodland/host')
 const garden = () => import('../garden/host')
+const tower = () => import('../tower/host')
 /** An egg that cannot load its code stays hidden. */
 const quietly = (egg: Promise<unknown>) => void egg.catch(() => {})
 
@@ -49,6 +51,13 @@ onMark('garden-years', (years) => years.addEventListener('click', () => toGarden
 onMark('garden-dish', (dish) => {
   keepDish(dish, dish.dataset.label!)
   dish.addEventListener('click', () => toGarden('egg-garden-dish'))
+})
+
+// The reading time of an article sits beside a small clock, the cloister clock tower seen from above
+// with its two bridges for hands. It opens the tower.
+onMark('tower', (clock) => {
+  keepBridges(clock, clock.dataset.label!)
+  clock.addEventListener('click', () => quietly(tower().then((t) => t.openTower(lang))))
 })
 
 if (params.has('clock-open')) quietly(host().then((h) => h.openTown(lang)))

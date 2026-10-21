@@ -100,6 +100,7 @@ export const UI = {
     localTime: 'Local time',
     since: 'Since {year}',
     sandGarden: 'Sand garden',
+    readingClock: '{minutes} min read, clock tower',
     notFound: 'That page is not here',
   },
   zh: {
@@ -126,6 +127,7 @@ export const UI = {
     localTime: '本地时间',
     since: '自 {year} 年起',
     sandGarden: '沙庭',
+    readingClock: '{minutes} 分钟，钟塔',
     notFound: '这个页面不在这里',
   },
 } as const

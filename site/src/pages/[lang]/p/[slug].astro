@@ -99,7 +99,14 @@ const bib = [
 
         <div class="ameta">
           <div><b><time datetime={dateISO(data.date)}>{dateISO(data.date)}</time></b>{L.published}</div>
-          <div><b>{article.minutes}</b>{L.minRead}</div>
+          <button class="minread" type="button" data-egg="tower" data-label={fill(L.readingClock, { minutes: article.minutes })}>
+            <b><svg class="tower" viewBox="0 0 16 16" aria-hidden="true">
+              <circle class="tower-ring" cx="8" cy="8" r="6.6" />
+              <path class="tower-minute" d="M8 8V2.2" />
+              <path class="tower-hour" d="M8 8V4.4" />
+              <circle class="tower-lift" cx="8" cy="8" r="1.5" />
+            </svg>{article.minutes}</b>{L.minRead}
+          </button>
           <div><b>{article.words.toLocaleString('en-US')}</b>{L.words}</div>
           {article.eqns > 0 && (
             <div><a href="#eq-1" data-scroll="eq-1"><b>{article.eqns}</b>{L.equations}</a></div>

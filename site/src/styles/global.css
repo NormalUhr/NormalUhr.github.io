@@ -4,7 +4,7 @@
    prefers. Light applies only when a reader asks for it.
    ============================================================ */
 :root {
-  --sand: #2a2924; --sand-rake: #45423a; --stone: #a9a598;
+  --sand: #2a2924; --sand-rake: #45423a; --stone: #a9a598; --hour-bridge: #c48f58; --minute-bridge: #8aaebe;
   --paper: #14161b; --paper-2: #1a1d24; --paper-3: #212630; --card: #171a20;
   --rule: #2d323c; --rule-soft: #232833; --rule-hair: #1c2028;
   --ink: #dcd7cb; --ink-strong: #f4f1e8; --ink-soft: #9d9b92; --ink-faint: #71757c;
@@ -19,7 +19,7 @@
   color-scheme: dark;
 }
 :root[data-theme="light"] {
-  --sand: #ebe5d7; --sand-rake: #d2c8b2; --stone: #5b625d;
+  --sand: #ebe5d7; --sand-rake: #d2c8b2; --stone: #5b625d; --hour-bridge: #9a6c3c; --minute-bridge: #5b7b8c;
   --paper: #f8faf8; --paper-2: #eff2f0; --paper-3: #e6eae7; --card: #ffffff;
   --rule: #d3dad5; --rule-soft: #e2e7e3; --rule-hair: #ecf0ed;
   --ink: #1f2522; --ink-strong: #0b100e; --ink-soft: #54605a; --ink-faint: #87938c;
@@ -229,6 +229,18 @@ p.lede { font-size: 17.5px; line-height: 1.58; color: var(--ink-soft); margin: 0
 .ameta a b { color: var(--accent); text-decoration: underline; text-decoration-style: dotted; text-underline-offset: 3px; }
 .ameta a:hover { text-decoration: none; }
 .ameta a:hover b { text-decoration-style: solid; }
+/* The reading time, with a small clock beside it that is the cloister clock tower seen from above,
+   its two bridges for hands (src/eggs/bridges.ts). Pressing it opens the tower. */
+.ameta .minread { padding: 0 20px 0 0; text-align: left; }
+.ameta .minread:hover { color: var(--ink); }
+.minread .tower { display: inline-block; width: 15px; height: 15px; margin-right: 6px; vertical-align: -2px; }
+.minread:not([data-time]) .tower { visibility: hidden; }
+.tower-ring { fill: none; stroke: var(--ink-faint); stroke-width: 1; }
+.minread:hover .tower-ring { stroke: var(--ink-soft); }
+.tower-hour, .tower-minute { fill: none; stroke-linecap: round; }
+.tower-hour { stroke: var(--hour-bridge); stroke-width: 2.3; }
+.tower-minute { stroke: var(--minute-bridge); stroke-width: 1.3; }
+.tower-lift { fill: var(--ink-soft); }
 .notice { margin: 16px 0 0; border-left: 3px solid var(--vermilion); padding: 9px 14px; background: var(--paper-2); font-family: var(--sans); font-size: 13px; }
 .notice b { color: var(--vermilion); }
 

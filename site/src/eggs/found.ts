@@ -11,6 +11,7 @@ const EGGS = {
   'egg-woodland': 'Woodland clock, from the clock in the masthead',
   'egg-garden-dish': 'Karesansui garden, from the sand dish in the footer',
   'egg-garden-years': 'Karesansui garden, from the years in the footer',
+  'egg-tower': 'Cloister clock tower, from the clock beside the reading time of an article',
 } as const
 
 export type Egg = keyof typeof EGGS
