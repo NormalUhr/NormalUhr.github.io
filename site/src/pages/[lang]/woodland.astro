@@ -23,6 +23,7 @@ const notices = JSON.stringify({ three, rapier, textures }).replace(/</g, '\\u00
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex">
+<meta name="antkeepers-edition" content="free-roam-03-20261021">
 <meta name="theme-color" content="#20291e">
 <link rel="icon" href={site.favicon ?? 'data:,'}>
 <title>{W.title}</title>
@@ -79,7 +80,7 @@ html:lang(en) #loadingText{font-family:Georgia,"Times New Roman",serif;letter-sp
 </header>
 <nav class="observation" aria-label={W.views}>
 <button id="closeViewBtn" type="button" aria-label={W.closerLabel}>{W.closer}</button>
-<button id="resetBtn" type="button" aria-label={W.resetLabel}>{W.reset}</button>
+<button id="resetBtn" type="button" aria-label={W.resetLabel} aria-keyshortcuts="H">{W.reset}</button>
 <button id="quietBtn" type="button" aria-label={W.quietLabel} aria-pressed="false">{W.quiet}</button>
 </nav>
 <div id="loading"><div class="seed" aria-hidden="true"></div><p id="loadingText" role="status" aria-live="polite" aria-atomic="true">{W.greetings[0]}</p><div id="loadingDetail"></div></div>

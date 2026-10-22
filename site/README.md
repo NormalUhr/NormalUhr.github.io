@@ -203,10 +203,15 @@ corner (`datestamp.ts`), the newspaper
 ## The woodland clock
 
 The woodland clock is a 3D woodland where worker ants carry stones to lay out the visitor's
-local time. A visitor can turn the view, zoom, and drop a stone with a right-click or a long
-press. Day and night, the seasons and the weather follow the visitor's clock. At night the
-moonlight falls through an opening in the trees onto the clock and the nest. It needs WebGL 2
-and WebAssembly, and without them the clock in the masthead stays a plain clock.
+local time. A visitor walks through it freely. Dragging turns the view, W, A, S and D or the
+arrow keys move, Q and E go down and up, Shift moves faster, and the wheel or a pinch moves along
+the view. A right-click or a long press drops a stone. Now and then something visits the
+clearing. It can be a beetle, a gust of falling leaves, a moth by moonlight, ants from a
+neighbouring nest that compete for food, a snail or a lizard. Some visitors push a stone a little
+way, and the ants put it back. Day and night, the seasons and the weather follow the visitor's
+clock, and they also decide which visitors can come. At night the moonlight falls through an
+opening in the trees onto the clock and the nest. It needs WebGL 2 and WebAssembly, and without
+them the clock in the masthead stays a plain clock.
 
 It is a page of its own, `/<lang>/woodland/` (`src/pages/[lang]/woodland.astro`), which no page
 links to and which asks search engines to leave it out. The woodland takes over its whole window
@@ -216,9 +221,14 @@ close it. Closing removes the frame, which stops the woodland and frees its grap
 
 `src/woodland/app/` is the woodland's own program, taken from the source of its single-file
 version 5 and built with the versions it was written for, Three.js 0.180.0 and Rapier 0.21.0.
-A later single-file build brought the moonlight (`app/moonlight.js`) and a stronger light, but
-no source. Those changes were written back into this source, and the source with them builds
-into the same program as that file. This copy differs from that source in four ways:
+Two later single-file builds came without source. The first brought the moonlight
+(`app/moonlight.js`) and a stronger light. The second, edition `free-roam-03-20261021`, replaced
+the orbit camera with a free camera (`app/free_camera.js`) and brought the visitors.
+`app/visitors.js` decides when a visitor comes and what it does, and `app/visitor_models.js`
+draws them. Both builds were written back into this source. Together with the test panel of the
+second build, which this copy leaves out, the source builds into the same program as that file.
+All 252,080 syntax nodes match, and all 66,763 variable uses point to the same declarations.
+This copy differs from that source in five ways:
 
 - The six Poly Haven textures are image files in `src/woodland/textures/`, so browsers cache
   them. The source has them as text inside the script.
@@ -227,6 +237,11 @@ into the same program as that file. This copy differs from that source in four w
 - In the site's frame, the woodland leaves the top right corner to the close button, and Escape
   asks the site to close it.
 - The markup and styles of its `shell.html` are now in `woodland.astro`.
+- The second build was a test version. It brought a visitor every few seconds in a fixed order,
+  and it showed a test panel, a label over each visitor and a line of control hints. Here the
+  visitors come at their natural pace, and the panel with its module `visitor_test.js`, the
+  labels and the hints are left out. The canvas label for screen readers still describes the
+  controls.
 
 Its `README.md`, in Chinese, explains how the program works. Its tests, its build script and
 the tool that bakes its reflection data stay with the original project and are not copied here.

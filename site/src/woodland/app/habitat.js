@@ -344,6 +344,10 @@ export function createHabitat(scene, renderer, {seed = 41871, quality = 'high'} 
     const hit = sceneryRay.intersectObject(surroundings, false)[0];
     return hit ? hit.point.y : sceneryHeight(x, z);
   }
+  // The camera can travel past the edge of the playable floor, where the surrounding scenery is the ground.
+  function cameraHeightAt(x, z) {
+    return x >= bounds.minX && x <= bounds.maxX && z >= bounds.minZ && z <= bounds.maxZ ? heightAt(x, z) : scenerySurfaceAt(x, z);
+  }
 
   const barkMaterial = naturalMaterial({map: textures.bark, normalMap: textures.barkNormal, normalScale: new THREE.Vector2(.8, .8), roughnessMap: textures.barkARM,
     aoMap: textures.barkARM, aoMapIntensity: .65, roughness: .94, color: '#d8d4c5'});
@@ -582,7 +586,7 @@ export function createHabitat(scene, renderer, {seed = 41871, quality = 'high'} 
   }
   group.updateMatrixWorld(true);
   return {
-    group, ground, heightAt, normalAt, bounds, colliderData: {vertices: positions, indices}, collisionMeshes, obstacles, update, materials, textures, ready: textures.ready, forest,
+    group, ground, heightAt, cameraHeightAt, normalAt, bounds, colliderData: {vertices: positions, indices}, collisionMeshes, obstacles, update, materials, textures, ready: textures.ready, forest,
     nest: {x: 9, z: 4, y: heightAt(9, 4)},
     statistics: {terrainVertices: heightField.length, terrainTriangles: indices.length / 3, fernFronds: fernEntries.length, mossShoots: mossEntries.length, canopyLeaves: canopy.length, litterLeaves: litter.length, fixedGrains: grains.length, forest: forest.statistics},
     dispose() {

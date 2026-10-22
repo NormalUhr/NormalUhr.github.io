@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
+import {createFreeCamera} from './free_camera.js';
 import RAPIER from '@dimforge/rapier3d-compat';
 import {createHabitat} from './habitat.js';
 import {createAtmosphere,prepareEnvironment} from './atmosphere.js';
@@ -7,6 +7,8 @@ import {createMoonlight} from './moonlight.js';
 import {createAntColony} from './ants.js';
 import {createStoneRenderer} from './rocks.js';
 import {WoodlandSimulation} from './simulation.js';
+import {createVisitorDirector} from './visitors.js';
+import {createVisitorModels} from './visitor_models.js';
 import {clamp,lerp,ease,clockLabel} from './math.js';
 import {words} from './words.js';
 
@@ -14,7 +16,7 @@ const $=id=>document.getElementById(id),canvas=$('scene');
 // Opened in the site's frame, the woodland leaves the top right corner to the site's close button,
 // and Escape asks the site to close it.
 const embedded=window.parent!==window;if(embedded)document.documentElement.classList.add('embedded');
-const system={renderer:null,scene:null,camera:null,controls:null,sim:null,habitat:null,atmosphere:null,moonlight:null,colony:null,ready:false,frame:0,needsRender:true};
+const system={renderer:null,scene:null,camera:null,controls:null,sim:null,habitat:null,atmosphere:null,moonlight:null,colony:null,visitors:null,visitorModels:null,ready:false,frame:0,needsRender:true};
 const view={dropMode:false,paused:false,weather:'auto',season:'auto',lightMode:'live',hours:12,targetHours:12,cycleSpeed:360,quality:'auto',quiet:false,cameraTween:null,lastNotice:''};
 const now=new Date();view.hours=view.targetHours=now.getHours()+now.getMinutes()/60+now.getSeconds()/3600;
 const prefersReduced=window.matchMedia?.('(prefers-reduced-motion: reduce)').matches||false;
@@ -48,11 +50,9 @@ async function boot(){
  renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.setPixelRatio(Math.min(devicePixelRatio||1,mobile?1.5:1.65));
  const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(mobile?60:44,1,.055,180);
  camera.position.set(0,mobile?25:16,mobile?29:19.5);
- const controls=new OrbitControls(camera,canvas);controls.target.set(0,-.08,-.2);controls.enableDamping=true;controls.dampingFactor=.075;
- controls.rotateSpeed=.54;controls.zoomSpeed=.78;controls.enablePan=false;controls.minDistance=6;controls.maxDistance=mobile?45:35;
- controls.minPolarAngle=.15;controls.maxPolarAngle=1.34;
- controls.mouseButtons={LEFT:THREE.MOUSE.ROTATE,MIDDLE:THREE.MOUSE.DOLLY,RIGHT:null};
- controls.touches={ONE:THREE.TOUCH.ROTATE,TWO:THREE.TOUCH.DOLLY_PAN};controls.update();
+ const controls=createFreeCamera(camera,canvas,{heightAt:(x,z)=>system.habitat?.cameraHeightAt?.(x,z)??system.habitat?.heightAt(x,z)??0});
+ // Movement waits for the first frame, so a key held during loading does not carry the camera away.
+ controls.target.set(0,-.08,-.2);controls.update(0);controls.enabled=false;
  Object.assign(system,{renderer,scene,camera,controls});resize();markStage('renderer-ready');
  markStage('habitat-start');
  const habitat=createHabitat(scene,renderer,{seed:6101801,quality:initialQuality});system.habitat=habitat;
@@ -76,6 +76,12 @@ async function boot(){
  markStage('ants-start');
  const colony=createAntColony(scene,sim.ants,{heightAt:walkHeightAt,groundHeightAt:habitat.heightAt,normalAt,quality:initialQuality});sim.colony=colony;system.colony=colony;
  markStage('ants-end');
+ markStage('visitors-start');
+ const visitors=createVisitorDirector(sim,{seed:724831});
+ sim.visitors=visitors;system.visitors=visitors;
+ const visitorModels=createVisitorModels(scene,visitors.actors,{heightAt:habitat.heightAt,quality:initialQuality});
+ system.visitorModels=visitorModels;sim.environment=atmosphere.state;visitorModels.update(0,sim.time,atmosphere.state);
+ markStage('visitors-end');
  setupInteraction();setupUI();setupCrumbs(scene);setupCursor(scene);
  system.stoneRenderer=stoneRenderer;
  const moonlight=createMoonlight(scene,camera,{heightAt:habitat.heightAt,quality:initialQuality});
@@ -84,13 +90,15 @@ async function boot(){
  // are ready. Nothing is appended or repositioned after the first visible frame.
  sim.render(1);updateUI();
  markStage('programs-start');
- const programsReady=renderer.compileAsync(scene,camera).then(()=>markStage('programs-end'));
+ const programsReady=visitorModels.prepareShadows(renderer,camera).then(()=>renderer.compileAsync(scene,camera)).then(()=>markStage('programs-end'));
  await Promise.all([texturesReady,programsReady]);
  markStage('first-render-start');renderer.render(scene,camera);markStage('first-render-end');
- system.ready=true;stopGreeting();$('loading').classList.add('finished');
+ system.ready=true;controls.enabled=true;stopGreeting();$('loading').classList.add('finished');
  setTimeout(()=>{$('loading')?.remove();markStage('loading-removed')},prefersReduced?0:260);
  requestAnimationFrame(frame);
- window.__ANTKEEPERS__={system,view,startup,snapshot:()=>sim.snapshot(),requestTime:label=>sim.requestTime(label),drop:(x,z)=>sim.dropRock(x,z),advance:seconds=>{for(let t=0;t<seconds;t+=1/90)sim.step(1/90);sim.render(1);renderer.render(scene,camera)},setEnvironment:({hours,season,weather}={})=>{if(hours!==undefined){view.lightMode='preview';view.targetHours=hours}if(season!==undefined)view.season=String(season);if(weather!==undefined)view.weather=weather},render:()=>renderer.render(scene,camera)};
+ window.__ANTKEEPERS__={edition:'free-roam-03-20261021',system,view,startup,snapshot:()=>sim.snapshot(),requestTime:label=>sim.requestTime(label),drop:(x,z)=>sim.dropRock(x,z),
+  visit:(kind,options)=>visitors.trigger(kind,options),
+  advance:seconds=>{for(let t=0;t<seconds;t+=1/90)sim.step(1/90);sim.render(1);visitorModels.update(0,sim.time,sim.environment);updateCrumbs();renderer.render(scene,camera)},setEnvironment:({hours,season,weather}={})=>{if(hours!==undefined){view.lightMode='preview';view.targetHours=hours}if(season!==undefined)view.season=String(season);if(weather!==undefined)view.weather=weather},render:()=>renderer.render(scene,camera)};
 }
 
 function resize(){
@@ -106,7 +114,7 @@ function frame(nowMs){
  requestAnimationFrame(frame);if(!system.ready)return;
  const raw=last?Math.max(0,(nowMs-last)/1000):1/60;last=nowMs;
  if(document.hidden)return;
- const dt=Math.min(raw,.055),{renderer,scene,camera,controls,sim,habitat,atmosphere,moonlight,stoneRenderer}=system;
+ const dt=Math.min(raw,.055),{renderer,scene,camera,controls,sim,habitat,atmosphere,moonlight,stoneRenderer,visitorModels}=system;
  const real=new Date();
  if(sim.live)sim.requestTime(clockLabel(real));
  if(view.lightMode==='live')view.targetHours=real.getHours()+real.getMinutes()/60+real.getSeconds()/3600;
@@ -118,14 +126,13 @@ function frame(nowMs){
  moonlight.update(atmosphere.state);
  sim.environment=atmosphere.state;habitat.update(view.paused?0:dt,atmosphere.state);stoneRenderer.update(atmosphere.state);
  if(!view.paused){accumulator+=dt;let n=0;while(accumulator>=1/90&&n<5){sim.step(1/90);accumulator-=1/90;n++}if(n===5)accumulator=Math.min(accumulator,1/90)}else accumulator=0;
- sim.render(1);updateCrumbs(dt);
+ sim.render(1);visitorModels.update(view.paused?0:dt,sim.time,atmosphere.state);updateCrumbs();
  if(view.cameraTween){
   const t=clamp((nowMs-view.cameraTween.start)/1400,0,1),f=ease(t);
   camera.position.lerpVectors(view.cameraTween.from,view.cameraTween.to,f);controls.target.lerpVectors(view.cameraTween.targetFrom,view.cameraTween.targetTo,f);
   if(t===1)view.cameraTween=null;
  }
- controls.update();
- camera.position.y=Math.max(camera.position.y,habitat.heightAt(camera.position.x,camera.position.z)+.4);
+ controls.update(dt);
  updateCursor();
  if(!view.paused||system.needsRender||view.cameraTween){renderer.render(scene,camera);system.needsRender=false}
  system.frame++;
@@ -155,6 +162,7 @@ function updateCursor(){
 function setupInteraction(){
  let gesture=null,longTimer=null,downPointers=new Set();
  const clear=()=>{if(longTimer){clearTimeout(longTimer);longTimer=null}};
+ const cancelGesture=()=>{clear();gesture=null;downPointers.clear();lastPointer=null};
  canvas.addEventListener('contextmenu',e=>e.preventDefault());
  canvas.addEventListener('pointerdown',e=>{
   view.cameraTween=null;downPointers.add(e.pointerId);
@@ -173,27 +181,39 @@ function setupInteraction(){
    const held=e.pointerType==='touch'&&e.timeStamp-gesture.startedAt>=550;
    // Slow frames may delay the timer until after pointerup. Honor the physical
    // press duration on release as well, without dropping a second stone.
-   if(view.dropMode||e.shiftKey||held)dropAt(e.clientX,e.clientY);
+   if(view.dropMode||held)dropAt(e.clientX,e.clientY);
   }
   gesture=null;
  });
  canvas.addEventListener('pointercancel',e=>{downPointers.delete(e.pointerId);gesture=null;clear()});
+ canvas.addEventListener('lostpointercapture',cancelGesture);
  canvas.addEventListener('pointerleave',()=>{lastPointer=null;clear()});
+ window.addEventListener('blur',cancelGesture);document.addEventListener('visibilitychange',()=>{if(document.hidden)cancelGesture()});
+ canvas.addEventListener('webglcontextlost',cancelGesture);
  canvas.addEventListener('wheel',()=>view.cameraTween=null,{passive:true});
  system.controls.addEventListener('start',()=>view.cameraTween=null);
  system.controls.addEventListener('change',()=>system.needsRender=true);
 }
 
-const sugarMeshes=new Map();let sugarGeometry,sugarMaterial;
-function setupCrumbs(scene){sugarGeometry=new THREE.IcosahedronGeometry(.073,0);sugarMaterial=new THREE.MeshPhysicalMaterial({color:'#eddbad',roughness:.4,metalness:0,clearcoat:.15})}
+// One hidden food mesh always waits in the scene, and the next crumb takes it.
+const sugarMeshes=new Map();let sugarGeometry,sugarMaterial,spareSugar;
+function setupCrumbs(scene){
+ sugarGeometry=new THREE.IcosahedronGeometry(.073,0);sugarMaterial=new THREE.MeshPhysicalMaterial({color:'#eddbad',roughness:.4,metalness:0,clearcoat:.15});
+ spareSugar=new THREE.Mesh(sugarGeometry,sugarMaterial);spareSugar.name='Pooled forest food';spareSugar.visible=false;spareSugar.castShadow=true;spareSugar.receiveShadow=true;scene.add(spareSugar);
+}
 function updateCrumbs(){
  const sim=system.sim,active=new Set(sim.crumbs.map(c=>c.id));
- for(const c of sim.crumbs){let mesh=sugarMeshes.get(c.id);if(!mesh){mesh=new THREE.Mesh(sugarGeometry,sugarMaterial);mesh.position.set(c.x,c.y,c.z);mesh.rotation.set(.2,c.id*.01,.4);mesh.castShadow=true;system.scene.add(mesh);sugarMeshes.set(c.id,mesh)}mesh.scale.setScalar(Math.min(1,c.life/3))}
- for(const [id,mesh]of sugarMeshes)if(!active.has(id)){system.scene.remove(mesh);sugarMeshes.delete(id)}
+ for(const c of sim.crumbs){
+  let mesh=sugarMeshes.get(c.id);
+  if(!mesh){mesh=spareSugar||new THREE.Mesh(sugarGeometry,sugarMaterial);spareSugar=null;mesh.visible=true;mesh.rotation.set(.2,c.id*.01,.4);mesh.castShadow=true;mesh.receiveShadow=true;system.scene.add(mesh);sugarMeshes.set(c.id,mesh)}
+  // Food can be carried away, so it follows its crumb every frame.
+  mesh.position.set(c.x,c.y,c.z);mesh.scale.setScalar(Math.min(1,c.life/3)*(c.size||1));
+ }
+ for(const [id,mesh]of sugarMeshes)if(!active.has(id)){if(spareSugar)system.scene.remove(mesh);else{spareSugar=mesh;mesh.visible=false}sugarMeshes.delete(id)}
 }
 
 function resetCamera(close=false){
- const {camera,controls}=system;
+ const {camera,controls}=system;controls.clearInput();canvas.focus({preventScroll:true});
   view.cameraTween={start:performance.now(),from:camera.position.clone(),to:close?new THREE.Vector3(5.9,3.1,8):mobile?new THREE.Vector3(0,25,29):new THREE.Vector3(0,16,19.5),targetFrom:controls.target.clone(),targetTo:close?new THREE.Vector3(6,0,2.3):new THREE.Vector3(0,-.08,-.2)};
 }
 function setupUI(){
@@ -201,9 +221,10 @@ function setupUI(){
  $('quietBtn').onclick=()=>{
   view.quiet=!view.quiet;document.body.classList.toggle('quiet',view.quiet);
   $('quietBtn').textContent=view.quiet?words.show:words.quiet;$('quietBtn').setAttribute('aria-pressed',String(view.quiet));
+  canvas.focus({preventScroll:true});
  };
  document.addEventListener('keydown',e=>{
-  if(e.ctrlKey||e.metaKey||e.altKey||e.repeat||/^(INPUT|SELECT|TEXTAREA)$/.test(e.target?.tagName))return;
+  if(e.ctrlKey||e.metaKey||e.altKey||e.repeat||e.target?.isContentEditable||/^(INPUT|SELECT|TEXTAREA)$/.test(e.target?.tagName))return;
   if(e.key==='Escape'&&view.quiet){$('quietBtn').click();return}
   if(e.key==='Escape'&&embedded){window.parent.postMessage('frame:close',location.origin);return}
   if(e.key.toLowerCase()==='h'){e.preventDefault();resetCamera()}

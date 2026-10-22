@@ -46,6 +46,7 @@ export class WoodlandSimulation{
   this.label=this.requestedLabel=this.settledLabel=initialLabel;this.jitter=this.requestedJitter=1;
   this.live=true;this.rockSerial=0;this.jobSerial=0;this.stockSerial=0;this.jobsDone=0;this.jobsTotal=0;
   this.environment={rain:0,wetness:0,temperature:18};this.colony=null;this.paused=false;this.repairPending=false;
+  this.visitors=null;this.visitorObstacles=new Map();this.visitorPushes=new Map();this.visitorBudgets=new Map();this.lastDropAt=-Infinity;
   this.maxStones=360;this._vector=new THREE.Vector3();this._quaternion=new THREE.Quaternion();
   this.addTerrainColliders();this.makeNavigation();this.init();
  }
@@ -107,17 +108,27 @@ export class WoodlandSimulation{
   const i=p.stockSlot,r=rng(hash(`stock-3d-${i}`)),a=i*2.3999632297+(r()-.5)*.2,d=.245*Math.sqrt(i+.7);
   return{x:7.65+Math.cos(a)*d,z:3.1+Math.sin(a)*d*.92};
  }
- hasWork(){return this.repairPending||this.jobs.length>0||this.ants.some(a=>a.job)}
+ hasWork(){return this.repairPending||this.visitorPushes.size>0||this.jobs.length>0||this.ants.some(a=>a.job)}
+ // Visitors touch the stones only while the clock stands complete and nothing has just fallen.
+ clockStable(){return this.time>3&&!this.hasWork()&&!this.pending()&&!this.rocks.some(p=>p.falling)&&this.time-this.lastDropAt>3}
  pending(){return this.requestedLabel!==this.label||this.requestedJitter!==this.jitter}
  requestTime(label){
   if(!/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(label))return;
-  this.requestedLabel=label;if(!this.hasWork()&&this.pending())this.plan();
+  const changed=label!==this.requestedLabel;this.requestedLabel=label;
+  if(changed&&this.pending()){
+   // Returning stones that a visitor pushed is pointless once the time changes, unless a worker already holds one.
+   const release=job=>{job.rock.jobId=null;job.rock.targetKey=job.rock.key;job.rock.target=null};
+   this.jobs=this.jobs.filter(job=>{if(job.reason!=='repair')return true;release(job);return false});
+   for(const a of this.ants)if(a.job?.reason==='repair'&&!a.hold){release(a.job);a.job=null;a.aim=null;a.route=[];a.state='idle';a.walkSpeed=0;a.pause=0}
+   this.repairPending=this.visitorPushes.size>0;
+  }
+  if(!this.hasWork()&&this.pending())this.plan();
  }
  scatter(){this.requestedJitter++;if(!this.hasWork())this.plan();this.notice('工蚁记下了新的摆放位置，会先把手中的石头放稳。')}
- queue(p,to,role){
+ queue(p,to,role,reason='layout'){
   if(p.jobId!==null)return;
   if(distance(p,to)<.038&&!p.falling){p.role=role;p.key=role==='digit'?to.key:null;p.targetKey=p.key;p.target={...to};return}
-  const job={id:++this.jobSerial,rock:p,to:{...to},role,phase:'queued'};
+  const job={id:++this.jobSerial,rock:p,to:{...to},role,phase:'queued',reason};
   p.jobId=job.id;p.targetKey=role==='digit'?to.key:null;p.target={...to};this.jobs.push(job);this.jobsTotal++;
  }
  plan(){
@@ -140,7 +151,82 @@ export class WoodlandSimulation{
  dropRock(x,z){
   if(this.rocks.length>=this.maxStones){this.notice('这片林地已经有 360 颗石头。现有石头都会留在这里。');return null}
   const b=this.terrain.bounds;x=clamp(x,b.minX+.8,b.maxX-.8);z=clamp(z,b.minZ+.8,b.maxZ-.8);
-  const p=this.createRock(x,z,'user',{falling:true});this.notice('一颗新石头落入林地。它落稳后，工蚁会来搬运。');return p;
+  const p=this.createRock(x,z,'user',{falling:true});this.lastDropAt=this.time;this.visitors?.onStoneDrop(p);
+  this.notice('一颗新石头落入林地。它落稳后，工蚁会来搬运。');return p;
+ }
+ reserveVisitorAnts(owner,count,near){
+  if(!owner||this.hasWork()||this.pending())return[];
+  const chosen=this.ants.filter(a=>!a.job&&!a.hold&&!a.visitorOwner).sort((a,b)=>distance(a,near)-distance(b,near)).slice(0,Math.min(4,Math.max(0,count)));
+  for(const a of chosen){a.visitorOwner=owner;a.visitorGoal=null;a.state='visitor';a.pause=0;a.aim=null;a.route=[];a.walkSpeed=0}
+  return chosen;
+ }
+ releaseVisitorAnts(owner){
+  for(const a of this.ants)if(a.visitorOwner===owner){
+   a.visitorOwner=null;a.visitorGoal=null;
+   if(!a.job&&!a.hold){a.aim=null;a.route=[];a.state='idle';a.pause=.15;a.walkSpeed=0}
+  }
+ }
+ // Walks a lent ant toward a point and reports arrival. The clock's own work always takes the ant back.
+ guideVisitorAnt(a,to,dt,pace=.8,{backwards=false}={}){
+  if(!a.visitorOwner||a.job||a.hold)return false;
+  if(this.jobs.length||this.pending()){this.releaseVisitorAnts(a.visitorOwner);return false}
+  a.pause=0;a.turning=0;a.state='visitor';
+  if(!a.visitorGoal||distance(a.visitorGoal,to)>.2||!a.aim&&distance(a,to)>.06){a.visitorGoal={x:to.x,z:to.z};this.route(a,to)}
+  if(distance(a,to)<.065){a.aim=null;a.route=[];a.walkSpeed=0;a.motion=damp(a.motion,0,14,dt);return true}
+  if(a.aim&&this.move(a,a.aim,dt,Math.min(a.speed,pace),backwards))a.aim=a.route.shift()||null;
+  return distance(a,to)<.065;
+ }
+ setVisitorObstacle(id,obstacle){
+  if(!obstacle){this.visitorObstacles.delete(id);return}
+  if([obstacle.x,obstacle.z,obstacle.r].every(Number.isFinite)&&obstacle.r>0)this.visitorObstacles.set(id,{x:obstacle.x,z:obstacle.z,r:Math.min(1.3,obstacle.r)});
+ }
+ // A visitor may shove a settled stone a little way. One visit moves at most three stones, and the clock repairs them afterwards.
+ nudgeVisitorStone(p,direction,key,reach=.5){
+  if(!p||!key||!this.clockStable()||p.falling||p.carrierId!==null||p.jobId!==null||this.visitorPushes.has(p.id))return false;
+  const length=Math.hypot(direction.x,direction.z);
+  if(!Number.isFinite(length)||length<.001)return false;
+  const dx=direction.x/length,dz=direction.z/length,limit=clamp(reach,p.radius*2,p.radius*3.5);
+  for(const q of this.rocks){
+   if(q===p||q.carrierId!==null)continue;
+   const along=clamp((q.x-p.x)*dx+(q.z-p.z)*dz,0,limit);
+   if(Math.hypot(q.x-p.x-dx*along,q.z-p.z-dz*along)<p.radius+q.radius+.055)return false;
+  }
+  const end={x:p.x+dx*limit,z:p.z+dz*limit},b=this.terrain.bounds;
+  if(end.x<b.minX+1||end.x>b.maxX-1||end.z<b.minZ+1||end.z>b.maxZ-1||(this.terrain.obstacles||[]).some(o=>distance(end,o)<o.r+p.radius+.12))return false;
+  let budget=this.visitorBudgets.get(key);
+  if(!budget){
+   budget={key,startedAt:this.time,origins:new Map(this.rocks.map(q=>[q.id,{x:q.x,z:q.z}])),nudged:new Set(),affected:new Set(),maxDisplacement:0,finishedAt:null};
+   this.visitorBudgets.set(key,budget);
+   if(this.visitorBudgets.size>24)this.visitorBudgets.delete(this.visitorBudgets.keys().next().value);
+  }
+  if(budget.nudged.has(p.id)||budget.affected.size>=3||budget.nudged.size>=3)return false;
+  budget.nudged.add(p.id);budget.affected.add(p.id);budget.finishedAt=null;
+  this.visitorPushes.set(p.id,{p,dx,dz,origin:{x:p.x,z:p.z},limit,age:0,budget});
+  p.visitorPushKey=key;this.repairPending=true;p.body.wakeUp();return true;
+ }
+ driveVisitorPushes(dt){
+  for(const [id,push] of this.visitorPushes){
+   const {p,dx,dz,limit,budget}=push;push.age+=dt;
+   const moved=distance(p,push.origin),left=limit-moved,crowded=budget.affected.size>=3&&budget.affected.size>budget.nudged.size;
+   if(p.carrierId!==null||p.jobId!==null||this.pending()||this.time-this.lastDropAt<1.5||push.age>1.8||left<.026||crowded){
+    p.visitorPushKey=null;budget.finishedAt=this.time;this.visitorPushes.delete(id);continue;
+   }
+   const v=p.body.linvel(),speed=Math.min(.55,Math.max(.11,left*3)),mass=p.body.mass(),ramp=Math.min(1,push.age/.16),gain=Math.min(1,dt*40),target=speed*ramp;
+   p.body.applyImpulse({x:(dx*target-v.x)*mass*gain,y:0,z:(dz*target-v.z)*mass*gain},true);
+  }
+ }
+ // A stone counts as affected once anything has moved it, so a push that knocks into others stops early.
+ observeVisitorPushes(){
+  for(const budget of this.visitorBudgets.values()){
+   if(budget.finishedAt!==null&&this.time-budget.finishedAt>2)continue;
+   for(const p of this.rocks){
+    if(p.carrierId!==null||p.jobId!==null)continue;
+    const origin=budget.origins.get(p.id);if(!origin)continue;
+    const moved=distance(p,origin);
+    if(moved>.06)budget.affected.add(p.id);
+    if(budget.nudged.has(p.id))budget.maxDisplacement=Math.max(budget.maxDisplacement,moved);
+   }
+  }
  }
  acceptRock(p){
   const occupied=new Set(this.rocks.filter(q=>q!==p&&q.role==='digit').map(q=>q.key));
@@ -162,8 +248,15 @@ export class WoodlandSimulation{
  navNode(at){return clamp(Math.round((at.z-this.navMinZ)/this.navStep),0,this.navH-1)*this.navW+clamp(Math.round((at.x-this.navMinX)/this.navStep),0,this.navW-1)}
  navPoint(id){return{x:this.navMinX+(id%this.navW)*this.navStep,z:this.navMinZ+Math.floor(id/this.navW)*this.navStep}}
  navigationMask(carried=null){
-  if(!carried)return this.navBlocked;
+  if(!carried&&!this.visitorObstacles.size)return this.navBlocked;
   const blocked=this.navBlocked.slice(),step=this.navStep;
+  for(const o of this.visitorObstacles.values()){
+   const radius=o.r+(carried?carried.radius+.34:.25);
+   const minI=clamp(Math.floor((o.x-radius-this.navMinX)/step),0,this.navW-1),maxI=clamp(Math.ceil((o.x+radius-this.navMinX)/step),0,this.navW-1);
+   const minJ=clamp(Math.floor((o.z-radius-this.navMinZ)/step),0,this.navH-1),maxJ=clamp(Math.ceil((o.z+radius-this.navMinZ)/step),0,this.navH-1);
+   for(let j=minJ;j<=maxJ;j++)for(let i=minI;i<=maxI;i++)if(Math.hypot(this.navMinX+i*step-o.x,this.navMinZ+j*step-o.z)<radius)blocked[j*this.navW+i]=1;
+  }
+  if(!carried)return blocked;
   // Plan the load's swept footprint, not just its worker's point. Grounded
   // stones remain fully dynamic colliders; a carrier walks around them.
   for(const p of this.rocks){
@@ -215,9 +308,21 @@ export class WoodlandSimulation{
   a.job=j;a.state=j.phase='toSource';a.finalAngle=angle;
   this.route(a,{x:p.x-Math.cos(angle)*reach,z:p.z-Math.sin(angle)*reach});
  }
- move(a,to,dt,pace){
+ move(a,to,dt,pace,backwards=false){
+  if(this.visitorObstacles.size&&a.visitorAvoidUntil!==undefined&&a.visitorAvoidUntil>this.time){a.walkSpeed=0;return false}
+  // A worker that is closing on a visitor stops and plans around it, and a carrier sets its load down first.
+  for(const o of this.visitorObstacles.values()){
+   const from=distance(a,o),ahead=distance(to,o),clearance=o.r+(a.hold?a.hold.radius+.27:.18),closing=ahead<from;
+   const reach=Math.min(.52,distance(a,to)),d=Math.max(.001,distance(a,to)),probe={x:a.x+(to.x-a.x)/d*reach,z:a.z+(to.z-a.z)/d*reach};
+   if(closing&&distance(probe,o)<clearance&&from>o.r*.55){
+    a.walkSpeed=0;a.visitorAvoidUntil=this.time+.22;
+    if(a.job?.phase==='toDest'&&a.hold)this.startCarry(a);
+    else{const goal=a.route.at(-1)||a.aim||to;this.route(a,goal)}
+    return false;
+   }
+  }
   const dx=to.x-a.x,dz=to.z-a.z,d=Math.hypot(dx,dz);if(d<.001)return true;
-  const desired=Math.atan2(dz,dx),turn=angleDelta(a.angle,desired),angleStep=clamp(turn,-dt*(a.hold?3.8:5.1),dt*(a.hold?3.8:5.1));
+  const desired=Math.atan2(dz,dx)+(backwards?Math.PI:0),turn=angleDelta(a.angle,desired),angleStep=clamp(turn,-dt*(a.hold?3.8:5.1),dt*(a.hold?3.8:5.1));
   a.angle+=angleStep;a.turning=angleStep/dt;const facing=Math.max(0,Math.cos(turn));
   const slope=Math.abs(this.terrain.heightAt(to.x,to.z)-a.y)/Math.max(.25,d);
   const weatherFactor=1-(this.environment.rain||0)*.22;
@@ -262,6 +367,8 @@ export class WoodlandSimulation{
  }
  updateAnt(a,dt){
   a.motion*=Math.exp(-dt*5);a.turning=0;
+  // A visitor moves its lent ants itself, until the clock needs them back.
+  if(a.visitorOwner){if(this.jobs.length||this.pending())this.releaseVisitorAnts(a.visitorOwner);else return}
   if(a.pause>0){a.pause=Math.max(0,a.pause-dt);a.walkSpeed=0;return}
   if(!a.job&&this.jobs.length)this.begin(a,this.nearestJob(a));
   if(a.state==='pickup'||a.state==='place'){a.phaseTime=Math.min(a.phaseDuration,a.phaseTime+dt);return}
@@ -310,23 +417,24 @@ export class WoodlandSimulation{
  }
  addSugar(x=0,z=3){const c={x,z,y:this.terrain.heightAt(x,z)+.04,life:16,id:hash(`sugar-${this.time}`)};this.crumbs.push(c);this.notice('糖粒落在空地上，附近的工蚁会循着气味靠近。');return c}
  repairDrift(){
-  this.repairPending=false;
+  this.repairPending=this.visitorPushes.size>0;
   if(this.pending())return;
   const targets=new Map(buildTargets(this.label,this.jitter).map(t=>[t.key,t]));
   for(const p of this.rocks){
-   if(p.role!=='digit'||p.carrierId!==null||p.jobId!==null||p.falling)continue;
+   if(p.role!=='digit'||p.carrierId!==null||p.jobId!==null||p.falling||p.visitorPushKey)continue;
    const to=targets.get(p.key);if(!to||distance(p,to)<.13)continue;
    const v=p.body.linvel(),w=p.body.angvel();
    const speed=Math.hypot(v.x,v.y,v.z)+Math.hypot(w.x,w.y,w.z)*p.radius;
    if(!p.body.isSleeping()&&(speed>.055||this.time-(p.releasedAt||-10)<.65)){this.repairPending=true;continue}
    // A real impact may displace a completed digit. One worker retrieves that
    // same settled body and physically returns it; no pose correction is used.
-   this.queue(p,to,'digit');
+   this.queue(p,to,'digit','repair');
   }
  }
  step(dt=1/90){
   if(this.paused)return;dt=clamp(dt,0,1/30);if(!dt)return;this.time+=dt;this.physics.timestep=dt;
   for(const p of this.rocks){p.previous.copy(p.current);p.previousQ.copy(p.currentQ)}
+  this.visitors?.step(dt,this.environment);this.driveVisitorPushes(dt);
   for(const a of this.ants){this.updateAnt(a,dt);a.y=damp(a.y,this.walkHeightAt(a.x,a.z),18,dt)}
   if(this.colony)this.colony.update(dt,this.time,this.environment);
   for(const a of this.ants)this.driveHeld(a);
@@ -340,11 +448,12 @@ export class WoodlandSimulation{
    }
   }
   for(const a of this.ants){if(a.nextPhase==='carry'){a.nextPhase=null;this.startCarry(a)}else if(a.nextPhase==='release')this.release(a)}
+  this.observeVisitorPushes();
   for(const c of this.crumbs)c.life-=dt;this.crumbs=this.crumbs.filter(c=>c.life>0);
   if(!this.jobs.length&&!this.ants.some(a=>a.job)){
    this.repairDrift();if(!this.hasWork()){this.settledLabel=this.label;if(this.pending())this.plan()}
   }
  }
  render(alpha=1){for(const p of this.rocks)if(p.mesh){p.mesh.position.lerpVectors(p.previous,p.current,alpha);p.mesh.quaternion.slerpQuaternions(p.previousQ,p.currentQ,alpha)}}
- snapshot(){return{label:this.label,requestedLabel:this.requestedLabel,settledLabel:this.settledLabel,rocks:this.rocks.length,stock:this.rocks.filter(p=>p.role==='stock'&&p.carrierId===null).length,carrying:this.ants.filter(a=>a.hold).length,queued:this.jobs.length,done:this.jobsDone,total:this.jobsTotal,working:this.hasWork(),falling:this.rocks.filter(p=>p.falling).length,time:this.time}}
+ snapshot(){return{label:this.label,requestedLabel:this.requestedLabel,settledLabel:this.settledLabel,rocks:this.rocks.length,stock:this.rocks.filter(p=>p.role==='stock'&&p.carrierId===null).length,carrying:this.ants.filter(a=>a.hold).length,queued:this.jobs.length,done:this.jobsDone,total:this.jobsTotal,working:this.hasWork(),falling:this.rocks.filter(p=>p.falling).length,time:this.time,visitors:this.visitors?.snapshot()||null}}
 }

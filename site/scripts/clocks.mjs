@@ -467,6 +467,21 @@ for (const lang of ['en', 'zh']) {
     check(lit > 0, `${lang}: the woodland's moonlight reaches no material`)
     const label = await frame.$eval('#resetBtn', (b) => b.textContent)
     check(label === WOODLAND[lang].reset, `${lang}: the woodland's button reads "${label}", expected "${WOODLAND[lang].reset}"`)
+    // Visitors come at their natural pace, with no test panel, no label over a visitor and no line of control hints.
+    const test = await frame.evaluate(() => ({
+      testing: window.__ANTKEEPERS__.snapshot().visitors?.testing.enabled,
+      shown: ['visitorPanel', 'visitorMarker', 'cameraHint'].filter((id) => document.getElementById(id)),
+    }))
+    check(test.testing === false && !test.shown.length, `${lang}: the woodland runs its visitor test (testing ${test.testing}, shows ${test.shown.join(' ') || 'nothing'})`)
+    // The camera walks. Holding W carries it forward over the clearing.
+    const depth = () => frame.evaluate(() => window.__ANTKEEPERS__.system.camera.position.z)
+    const start = await depth()
+    await frame.focus('#scene')
+    await page.keyboard.down('KeyW')
+    await wait(600)
+    await page.keyboard.up('KeyW')
+    const walked = start - (await depth())
+    check(walked > 0.5, `${lang}: holding W moved the woodland's camera forward by ${walked.toFixed(2)}`)
     await page.keyboard.press('Escape')
     const closed = await page
       .waitForFunction(() => !document.querySelector('dialog.frdlg'), { timeout: 3000 })
