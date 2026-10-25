@@ -13,8 +13,15 @@ export const CLOCK_COUNT=720/CLOCK_STEP;
 export const CLOCK_INNER=.62,CLOCK_OUTER=2.95;
 export const WALK_FOOT_RADIUS=.18;
 const WALK_PLAN_RADIUS=.205,ACCESS_WIDTH=.68,CLEAN_WIDTH=.56;
+// A clock stroke is raked walking backward ahead of the rake, just outside the
+// groove being drawn. At .18 outside, the feet clear the turn inside it.
+const CLOCK_STANCE={along:.42,side:.18};
 export function clockMinute(date){return(date.getHours()%12)*60+date.getMinutes()+date.getSeconds()/60+date.getMilliseconds()/60000;}
 export function cycleKey(date){return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}-${date.getHours()<12?0:1}`;}
+// A saved garden opens again only while its sand is within two minutes of the
+// time. Otherwise the family has kept the garden while the visitor was away,
+// and a new garden shows the current time from the first frame.
+export function showsTime(saved,date){return saved.cycle===cycleKey(date)&&!saved.cleanup&&Math.abs(clockMinute(date)-saved.recordedMinute)<=2;}
 export function spiralPoint(minute){const r=lerp(CLOCK_INNER,CLOCK_OUTER,clamp(minute/720)),a=minute/60*TAU;return{x:Math.sin(a)*r,z:-Math.cos(a)*r,m:minute};}
 function segmentDistance(px,pz,a,b){const dx=b.x-a.x,dz=b.z-a.z,l=dx*dx+dz*dz,t=l?clamp(((px-a.x)*dx+(pz-a.z)*dz)/l):0;return Math.hypot(px-a.x-dx*t,pz-a.z-dz*t);}
 const pointCopy=p=>({x:p.x,z:p.z,...(p.m!==undefined?{m:p.m}:{})});
@@ -427,7 +434,7 @@ export class GardenWorld {
     const careActive=w&&(w.repairBatch||Object.keys(w.repairs||{}).length||w.accessSerial);
     const threshold=w?.clockExcursion ? .249 : careActive ? 1.5 : .75;
     if(lag<threshold){if(w?.clockExcursion)w.clockExcursion=false;return null;}
-    const task=this.advanceTask();if(!task){if(w)w.clockExcursion=false;return null;}
+    const task=this.advanceTask(!careActive);if(!task){if(w)w.clockExcursion=false;return null;}
     if(task.kind==='time'){
       const blocked=task.path.findIndex((p,i)=>this.isDirtyStroke(task.path[Math.max(0,i-1)],p));
       if(blocked>=0){
@@ -492,8 +499,11 @@ export class GardenWorld {
     }
     this.lastMutation++;
   }
+  // A restore draws only whole segments behind the clock. The segment the clock
+  // is drawing belongs to the next time stroke, even after a repair touched it.
+  restorableEnd(){return Math.min(CLOCK_COUNT,Math.floor(Math.min(this.minute,this.recordedMinute)/CLOCK_STEP));}
   missingRuns(w=null,ownedOnly=false) {
-    const end=Math.min(CLOCK_COUNT,Math.floor(Math.min(this.minute,this.recordedMinute)/CLOCK_STEP)),runs=[];
+    const end=this.restorableEnd(),runs=[];
     const owners=this.workers.filter(v=>v!==w);
     const owned=i=>owners.some(v=>v.repairs?.[i]!==undefined)||(ownedOnly&&w?.repairs?.[i]===undefined);
     const isPassage=i=>w?.accessRepairs?.[i]!==undefined;
@@ -524,7 +534,7 @@ export class GardenWorld {
   }
   findMissing(w=null,ownedOnly=false) {
     if(!ownedOnly)this.adoptMissingRepairs(w);
-    if(w?.repairs)for(const key of Object.keys(w.repairs))if(this.coverage[key]||Number(key)*CLOCK_STEP>=Math.min(this.minute,this.recordedMinute))delete w.repairs[key];
+    if(w?.repairs)for(const key of Object.keys(w.repairs))if(this.coverage[key]||Number(key)>=this.restorableEnd())delete w.repairs[key];
     const runs=this.missingRuns(w,ownedOnly);if(!runs.length)return null;
     if(w)runs.sort((a,b)=>Number(a.passage)-Number(b.passage)||(a.passage?b.rank-a.rank:a.i-b.i)||Math.hypot(a.p.x-w.x,a.p.z-w.z)-Math.hypot(b.p.x-w.x,b.p.z-w.z));
     const make=run=>({kind:'restore',path:clockPath(run.i*CLOCK_STEP,run.j*CLOCK_STEP),revision:this.revision});
@@ -638,7 +648,7 @@ export class GardenWorld {
   findMissingOwned(w) {
     if(!Object.keys(w.repairs||{}).length)return null;
     const task=this.findMissing(w,true);if(task)return task;
-    const outstanding=Object.keys(w.repairs).some(i=>!this.coverage[i]&&Number(i)*CLOCK_STEP<Math.min(this.minute,this.recordedMinute));
+    const outstanding=Object.keys(w.repairs).some(i=>!this.coverage[i]&&Number(i)<this.restorableEnd());
     if(!outstanding)w.repairs=Object.create(null);
     return null;
   }
@@ -674,6 +684,12 @@ export class GardenWorld {
         w.workAnchor=body;return{...body,stance:this.stanceFor(p,heading,body),changed:false};
       }
     }
+    if(w.task?.walking) {
+      const body=this.clockStance(p,heading);
+      if(Math.hypot(body.x-w.x,body.z-w.z)<.12&&this.nav.free(body.x,body.z)&&this.feetVisible(w,body)) {
+        w.workAnchor=body;return{...body,stance:{...CLOCK_STANCE},changed:false};
+      }
+    }
     const currentDistance=Math.hypot(w.x-p.x,w.z-p.z),comfortable=w.id>=4?Math.max(.34,min+.04):.49;
     if(w.task?.kind!=='restore'&&currentDistance>comfortable&&currentDistance<reach+.08) {
       const body={x:p.x+(w.x-p.x)/currentDistance*comfortable,z:p.z+(w.z-p.z)/currentDistance*comfortable};
@@ -685,7 +701,7 @@ export class GardenWorld {
     // the former repeated stance changes at every small clock path segment.
     const anchor=w.workAnchor||w,d=Math.hypot(anchor.x-p.x,anchor.z-p.z);
     if(d>=min&&d<=reach&&this.nav.free(anchor.x,anchor.z,.20)&&this.surfaceFree(anchor.x,anchor.z))return{...anchor,stance:this.stanceFor(p,heading,anchor),changed:false};
-    const fake={kind:w.task?.kind,keepAccess:w.task?.keepAccess,path:[p,{x:p.x+Math.sin(heading)*.1,z:p.z+Math.cos(heading)*.1}]},body=this.findAnchor(w,fake,true);
+    const fake={kind:w.task?.kind,keepAccess:w.task?.keepAccess,walking:w.task?.walking,path:[p,{x:p.x+Math.sin(heading)*.1,z:p.z+Math.cos(heading)*.1}]},body=this.findAnchor(w,fake,true);
     if(body)return{...body,stance:this.stanceFor(p,heading,body),changed:true};
     const physical=this.findAnchor(w,fake,false)||{x:p.x-Math.sin(heading)*.38,z:p.z-Math.cos(heading)*.38};
     return{...physical,stance:this.stanceFor(p,heading,physical),changed:true,needsAccess:true};
@@ -991,19 +1007,28 @@ export class GardenWorld {
   }
   findExcess(){const start=Math.min(CLOCK_COUNT,Math.ceil(this.minute/CLOCK_STEP));for(let i=start;i<CLOCK_COUNT;i++){if(!this.coverage[i])continue;let j=i+1;while(j<CLOCK_COUNT&&this.coverage[j]&&(j-i)*CLOCK_STEP<8)j++;return {kind:'erase',path:clockPath(j*CLOCK_STEP,i*CLOCK_STEP),revision:this.revision};}return null;}
   cycleTask(){if(!this.cleanup)return null;const r=this.cleanup.nextRadius;if(r>3.16){this.cleanup=null;return null;}const path=[],n=Math.ceil(TAU*r/.04);for(let i=0;i<=n;i++){const a=TAU*i/n;path.push({x:Math.sin(a)*r,z:-Math.cos(a)*r,working:i>0});}return {kind:'cycle',path,radius:r,revision:this.revision};}
-  advanceTask(){
+  advanceTask(whole=false){
     const to=Math.floor(this.minute*4)/4;if(to-this.recordedMinute<.249)return null;
-    let next=Math.min(to,this.recordedMinute+4),path=clockPath(this.recordedMinute,next),length=0,end=path.length;
+    // A repair that disturbed the segment at the tip leaves it to this stroke.
+    const tip=Math.floor(this.recordedMinute/CLOCK_STEP),from=this.coverage[tip]?this.recordedMinute:Math.min(this.recordedMinute,tip*CLOCK_STEP);
+    let next=Math.min(to,this.recordedMinute+4),path=clockPath(from,next),length=0,end=path.length;
     // Complete one reachable stroke before checking deadlines or another job.
     // A four-minute arc near noon was over a metre and required moving through
     // the work just drawn; a short arc fits the planted stance and exit check.
     for(let i=1;i<path.length;i++){length+=Math.hypot(path[i].x-path[i-1].x,path[i].z-path[i-1].z);if(length>.34&&i>1){end=i;break;}}
-    if(end<path.length){path=path.slice(0,end);next=path.at(-1).m;}
+    // A lag that one planted stroke cannot finish is drawn as one stroke, even
+    // several turns, by a raker with no repair in hand. The raker walks backward
+    // ahead of the rake and lifts it only where a stone, a mark or a person is
+    // in the way.
+    const walking=whole&&(end<path.length||next<to);
+    if(walking){next=to;path=clockPath(from,to);}
+    else if(end<path.length){path=path.slice(0,end);next=path.at(-1).m;}
     if(this.cleanup&&Math.hypot(spiralPoint(next).x,spiralPoint(next).z)+.13>this.cleanup.clearedRadius)return this.cycleTask();
-    return{kind:'time',path,to:next,revision:this.revision};
+    return{kind:'time',path,to:next,walking,revision:this.revision};
   }
   stanceFor(p,heading,body){const dx=body.x-p.x,dz=body.z-p.z;return{along:dx*Math.sin(heading)+dz*Math.cos(heading),side:dx*Math.cos(heading)-dz*Math.sin(heading)};}
   stancePoint(p,heading,stance){const dx=Math.sin(heading),dz=Math.cos(heading);return{x:p.x+dx*stance.along+dz*stance.side,z:p.z+dz*stance.along-dx*stance.side};}
+  clockStance(p,heading){return this.stancePoint(p,heading,CLOCK_STANCE);}
   taskHeading(task,index=0){const p=task.path[index],q=task.path[Math.min(index+1,task.path.length-1)]||p;if(Math.hypot(q.x-p.x,q.z-p.z)<.0001){const prev=task.path[Math.max(0,index-1)];return Math.atan2(p.x-prev.x,p.z-prev.z);}return Math.atan2(q.x-p.x,q.z-p.z);}
   stepWorker(w,dt){
     if(w.state.startsWith('stone')&&w.stoneTrip){this.hourStones.step(w,dt);return;}

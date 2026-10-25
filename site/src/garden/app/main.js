@@ -5,7 +5,7 @@ import {createHabitat} from './habitat.js';
 import {createFamily} from './family.js';
 import {createWildlife} from './wildlife.js';
 import {createAtmosphere,prepareEnvironment} from './atmosphere.js';
-import {GardenWorld} from './world.js';
+import {GardenWorld,showsTime} from './world.js';
 import {loadGarden,saveGarden} from './persistence.js';
 import {createSound} from './sound.js';
 import {clamp,lerp} from './math.js';
@@ -34,9 +34,9 @@ async function boot(){
   camera.position.copy(defaultTarget).add(defaultOffset);controls.target.copy(defaultTarget);controls.update();
   const sand=createSand(scene,{quality}),habitat=createHabitat(scene,{quality}),family=createFamily(scene);
   const [prepared,saved]=await Promise.all([environmentPromise,savedPromise]);
-  let savedWorld=null;
-  if(saved?.format===1&&saved.world?.format===2&&saved.sand){try{if(sand.importState(saved.sand))savedWorld=saved.world;}catch{}}
-  const world=new GardenWorld(sand,habitat,new Date(),savedWorld);
+  const opened=new Date();let savedWorld=null;
+  if(saved?.format===1&&saved.world?.format===2&&saved.sand&&showsTime(saved.world,opened)){try{if(sand.importState(saved.sand))savedWorld=saved.world;}catch{}}
+  const world=new GardenWorld(sand,habitat,opened,savedWorld);
   const wildlife=createWildlife(scene,{habitat,sand,quality,seed:630719,saved:savedWorld?saved?.wildlife:null,canBeginVisit:()=>world.canWelcomeWildlife(),onDisturb:(points,options)=>world.registerDisturbance(points,options)});
   const atmosphere=createAtmosphere(scene,renderer,camera,{quality,heightAt:(x,z)=>Math.max(habitat.heightAt(x,z),sand.contains(x,z)?sand.heightAt(x,z):-Infinity),seed:879321,environmentData:prepared});
   const sound=createSound();

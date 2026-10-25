@@ -7,9 +7,10 @@
 // in the masthead must show the visitor's local time and open the woodland clock in the page's
 // language, where the ants keep the same time, the opening view is open, and nothing in the forest
 // fades with the camera. The years in the footer and the dish of raked sand beside them must open
-// the karesansui garden, which keeps the same time and keeps what the visitor rakes. The clock
-// beside the reading time of an article must open the cloister clock tower, which keeps the same
-// time and keeps its settings.
+// the karesansui garden, which keeps the same time and keeps what the visitor rakes, shows the time
+// when it opens after a long absence, and catches up in whole turns of its spiral. The clock beside
+// the reading time of an article must open the cloister clock tower, which keeps the same time and
+// keeps its settings.
 //
 //   node scripts/clocks.mjs [--shots]
 import path from 'node:path'
@@ -674,6 +675,76 @@ for (const lang of ['en', 'zh']) {
     await page.waitForFunction(() => !document.querySelector('dialog.frdlg'), { timeout: 4000 }).catch(() => {})
   }
   noErrors(errors, `with the ${lang} sand dish`)
+  await page.close()
+}
+
+/** Makes `new Date()` and `Date.now()` in a page start from the given time. Runs in the page. */
+function shiftClock(iso) {
+  const Real = Date
+  const shift = new Real(iso).getTime() - Real.now()
+  window.Date = class extends Real {
+    constructor(...args) {
+      if (args.length) super(...args)
+      else super(Real.now() + shift)
+    }
+    static now() {
+      return Real.now() + shift
+    }
+  }
+}
+/** A script for `open` that starts the page's clock at the given time. */
+const clockAt = (iso) => `(${shiftClock})(${JSON.stringify(iso)})`
+/** Today at the given local hour and minute. */
+const todayAt = (h, m) => new Date(new Date().setHours(h, m, 0, 0)).toISOString()
+const gardenReady = (page) => page.waitForFunction(() => window.__GARDEN__?.snapshot().ready, { timeout: 60000 }).then(() => true, () => false)
+
+// A garden saved in another half of the day opens at the current time, with its hour stones in
+// place. The family does not first clear the old spiral while the visitor watches.
+{
+  const { page: first, errors: before } = await open('', { path: '/en/garden/', before: clockAt(new Date(Date.now() - 12 * 3600000).toISOString()) })
+  const saved = (await gardenReady(first)) && (await first.evaluate(() => window.__GARDEN__.persist(true)))
+  check(saved, 'the garden opened twelve hours earlier did not save')
+  await first.close()
+  const { page, errors } = await open('', { path: '/en/garden/' })
+  const shown = (await gardenReady(page)) && (await page.evaluate(() => {
+    const s = window.__GARDEN__.snapshot().world
+    return { lag: s.minute - s.recordedMinute, cleanup: !!s.cleanup, stones: s.hourStones.placedCount, hours: s.hourStones.targetCount }
+  }))
+  check(shown && Math.abs(shown.lag) < 0.5 && !shown.cleanup && shown.stones === shown.hours,
+    `a garden saved twelve hours earlier opened ${shown?.lag.toFixed(1)} minutes behind the time, clearing ${shown?.cleanup}, with ${shown?.stones} of ${shown?.hours} hour stones`)
+  noErrors([...before, ...errors], 'in the garden saved twelve hours earlier')
+  await page.close()
+}
+
+// A garden that is behind, as after an afternoon in a hidden tab, is caught up in whole turns of
+// the spiral: the raker walks backward ahead of the rake instead of stopping after every short arc.
+// The family is simulated without drawing frames, from 13:30 on the sand to a clock at 17:00.
+{
+  const { page, errors } = await open('fresh=1', { path: '/en/garden/', before: clockAt(todayAt(13, 30)) })
+  const run = (await gardenReady(page)) && (await page.evaluate(() => {
+    const g = window.__GARDEN__, w = g.world
+    g.pause({ render: false })
+    const at = new Date()
+    at.setHours(17, 0, 0, 0)
+    const strokes = []
+    let seconds = 0, from = null
+    while (seconds < 600 && (seconds < 5 || w.minute - w.recordedMinute >= 0.3)) {
+      w.setDate(new Date(at.getTime() + seconds * 1000))
+      w.step(1 / 60)
+      seconds += 1 / 60
+      const raking = w.active?.state === 'working' && w.active.task?.kind === 'time'
+      if (raking && from === null) from = w.active.toolMinute
+      if (!raking && from !== null) {
+        strokes.push((w.recordedMinute - from) * 6)
+        from = null
+      }
+    }
+    return { seconds, lag: w.minute - w.recordedMinute, strokes }
+  }))
+  check(run && run.lag < 0.3, `the raker left the sand ${run?.lag.toFixed(1)} minutes behind after ${run?.seconds.toFixed(0)} s`)
+  check(run && Math.max(...run.strokes) >= 360, `the longest stroke of the catch-up covers ${run && Math.max(...run.strokes).toFixed(0)} degrees, less than a turn`)
+  check(run && run.strokes.length <= 5, `the raker needed ${run?.strokes.length} strokes from 13:30 to 17:00`)
+  noErrors(errors, 'in the garden that catches up')
   await page.close()
 }
 

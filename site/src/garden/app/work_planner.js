@@ -178,7 +178,7 @@ export function findWorkAnchor(world, w, task, { clearOnly = false, directOnly =
   // move its stance later, but the approaching tip must already be foot-safe.
   const checkPoints = restoring ? task.path : drawing ? task.path.slice(0, Math.min(4, task.path.length)) : [p];
   const options = [], seen = new Set();
-  const add = body => {
+  const add = (body, preference = 0) => {
     const key = keyFor(body); if (seen.has(key)) return; seen.add(key);
     if (!world.nav.free(body.x, body.z, .21) || world.occupiedAnchor(w, body)) return;
     if (checkPoints.some(q => { const d = distance(body, q); return d < minimum || d > maximum; })) return;
@@ -191,8 +191,12 @@ export function findWorkAnchor(world, w, task, { clearOnly = false, directOnly =
     const continuationCost = relocatingClean ? Math.abs(distance(body, p) - (child ? .36 : .46)) * 2.5 +
       Math.abs(wrapAngle(angle - preferred)) * .30 : 0;
     options.push({ ...point(body), clear: world.walkNav.free(body.x, body.z),
-      score: distance(w, body) + Math.abs(wrapAngle(angle - preferred)) * .025 + continuationCost - (distance(w, body) < .001 ? .10 : 0) });
+      score: distance(w, body) + Math.abs(wrapAngle(angle - preferred)) * .025 + continuationCost - (distance(w, body) < .001 ? .10 : 0) - preference });
   };
+  // A clock stroke begins at the stance it keeps while walking backward ahead
+  // of the rake, so that it can follow the whole stroke without a new stance.
+  const walkingStance = task.walking ? world.clockStance(p, heading) : null;
+  if (walkingStance) add(walkingStance, 10);
   add(w);
   // A nearby obstacle can leave a small useful stance between the polar
   // samples around the tool. Try modest local foot placements too, so a whole
@@ -223,9 +227,21 @@ export function findWorkAnchor(world, w, task, { clearOnly = false, directOnly =
   const acceptable = body => {
     if (!drawing) return true;
     const key = keyFor(body);
-    if (!egress.has(key)) egress.set(key, exitStaysOpen(world, body, task, task.keepAccess || []));
+    // The walking stance does not stay where the stroke begins. Its groove
+    // trails behind the feet, so the way home starts where the stroke ends.
+    const from = walkingStance && key === keyFor(walkingStance) ?
+      world.clockStance(task.path.at(-1), world.taskHeading(task, task.path.length - 1)) : body;
+    if (!egress.has(key)) egress.set(key, exitStaysOpen(world, from, task, task.keepAccess || []));
     return egress.get(key);
   };
+  // The walking stance is worth a walk round the clock. From any other stance
+  // the stroke would stop for a new one as soon as it began.
+  const start = walkingStance && clear.find(o => keyFor(o) === keyFor(walkingStance));
+  if (start && acceptable(start)) {
+    if (world.walkNav.visible(w, start) && !world.personBlocker(w, w, start, .34)) return { ...start, route: [point(start)] };
+    const route = directOnly ? [] : world.travelRoute(w, start);
+    if (route.length) return { ...start, route };
+  }
   for (const body of clear) {
     if (!world.walkNav.visible(w, body) || world.personBlocker(w, w, body, .34) || !acceptable(body)) continue;
     return { ...body, route: [point(body)] };
