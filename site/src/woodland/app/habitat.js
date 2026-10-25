@@ -137,7 +137,7 @@ function grassGeometry(seed) {
   return geometryFromData(data);
 }
 
-export function createHabitat(scene, renderer, {seed = 41871, quality = 'high'} = {}) {
+export function createHabitat(scene, renderer, {seed = 41871, quality = 'high', startView} = {}) {
   const group = new THREE.Group(); group.name = 'Persistent woodland habitat'; scene.add(group);
   const rnd = randomSource(seed), noise = noiseSource(seed), textures = createTextures(renderer, seed);
   const low = quality === 'low', density = low ? .53 : 1;
@@ -557,7 +557,7 @@ export function createHabitat(scene, renderer, {seed = 41871, quality = 'high'} 
   // An independent random stream preserves every existing terrain vertex,
   // obstacle, plant and grain while extending the woodland in all directions.
   const forest = createForestBackdrop(group, {seed: seed ^ 0x73e91a, quality,
-    heightAt: scenerySurfaceAt, makeMaterial: naturalMaterial, textures});
+    heightAt: scenerySurfaceAt, makeMaterial: naturalMaterial, textures, startView});
   const fernSeason = [new THREE.Color('#77934c'), new THREE.Color('#627c36'), new THREE.Color('#a18846'), new THREE.Color('#847447')];
   const canopySeason = [new THREE.Color('#8da952'), new THREE.Color('#67843e'), new THREE.Color('#ba7d33'), new THREE.Color('#807148')];
   const grassSeason = [new THREE.Color('#829654'), new THREE.Color('#738044'), new THREE.Color('#a5945e'), new THREE.Color('#9a9277')];

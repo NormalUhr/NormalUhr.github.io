@@ -22,6 +22,8 @@ const now=new Date();view.hours=view.targetHours=now.getHours()+now.getMinutes()
 const prefersReduced=window.matchMedia?.('(prefers-reduced-motion: reduce)').matches||false;
 const mobile=window.matchMedia('(max-width: 700px)').matches;
 const initialQuality=mobile?'medium':'high';
+// The opening view, which "Full view" and H return to, looks over the clearing from among the trees at its edge.
+const startView={from:new THREE.Vector3(0,mobile?25:16,mobile?29:19.5),to:new THREE.Vector3(0,-.08,-.2)};
 const realDay=()=>Math.floor((Date.now()-new Date(new Date().getFullYear(),0,0).getTime())/86400000);
 const seasonForMonth=m=>m>=2&&m<5?0:m>=5&&m<8?1:m>=8&&m<11?2:3;
 const seasonNames=words.seasons;
@@ -49,13 +51,13 @@ async function boot(){
  renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.16;
  renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.setPixelRatio(Math.min(devicePixelRatio||1,mobile?1.5:1.65));
  const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(mobile?60:44,1,.055,180);
- camera.position.set(0,mobile?25:16,mobile?29:19.5);
+ camera.position.copy(startView.from);
  const controls=createFreeCamera(camera,canvas,{heightAt:(x,z)=>system.habitat?.cameraHeightAt?.(x,z)??system.habitat?.heightAt(x,z)??0});
  // Movement waits for the first frame, so a key held during loading does not carry the camera away.
- controls.target.set(0,-.08,-.2);controls.update(0);controls.enabled=false;
+ controls.target.copy(startView.to);controls.update(0);controls.enabled=false;
  Object.assign(system,{renderer,scene,camera,controls});resize();markStage('renderer-ready');
  markStage('habitat-start');
- const habitat=createHabitat(scene,renderer,{seed:6101801,quality:initialQuality});system.habitat=habitat;
+ const habitat=createHabitat(scene,renderer,{seed:6101801,quality:initialQuality,startView});system.habitat=habitat;
  markStage('habitat-end');
  const texturesReady=Promise.resolve(habitat.ready).then(()=>markStage('textures-ready'));
  texturesReady.catch(()=>{});
@@ -214,7 +216,7 @@ function updateCrumbs(){
 
 function resetCamera(close=false){
  const {camera,controls}=system;controls.clearInput();canvas.focus({preventScroll:true});
-  view.cameraTween={start:performance.now(),from:camera.position.clone(),to:close?new THREE.Vector3(5.9,3.1,8):mobile?new THREE.Vector3(0,25,29):new THREE.Vector3(0,16,19.5),targetFrom:controls.target.clone(),targetTo:close?new THREE.Vector3(6,0,2.3):new THREE.Vector3(0,-.08,-.2)};
+  view.cameraTween={start:performance.now(),from:camera.position.clone(),to:close?new THREE.Vector3(5.9,3.1,8):startView.from.clone(),targetFrom:controls.target.clone(),targetTo:close?new THREE.Vector3(6,0,2.3):startView.to.clone()};
 }
 function setupUI(){
  $('resetBtn').onclick=()=>resetCamera();$('closeViewBtn').onclick=()=>resetCamera(true);

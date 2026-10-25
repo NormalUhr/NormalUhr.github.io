@@ -5,10 +5,11 @@
 // starts, which day he walks to, and that the paper he hands over is that day's. Each egg must
 // open the town on its day, and the town must fit a phone without scrolling sideways. The clock
 // in the masthead must show the visitor's local time and open the woodland clock in the page's
-// language, where the ants keep the same time. The years in the footer and the dish of raked sand
-// beside them must open the karesansui garden, which keeps the same time and keeps what the
-// visitor rakes. The clock beside the reading time of an article must open the cloister clock
-// tower, which keeps the same time and keeps its settings.
+// language, where the ants keep the same time, the opening view is open, and nothing in the forest
+// fades with the camera. The years in the footer and the dish of raked sand beside them must open
+// the karesansui garden, which keeps the same time and keeps what the visitor rakes. The clock
+// beside the reading time of an article must open the cloister clock tower, which keeps the same
+// time and keeps its settings.
 //
 //   node scripts/clocks.mjs [--shots]
 import path from 'node:path'
@@ -498,6 +499,68 @@ for (const lang of ['en', 'zh']) {
     }
   }
   noErrors(errors, `in the ${lang} woodland`)
+  await page.close()
+}
+
+// The opening view looks over the clearing from among the trees at its edge. The forest plants no
+// tree on that line of sight, so the opening view is open on a desktop and on a phone, and nothing in
+// the forest fades with the camera. To find fading, each view is drawn twice while the woodland is
+// paused, once as built and once with the fading of the original woodland taken out of the forest's
+// shaders. To find how much of the opening view the forest covers, that view is also drawn without it.
+for (const [size, opts] of [['desktop', {}], ['phone', { width: 390, height: 844 }]]) {
+  const { page, errors } = await open('', { lang: 'en', ...opts })
+  const frame = await woodland(page)
+  check(frame, `${size}: the woodland did not open for the forest check`)
+  if (frame) {
+    await frame.evaluate(() => {
+      window.__ANTKEEPERS__.setEnvironment({ hours: 12 })
+      window.__ANTKEEPERS__.view.hours = 12
+    })
+    await wait(1000)
+    const seen = await frame.evaluate(() => {
+      const k = window.__ANTKEEPERS__
+      const { renderer, scene, camera, controls, habitat } = k.system
+      const gl = renderer.getContext()
+      const opening = [camera.position.toArray(), controls.target.toArray()]
+      const views = { opening, forest: [[0, 2.5, 8], [0, 2.5, 30]], trees: [[0, 5, 30], [0, 0, 0]] }
+      const draw = ([position, target]) => {
+        camera.position.set(...position)
+        controls.target.set(...target)
+        controls.update(0)
+        renderer.render(scene, camera)
+        const pixels = new Uint8Array(gl.drawingBufferWidth * gl.drawingBufferHeight * 4)
+        gl.readPixels(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight, gl.RGBA, gl.UNSIGNED_BYTE, pixels)
+        return pixels
+      }
+      const share = (a, b) => {
+        let changed = 0
+        for (let i = 0; i < a.length; i += 4) if (Math.abs(a[i] - b[i]) + Math.abs(a[i + 1] - b[i + 1]) + Math.abs(a[i + 2] - b[i + 2]) > 30) changed++
+        return changed / (a.length / 4)
+      }
+      k.view.paused = true
+      const built = Object.fromEntries(Object.entries(views).map(([name, view]) => [name, draw(view)]))
+      habitat.forest.group.visible = false
+      const bare = draw(opening)
+      habitat.forest.group.visible = true
+      for (const material of Object.values(habitat.forest.materials)) {
+        const compile = material.onBeforeCompile
+        const key = material.customProgramCacheKey
+        material.onBeforeCompile = (shader) => {
+          compile(shader)
+          shader.fragmentShader = shader.fragmentShader.replace('diffuseColor.a *= forestVisibility;', '').replace('if (forestVisibility <= .00001) discard;', '')
+        }
+        material.customProgramCacheKey = () => key.call(material) + '-whole'
+        material.needsUpdate = true
+      }
+      const faded = Object.fromEntries(Object.entries(views).map(([name, view]) => [name, share(built[name], draw(view))]))
+      k.view.paused = false
+      return { cover: share(built.opening, bare), faded }
+    })
+    check(seen.cover < (size === 'phone' ? 0.2 : 0.1), `${size}: the forest covers ${(100 * seen.cover).toFixed(1)}% of the opening view`)
+    for (const [name, what] of [['opening', 'in the opening view'], ['forest', 'looking at the forest from the clearing'], ['trees', 'looking down at the clearing from among the trees']])
+      check(seen.faded[name] < 0.005, `${size}: ${what}, ${(100 * seen.faded[name]).toFixed(1)}% of the frame is forest that fades with the camera`)
+  }
+  noErrors(errors, `in the ${size} woodland forest check`)
   await page.close()
 }
 

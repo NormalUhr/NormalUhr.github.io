@@ -1,8 +1,7 @@
 import * as THREE from 'three';
 
 // This forest is a fixed part of the scenery, not a camera-facing panorama or
-// a succession of distance-switched LODs. Obstructing foreground fragments
-// fade inside the sight corridor between the camera and the clearing.
+// a succession of distance-switched LODs. Nothing in it fades with the camera.
 const TAU = Math.PI * 2;
 const UP = new THREE.Vector3(0, 1, 0);
 const clamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v));
@@ -28,42 +27,6 @@ function noiseSource(seed) {
     return mix(mix(hash(ix, iz), hash(ix + 1, iz), u),
       mix(hash(ix, iz + 1), hash(ix + 1, iz + 1), u), v);
   };
-}
-
-function nearCameraCutaway(material) {
-  const originalCompile = material.onBeforeCompile;
-  const originalKey = material.customProgramCacheKey;
-  // The main renderer has an antialiased multisample buffer. Alpha coverage
-  // reveals the scene behind a close branch without a visible stipple pattern
-  // or transparent-instance sorting. Fully hidden fragments also work when a
-  // browser cannot supply MSAA; intermediate fragments remain opaque there.
-  material.alphaToCoverage = true;
-  material.onBeforeCompile = shader => {
-    originalCompile(shader);
-    shader.fragmentShader = shader.fragmentShader.replace('#include <alphatest_fragment>', `
-      #include <alphatest_fragment>
-      // The clearing stays visible if the camera enters its bordering trees.
-      // A long mobile overview can look through a tree ten or twenty units
-      // from the lens. Follow the actual view ray all the way to the clearing,
-      // protecting a gradually wider corridor instead of fading a whole band.
-      // Behind the focus and on both sides the forest remains fully opaque.
-      vec3 forestDirection = normalize(-vec3(viewMatrix[0][2], viewMatrix[1][2], viewMatrix[2][2]));
-      float forestViewLength = max(.1, (cameraPosition.y + .1) / max(.1, -forestDirection.y));
-      vec3 forestRay = vHabitatPosition - cameraPosition;
-      float forestDepth = dot(forestRay, forestDirection);
-      float forestOffset = length(forestRay - forestDirection * forestDepth);
-      float forestProgress = clamp(forestDepth / forestViewLength, 0., 1.);
-      float forestRadius = mix(1.25, 9.2, forestProgress);
-      float forestCorridor = 1. - smoothstep(forestRadius, forestRadius + 1.9, forestOffset);
-      float forestFront = step(0., forestDepth)
-        * (1. - smoothstep(forestViewLength - 2.5, forestViewLength - .6, forestDepth));
-      float forestVisibility = max(0., 1. - forestCorridor * forestFront);
-      diffuseColor.a *= forestVisibility;
-      if (forestVisibility <= .00001) discard;
-    `);
-  };
-  material.customProgramCacheKey = () => originalKey.call(material) + '-forest-cutaway-3';
-  return material;
 }
 
 // Four triangles make a folded leaf rather than a rectangular alpha card. The
@@ -136,23 +99,37 @@ function trunkGeometry() {
  * scenery surface. All geometry, instances and tree locations are persistent.
  */
 export function createForestBackdrop(parent, {
-  seed, quality = 'high', heightAt, makeMaterial, textures
+  seed, quality = 'high', heightAt, makeMaterial, textures, startView
 }) {
   const group = new THREE.Group(); group.name = 'Layered 360 degree woodland'; parent.add(group);
   group.userData.nonInteractive = true;
   const low = quality === 'low', rnd = randomSource(seed), noise = noiseSource(seed ^ 0x45b192);
-  const wood = nearCameraCutaway(makeMaterial({
+  const wood = makeMaterial({
     map: textures.bark, normalMap: textures.barkNormal, normalScale: new THREE.Vector2(.65, .65),
     roughnessMap: textures.barkARM, roughness: .96, color: '#bcbbaa'
-  }, {snow: .22, wet: .8}));
-  const broadleaf = nearCameraCutaway(makeMaterial({
+  }, {snow: .22, wet: .8});
+  const broadleaf = makeMaterial({
     map: textures.leaf, color: '#718746', vertexColors: true, roughness: .93, side: THREE.DoubleSide
-  }, {wind: .023, snow: .7, wet: .7}));
-  const evergreen = nearCameraCutaway(makeMaterial({
+  }, {wind: .023, snow: .7, wet: .7});
+  const evergreen = makeMaterial({
     map: textures.leaf, color: '#4f6a45', vertexColors: true, roughness: .96, side: THREE.DoubleSide
-  }, {wind: .013, snow: .85, wet: .65}));
+  }, {wind: .013, snow: .85, wet: .65});
   const transform = new THREE.Object3D(), segment = new THREE.Vector3(), meshes = [];
-  const statistics = {trees: 0, trunks: 0, branches: 0, canopyClusters: 0, shrubs: 0, triangles: 0, drawCalls: 0, layers: []};
+  const statistics = {trees: 0, startViewTrees: 0, trunks: 0, branches: 0, canopyClusters: 0, shrubs: 0, triangles: 0, drawCalls: 0, layers: []};
+  // The start view looks over the clearing from among the trees at its edge. A
+  // tree with a crown on that line of sight is not planted, so the view is open
+  // and no part of the forest has to fade for it.
+  const local = new THREE.Matrix4(), near = new THREE.Vector3(), far = new THREE.Vector3();
+  function onSightLine(crown, geometry) {
+    transform.position.set(crown.x, crown.y, crown.z);
+    transform.rotation.set(crown.rx || 0, crown.angle || 0, crown.rz || 0);
+    transform.scale.set(crown.sx, crown.sy, crown.sz); transform.updateMatrix();
+    local.copy(transform.matrix).invert();
+    near.copy(startView.from).applyMatrix4(local); far.copy(startView.to).applyMatrix4(local).sub(near);
+    const {center, radius} = geometry.boundingSphere;
+    const t = clamp((center.x - near.x) * far.x + (center.y - near.y) * far.y + (center.z - near.z) * far.z, 0, far.lengthSq()) / far.lengthSq();
+    return near.addScaledVector(far, t).distanceTo(center) < radius;
+  }
   function instances(geometry, material, entries, name) {
     const mesh = new THREE.InstancedMesh(geometry, material, entries.length);
     mesh.name = name; mesh.castShadow = false; mesh.receiveShadow = false;
@@ -202,6 +179,10 @@ export function createForestBackdrop(parent, {
       if (occupied.some(p => (p.x - x) ** 2 + (p.z - z) ** 2 < Math.min(p.spacing, spacing) ** 2)) continue;
       const tree = {x, z, spacing}; occupied.push(tree); trees.push(tree);
     }
+    const boost = low ? 1.12 : 1;
+    const broadleafCrown = crownGeometry(seed + 917 + layerIndex * 37, layer.leaves, false, boost);
+    const evergreenCrown = crownGeometry(seed + 1881 + layerIndex * 41, Math.round(layer.leaves * 1.1), true, boost);
+    let leftOut = 0;
     for (const tree of trees) {
       const {x, z} = tree, y = heightAt(x, z), typeChoice = rnd();
       const conifer = typeChoice > .81, slender = !conifer && typeChoice > .60;
@@ -210,11 +191,12 @@ export function createForestBackdrop(parent, {
       const crown = mix(...layer.crown, rnd()) * (slender ? .68 : 1);
       const leanX = (rnd() - .5) * .8, leanZ = (rnd() - .5) * .8;
       const tint = .65 + rnd() * .30;
-      trunkEntries.push({x, y: y - .12, z, sx: radius, sy: height, sz: radius,
+      const trunk = {x, y: y - .12, z, sx: radius, sy: height, sz: radius,
         rx: leanZ / height, rz: -leanX / height, angle: rnd() * TAU,
-        color: new THREE.Color().setRGB(tint * .98, tint, tint * .91)});
+        color: new THREE.Color().setRGB(tint * .98, tint, tint * .91)};
+      const crowns = [], branches = [];
       if (conifer) {
-        needles.push({x: x + leanX, y: y + height * .72, z: z + leanZ,
+        crowns.push({x: x + leanX, y: y + height * .72, z: z + leanZ,
           sx: crown, sy: height * .43, sz: crown * (.83 + rnd() * .25), angle: rnd() * TAU,
           color: new THREE.Color().setRGB(.82 + rnd() * .17, .87 + rnd() * .13, .78 + rnd() * .19)});
       } else {
@@ -225,15 +207,20 @@ export function createForestBackdrop(parent, {
           const crownX = x + leanX + Math.sin(angle) * spread;
           const crownZ = z + leanZ + Math.cos(angle) * spread;
           const reach = crown * (.66 + rnd() * .27);
-          leaves.push({x: crownX, y: crownY, z: crownZ,
+          crowns.push({x: crownX, y: crownY, z: crownZ,
             sx: reach, sy: reach * (slender ? 1.17 : .74 + rnd() * .18), sz: reach * (.86 + rnd() * .23),
             angle: rnd() * TAU, rx: (rnd() - .5) * .22, rz: (rnd() - .5) * .22,
             color: new THREE.Color().setRGB(.72 + rnd() * .26, .82 + rnd() * .18, .65 + rnd() * .30)});
           if (layerIndex < 2) {
-            branchEntries.push({x: x + leanX * .5, y: y + height * (.49 + branch * .065), z: z + leanZ * .5,
+            branches.push({x: x + leanX * .5, y: y + height * (.49 + branch * .065), z: z + leanZ * .5,
               end: new THREE.Vector3(crownX, crownY, crownZ), r: radius * (.20 + rnd() * .13)});
           }
         }
+      }
+      // A tree left out still draws its random numbers, so every other tree stays where it was.
+      if (crowns.some(c => onSightLine(c, conifer ? evergreenCrown : broadleafCrown))) leftOut++;
+      else {
+        trunkEntries.push(trunk); (conifer ? needles : leaves).push(...crowns); branchEntries.push(...branches);
       }
       // Irregular low vegetation fills the gap between grass and high crowns.
       // It is outside the original terrain rectangle and never affects paths.
@@ -253,13 +240,11 @@ export function createForestBackdrop(parent, {
         }
       }
     }
-    const boost = low ? 1.12 : 1;
-    instances(crownGeometry(seed + 917 + layerIndex * 37, layer.leaves, false, boost), broadleaf, leaves,
-      `${layer.name}: overlapping broadleaf crowns`);
-    instances(crownGeometry(seed + 1881 + layerIndex * 41, Math.round(layer.leaves * 1.1), true, boost), evergreen, needles,
-      `${layer.name}: evergreen spires`);
-    statistics.trees += trees.length; statistics.canopyClusters += leaves.length + needles.length;
-    statistics.layers.push({name: layer.name, trees: trees.length, canopyClusters: leaves.length + needles.length});
+    instances(broadleafCrown, broadleaf, leaves, `${layer.name}: overlapping broadleaf crowns`);
+    instances(evergreenCrown, evergreen, needles, `${layer.name}: evergreen spires`);
+    statistics.trees += trees.length - leftOut; statistics.startViewTrees += leftOut;
+    statistics.canopyClusters += leaves.length + needles.length;
+    statistics.layers.push({name: layer.name, trees: trees.length - leftOut, canopyClusters: leaves.length + needles.length});
   }
   instances(trunkGeometry(), wood, trunkEntries, 'Forest trunks with varied height and lean');
   const branchGeometry = new THREE.CylinderGeometry(.16, 1, 1, 5, 2, true); branchGeometry.translate(0, .5, 0);
@@ -277,7 +262,6 @@ export function createForestBackdrop(parent, {
   update();
   return {
     group, meshes, statistics, update, materials: {wood, broadleaf, evergreen},
-    extents: {minX: -116, maxX: 116, minZ: -96, maxZ: 96},
-    cameraClearance: {mode: 'camera-to-clearing', lensRadius: 1.25, clearingRadius: 9.2, feather: 1.9, endFeather: 2.5}
+    extents: {minX: -116, maxX: 116, minZ: -96, maxZ: 96}
   };
 }
