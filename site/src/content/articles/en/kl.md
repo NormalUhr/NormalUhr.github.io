@@ -23,7 +23,7 @@ $$
 = \mathbb{E}_{x\sim q}\!\left[\log\frac{q(x)}{p(x)}\right].
 $$
 
-As the formula shows: when estimating the KL between two (complicated) distributions, there’s a coding trick people often use: approximate KL by the sample mean of $\log\!\big(\frac{q(x)}{p(x)}\big)$ with samples drawn from $q$ (as opposed to trying to evaluate the full expectation exactly). The post then points out another move: use the sample average of $\tfrac{1}{2}(\log r)^2$ to replace the more “standard” $\log r$ form, where $r=\frac{q(x)}{p(x)}$. The write-up explains why this expression can be a good (albeit biased) estimator for KL, and how to make it unbiased while keeping its low variance.
+As the formula shows: when estimating the KL between two (complicated) distributions, there’s a coding trick people often use: approximate KL by the sample mean of $\log\!\big(\frac{q(x)}{p(x)}\big)$ with samples drawn from $q$ (as opposed to trying to evaluate the full expectation exactly). The post then points out another move: use the sample average of $\tfrac{1}{2}(\log r)^2$ to replace the more “standard” $-\log r$ form, where $r=\frac{p(x)}{q(x)}$. The write-up explains why this expression can be a good (albeit biased) estimator for KL, and how to make it unbiased while keeping its low variance.
 
 How we compute KL depends on how we can access $p$ and $q$. Here we assume we **can** evaluate $p(x)$ and $q(x)$ (probabilities or densities) for any $x$, but we **can’t** analytically sum/integrate over $x$. Why might we fail to do the analytic sum/integral? Maybe the exact computation is too expensive in compute or memory, maybe there’s no closed form, or maybe we only store log-probs instead of full distributions to keep code simpler, especially fine when KL is just a diagnostic (as is often the case in RL). The most common strategy to approximate sums or integrals is **Monte Carlo**. Given samples $x_1, x_2, \dots, x_n \sim q$, how do we build a good estimator?
 
@@ -33,11 +33,13 @@ $$
 k_1 = \log\frac{q(x)}{p(x)}.
 $$
 
-But it has high variance: by definition KL is a nonnegative quantity, yet for the estimator above, roughly “half” the sample values can be negative (if we assume no prior structure on $p$ and $q$), and this swings the average around a lot, hence high variance. For notational convenience, set $r = \frac{q(x)}{p(x)}$. Then the original KL can be written as
+But it has high variance: by definition KL is a nonnegative quantity, yet for the estimator above, roughly “half” the sample values can be negative (if we assume no prior structure on $p$ and $q$), and this swings the average around a lot, hence high variance. For notational convenience, set $r = \frac{p(x)}{q(x)}$, the same convention as the original post. Then the original KL can be written as
 
 $$
-\mathrm{KL}[q, p] \;=\; \mathbb{E}_{x\sim q}\,[\log r].
+\mathrm{KL}[q, p] \;=\; \mathbb{E}_{x\sim q}\,[-\log r],
 $$
+
+and correspondingly $k_1=-\log r$.
 
 To reduce variance, we can design an alternative estimator:
 
@@ -71,14 +73,14 @@ which is always nonnegative. And $k_3$ is exactly the piece where, in practice, 
 In RL (think PPO, GRPO, etc.), we often tack a KL divergence term onto the loss to keep the new policy from drifting too far from the old one. Here, $q$ is the old policy distribution ($\pi_{\text{old}}$), $p$ is the new policy distribution ($\pi_{\text{new}}$), and $x$ is a complete action sample (in an LLM this means a token or a token sequence). We usually use $s$ to denote the state (in an LLM, that’s the prompt or context), and $x$ is a specific token generated in that context. When we compute KL, what we’re really doing is taking the KL **over the action distribution given a state**, and then averaging over states:
 
 $$
-\mathrm{KL}[p, q] = \mathbb{E}_{s} \left[ \sum_x p(x|s) \log \frac{p(x|s)}{q(x|s)} \right].
+\mathrm{KL}[q, p] = \mathbb{E}_{s} \left[ \sum_x q(x|s) \log \frac{q(x|s)}{p(x|s)} \right].
 $$
 
-At sampling time, we typically fix a prompt (state) and then estimate this KL for that prompt.
+We write the KL in the $\mathrm{KL}[q, p]$ direction because the samples below are drawn from the old policy $q$, which matches the setting of the original post. At sampling time, we typically fix a prompt (state) and then estimate this KL for that prompt.
 
 **So why can’t we just compute KL exactly instead of estimating it?** The reasons are exactly those listed in the original blog post; in RL for LLMs, the main culprit is **Reason #1**: *the action space (token space) is too large to sum/integrate over all possible $x$*. For example, if a tokenizer has 50,000 vocabulary entries, even computing the KL for a single token means summing over 50,000 actions; and in RL we’re usually doing multi-step (sequence) generation, so the space blows up exponentially, which is completely impractical. There’s also a pragmatic reason: during training we generally don’t store the full distribution (all token probabilities); we only keep the log-probs of the tokens actually generated along the trajectory, to save GPU memory and I/O. So we have to use **Monte Carlo sampling**: draw $x$ from some distribution (usually $q$, the old policy), and use those samples to approximate KL. And that drops us squarely into the territory the blog post is about.
 
-In that post, the **estimator** we keep talking about is really just a function of a sample: it takes $p(x)$ and $q(x)$ for some sampled $x$ (or their ratio $r = \frac{q(x)}{p(x)}$) and spits out a number. We then take the average of those numbers over our samples to approximate KL. For example:
+In that post, the **estimator** we keep talking about is really just a function of a sample: it takes $p(x)$ and $q(x)$ for some sampled $x$ (or their ratio $r = \frac{p(x)}{q(x)}$) and spits out a number. We then take the average of those numbers over our samples to approximate KL. For example:
 - $k_1(x) = -\log r$
 - $k_2(x) = \frac12 (\log r)^2$
 - $k_3(x) = (r - 1) - \log r$
@@ -94,7 +96,7 @@ $$
 \log p(x_i),\ \log q(x_i)
 $$
 
-   and get $r_i = \frac{q(x_i)}{p(x_i)}$ or $\log r_i$.
+   and get $r_i = \frac{p(x_i)}{q(x_i)}$ or $\log r_i$.
 
 3. **Plug into the estimator formula**  
    For example, if we choose $k_3$:
@@ -114,7 +116,7 @@ $$
 If we compare this to computing the true KL (no estimation) for a discrete probability distribution (LLM single-token step): we’d need to iterate over every possible token $x$:
 
 $$
-\mathrm{KL}(p\|q) = \sum_x p(x) \log \frac{p(x)}{q(x)}
+\mathrm{KL}(q\|p) = \sum_x q(x) \log \frac{q(x)}{p(x)}
 $$
 
 You can see immediately that with an estimator, the computational load is much smaller than doing the full sum, especially in high-dimensional action spaces.
@@ -127,13 +129,13 @@ $$
 \mathrm{Var}_{x \sim q}[k(x)]
 $$
 
-That is, how much $k(x)$ fluctuates across the sample space. An **unbiased** estimator means that with infinitely many samples, its mean equals the true KL. But a high-variance estimator means that even if the mean is right (unbiased), with a small number of samples the average can be way off. In RL for LLMs, the KL term is often a regularization factor in the loss (e.g., $\beta \cdot \mathrm{KL}$). If the KL estimator’s variance is large, it makes the loss noisy, which in turn makes gradients noisy and training unstable.
+That is, how much $k(x)$ fluctuates across the sample space. An **unbiased** estimator means that with infinitely many samples, its mean equals the true KL. But a high-variance estimator means that even if the mean is right (unbiased), with a small number of samples the average can be way off. In RL for LLMs, the KL term is often a regularization factor in the loss (e.g., $\beta \cdot \mathrm{KL}$). If the KL estimator’s variance is large, the value of the loss becomes noisy. Note that everything here is about the variance of the estimated value. How the KL term affects the gradient is a separate question. It depends on the gradient that this term actually produces in the backward pass, and the variance of that gradient is not the same quantity as the variance of the estimate.
 
 In the original post, to give readers an intuition for why $k_1$ is not low-variance, the author writes:
 
 > However, it ($k_1$) has high-variance, as it’s negative for half of the samples, whereas KL is always positive.
 
-The author points out that although $k_1$ is unbiased, without prior constraints on $p$ and $q$, half the samples will have one bigger than the other, so half of the $k_1$ values are positive and half negative. Up to here I’m fine. But then the author says: because KL is always greater than 0 (a basic inequality), $k_1$ must therefore have high variance. And here I think the causal link doesn’t actually hold: you can’t use the sign of the expectation to dictate the sign of individual samples. A quick counterexample: in computing the expectation, $p(x) \log \frac{p(x)}{q(x)}$ is also sometimes positive and sometimes negative; that fact by itself tells you nothing about variance. In reality, a single-sample **log ratio** (whether $\log \frac{q(x)}{p(x)}$ or $\log \frac{p(x)}{q(x)}$) can be positive or negative, just like $k_1$, so **sign-flipping alone is not the sole reason for high variance**.
+The author points out that although $k_1$ is unbiased, without prior constraints on $p$ and $q$, half the samples will have one bigger than the other, so half of the $k_1$ values are positive and half negative. Up to here I’m fine. But then the author says: because KL is always greater than 0 (a basic inequality), $k_1$ must therefore have high variance. And here I think the causal link doesn’t actually hold: you can’t use the sign of the expectation to dictate the sign of individual samples. A quick counterexample: in computing the expectation, the individual terms $q(x) \log \frac{q(x)}{p(x)}$ of the sum are also sometimes positive and sometimes negative; that fact by itself tells you nothing about variance. In reality, a single-sample **log ratio** (whether $\log \frac{q(x)}{p(x)}$ or $\log \frac{p(x)}{q(x)}$) can be positive or negative, just like $k_1$, so **sign-flipping alone is not the sole reason for high variance**.
 
 From the KL definition:
 
@@ -151,7 +153,7 @@ So each sample value can indeed be positive or negative, same as the integrand i
 
 **So why does $k_1$ have high variance?**
 
-It’s not the mere “sign flipping.” The real reason is that $k_1$’s value distribution is often wide (heavy-tailed). For example, if $p(x)$ is tiny for some sample, then $\log\frac{q}{p}$ can be huge (positive or negative). These extreme values dominate the finite-sample average, pushing variance up. In other words, it’s the combination of **extreme values + positive/negative cancellation**: cancellation means you need more samples to converge to the true mean, and extreme values make the sample variance itself larger. So the “half negative” comment in the blog is more of an intuition hook than a complete explanation.
+It’s not the mere “sign flipping.” The real reason is that $k_1$’s value distribution is often wide (heavy-tailed). For example, if $p(x)$ or $q(x)$ is tiny for some sample, then $\log\frac{q}{p}$ can be huge in magnitude (a large positive number when $p(x)$ is tiny, a large negative number when $q(x)$ is tiny). These extreme values dominate the finite-sample average, pushing variance up. In other words, it’s the combination of **extreme values + positive/negative cancellation**: cancellation means you need more samples to converge to the true mean, and extreme values make the sample variance itself larger. So the “half negative” comment in the blog is more of an intuition hook than a complete explanation.
 
 From this perspective, if we look at the other estimators $k_2$ and $k_3$, we see: $k_2 = \frac12 (\log r)^2$ is always positive, so there’s no cancellation, but this introduces bias; squaring also smooths the magnitude, reducing variance. $k_3$ uses a control variate to knock out part of the fluctuation source, lowering variance while keeping unbiasedness (details next).
 
