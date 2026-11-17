@@ -52,7 +52,8 @@
   border-color: var(--accent, #247a94);
   background: color-mix(in srgb, var(--accent, #247a94) 12%, var(--card, #fafaf7));
 }
-.cm-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 32px; font-weight: 600; }
+.cm-toolbar { display: flex; justify-content: flex-end; margin-bottom: 10px; }
+.cm-toolbar:has(button[hidden]) { display: none; }
 .cm-toolbar button { padding: 3px 9px; background: transparent; border: 1px solid var(--rule, #d6d8d5); border-radius: 3px; font-size: 12px; }
 .consistency-map .cm-legend { margin: 6px 0 14px; font-size: 12px; color: var(--ink-soft, #626767); }
 .cm-node { display: block; width: 100%; padding: 11px 13px; background: var(--bg, transparent); border: 1px solid var(--rule, #d6d8d5); border-radius: 3px; }
@@ -84,16 +85,11 @@
 .cm-dataflow { border-color: transparent; }
 .cm-dataflow .cm-bridge-label { display: flex; align-items: center; justify-content: center; gap: 6px; }
 .cm-highlight { box-shadow: inset 0 0 0 2px var(--accent, #247a94); }
-.consistency-map .cm-status { margin: 18px 0 7px; color: var(--ink-soft, #626767); font-size: 12px; }
-.cm-panels { border-top: 1px solid var(--rule, #d6d8d5); }
+.cm-panels { margin-top: 18px; border-top: 1px solid var(--rule, #d6d8d5); }
 .cm-panel { padding: 16px 0 2px; scroll-margin-top: 100px; scroll-margin-bottom: 60px; }
 .cm-panel + .cm-panel { border-top: 1px solid var(--rule, #d6d8d5); }
 .cm-panel > strong { display: block; font-size: 15px; color: var(--ink-strong, #252a2b); }
-.consistency-map .cm-panel p { margin: 10px 0; font-size: 13px; line-height: 1.75; }
-.cm-panel dl { display: grid; grid-template-columns: 76px 1fr; gap: 8px 12px; margin: 14px 0; }
-.cm-panel dt { font-weight: 600; }
-.cm-panel dd { margin: 0; min-width: 0; }
-.cm-panel a { font-size: 12px; }
+.consistency-map .cm-panel p { margin: 10px 0; font-size: 14px; line-height: 1.8; }
 .cm-return { margin-top: 12px; padding: 6px 10px; border: 1px solid var(--rule, #d6d8d5); border-radius: 3px; background: transparent; font-size: 12px !important; }
 .consistency-map figcaption { margin-top: 18px; font-size: 12px; color: var(--ink-soft, #626767); }
 @media (max-width: 600px) {
@@ -110,12 +106,11 @@
   .cm-relation b { font-size: 12px; }
   .cm-bridge { gap: 5px; padding: 9px 7px; font-size: 12px; }
   .cm-bridge-label { font-size: 11px; }
-  .cm-panel dl { grid-template-columns: 62px 1fr; gap: 8px; }
 }
 @media (max-width: 350px) { .cm-systems { grid-template-columns: 1fr; } }
 @media print {
   .consistency-map .cm-panel[hidden] { display: block !important; }
-  .cm-toolbar button, .cm-status, .cm-return { display: none !important; }
+  .cm-toolbar button, .cm-return { display: none !important; }
   .consistency-map button { color: inherit; background: transparent; }
   .cm-system, .cm-panel { break-inside: avoid; }
 }

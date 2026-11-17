@@ -525,21 +525,21 @@ $$
 下面这张图按照这些比较对象，串起了全文讨论过的差异来源、监控证据和排查方法。沿着 trainer 与 generator 的内部路径，以及两端之间的连线，可以看到每项检查在系统中的位置。图中也单独保留了实际采样的检查，因为评分相同以后，仍然需要验证输出是否遵循了预期的分布。
 
 <figure class="consistency-map" id="consistency-diagnostic-map" aria-label="Trainer 与 Generator 的交互式诊断结构图">
-<div class="cm-toolbar"><span>按比较对象查找问题</span><button type="button" data-map-reset hidden>回到总览</button></div>
-<p class="cm-legend">双向箭头表示比较；单向箭头表示更新、生成或数据传递。点击检查入口，可以查看需要固定的条件、具体操作和对应的正文说明，描边会标出检查涉及的位置。</p>
-<noscript><p>当前未启用脚本，各项检查的完整说明列在图下，可以直接阅读并使用正文链接。</p></noscript>
-<button type="button" class="cm-node cm-common" data-map-select="inputs" aria-controls="cm-inputs"><b>共同前提：比较的是同一个预测事件吗？</b><span>token、前缀、位置、权重版本与概率定义</span></button>
+<div class="cm-toolbar"><button type="button" data-map-reset hidden>回到总览</button></div>
+<p class="cm-legend">点击图中的一项比较，可以查看相应的说明。蓝色描边标出涉及的计算路径。双向箭头表示比较，单向箭头表示更新、生成或数据传递。</p>
+<noscript><p>各项说明已展开，可以直接阅读。</p></noscript>
+<button type="button" class="cm-node cm-common" data-map-select="inputs" aria-controls="cm-inputs"><b>比较相同前缀下同一个 token 的概率</b><span>核对 token IDs、位置、权重和概率处理方式</span></button>
 <div class="cm-systems">
 <div class="cm-system cm-trainer" data-map-system="trainer">
 <div class="cm-system-title"><strong>Trainer</strong><span>训练 loss 的实际评分路径</span></div>
-<div class="cm-score" data-map-endpoint="train"><b>Trainer 训练评分</b><button type="button" class="cm-self-check" data-map-select="trainer" aria-controls="cm-trainer">↔ 自身：固定权重，重复计算或改变 batch</button></div>
-<div class="cm-snapshot"><span>更新前冻结的评分</span><span aria-hidden="true">↓</span><span>当前参数的评分</span><small>真实更新与执行差异需要分开。</small></div>
+<div class="cm-score" data-map-endpoint="train"><b>Trainer 训练评分</b><button type="button" class="cm-self-check" data-map-select="trainer" aria-controls="cm-trainer">↔ 固定权重，重复计算或改变 batch</button></div>
+<div class="cm-snapshot"><span>更新前冻结的评分</span><span aria-hidden="true">↓</span><span>当前参数的评分</span><small>参数更新带来的变化，与固定权重下的计算差异，需要分别记录。</small></div>
 </div>
 <div class="cm-system cm-generator" data-map-system="generator">
 <div class="cm-system-title"><strong>Generator</strong><span>重算、生成与状态维护</span></div>
-<div class="cm-score" data-map-endpoint="prefill"><b>Prefill 整段评分</b><button type="button" class="cm-self-check" data-map-select="prefill" aria-controls="cm-prefill">↔ 自身：重复、batch 与分块对照</button></div>
+<div class="cm-score" data-map-endpoint="prefill"><b>Prefill 整段评分</b><button type="button" class="cm-self-check" data-map-select="prefill" aria-controls="cm-prefill">↔ 重复计算，再改变 batch 或分块方式</button></div>
 <button type="button" class="cm-relation" data-map-select="phase" aria-controls="cm-phase" aria-label="比较 prefill 与 decode，另查候选块的 verifier 评分"><span aria-hidden="true">↕</span><b>Prefill ↔ Decode</b><small>整段与增量路径<br>启用候选验证时另查 verifier 评分</small></button>
-<div class="cm-score" data-map-endpoint="decode"><b>Decode 生成评分</b><button type="button" class="cm-self-check" data-map-select="state" aria-controls="cm-state">↔ 自身：连续推进、暂停恢复与缓存状态</button></div>
+<div class="cm-score" data-map-endpoint="decode"><b>Decode 生成评分</b><button type="button" class="cm-self-check" data-map-select="state" aria-controls="cm-state">↔ 对比连续生成与暂停或复用缓存后的生成</button></div>
 <span class="cm-down" aria-hidden="true">↓</span>
 <button type="button" class="cm-node" data-map-select="sampling" aria-controls="cm-sampling"><b>采出的 token 与返回的概率</b><span>温度、截断、MTP 候选验证</span></button>
 </div>
@@ -548,68 +548,67 @@ $$
 <div class="cm-bridge cm-dataflow"><span>Trainer 接收</span><span class="cm-bridge-label"><span aria-hidden="true">←</span><span>生成序列与概率记录</span></span>Generator 生成</div>
 <button type="button" class="cm-bridge" data-map-select="engines" aria-controls="cm-engines" aria-label="比较 trainer 与 prefill 的整段评分"><span>Trainer 训练评分</span><span class="cm-bridge-label">↔ 整段实现比较 ↔</span><span>Prefill 整段评分</span></button>
 <button type="button" class="cm-bridge" data-map-select="total" aria-controls="cm-total" aria-label="比较 trainer 训练评分与 decode 生成评分的总差异"><span>Trainer 训练评分</span><span class="cm-bridge-label">↔ 生成时的总差异 ↔</span><span>Decode 生成评分</span></button>
-<button type="button" class="cm-bridge cm-sync" data-map-select="sync" aria-controls="cm-sync" aria-label="检查 trainer 非零更新后的权重同步与 generator 旧状态处理"><span>Trainer 非零更新</span><span class="cm-bridge-label">→ 权重同步 →</span>Generator 处理旧状态</button>
+<button type="button" class="cm-bridge cm-sync" data-map-select="sync" aria-controls="cm-sync" aria-label="检查 trainer 非零更新后的权重同步与 generator 旧状态处理"><span>Trainer 非零更新</span><span class="cm-bridge-label">→ 权重同步 →</span><span>Generator 处理旧状态</span></button>
 </div>
-<button type="button" class="cm-node cm-common" data-map-select="monitor" aria-controls="cm-monitor"><b>将检查结果用于监控与回归</b><span>逐 token 差异、异常样本、clipping 影响与故障触发</span></button>
-<p class="cm-status" aria-live="polite" data-map-status>当前查看：总览</p>
+<button type="button" class="cm-node cm-common" data-map-select="monitor" aria-controls="cm-monitor"><b>保存异常样本，并用原来的故障验证修复</b><span>逐 token 差异、权重与 batch 配置、调度和缓存记录</span></button>
 <div class="cm-panels">
-<div class="cm-panel" id="cm-overview" data-map-panel="overview">
-<strong>先确定比较对象，再沿差异继续定位</strong>
-<p>即使两套引擎各自重复计算时都没有问题，它们之间的结果也仍然可能不同。同样，generator 的 prefill 正常，也不意味着 decode 或者采样过程一定正确。因此，图中的这些检查需要相互补充，不能用某一项通过来代替其他项。</p>
-<p>如果遇到了评分差异，可以从相应的两条路径开始比较；如果评分相等，但输出统计发生了变化，就需要继续检查采样过程。图中的入口对应的是本文讨论过的检查，至于具体原因，仍然需要结合受控对照和状态记录来判断。</p>
+<div class="cm-panel" id="cm-overview" data-map-panel="overview" aria-labelledby="cm-heading-overview">
+<strong id="cm-heading-overview">引擎内部的差异和两端之间的差异，需要分别比较</strong>
+<p>即使 trainer 和 generator 各自重复计算时都能得到相同的结果，两者计算出的概率也可能不同。Generator 内部也是这样，即使 prefill 的结果稳定，也还需要另外确认 decode、缓存状态和采样过程是否正确。</p>
+<p>如果已经发现两条路径的评分不同，就从这两条路径开始对照。如果评分相同，生成结果的统计却发生了变化，就继续核对采样分布。图中的每组比较都只能排除一部分原因，需要把结果放在一起判断。</p>
 </div>
-<div class="cm-panel" id="cm-inputs" data-map-panel="inputs">
-<strong>共同前提：先排除比较对象没有对齐</strong>
-<dl><dt>固定什么</dt><dd>两端需要为同一个 token 评分，并使用相同的前缀和位置。如果要调查执行差异，还需要固定权重，确认比较的是 raw 还是 processed 概率。</dd><dt>检查什么</dt><dd>完整 token IDs、prompt 边界、EOS、padding、attention mask、position IDs、多模态输入，以及有效记录的数量与有限值。</dd><dt>怎样继续</dt><dd>如果索引、前缀或者概率定义不同，就先修正对应关系。如果数据缺失，就需要补充采集，不能用事后重新计算的结果来代替生成时的记录。</dd></dl>
-<a href="#71-先保存能够复现的输入并确认两端比较的是同一个量">阅读：输入与记录需要保存什么</a>
+<div class="cm-panel" id="cm-inputs" data-map-panel="inputs" aria-labelledby="cm-heading-inputs">
+<strong id="cm-heading-inputs">两端需要在同一个前缀上给同一个 token 计算概率</strong>
+<p>开始比较之前，先逐项核对 token IDs、prompt 的结束位置、EOS、padding、attention mask 和 position IDs。如果输入包含图像等内容，也需要核对对应的输入表示。两端记录的位置必须指向同一个 token，而且这个 token 之前的前缀应当完全一致。如果发现对应关系不一致，就先修正，再比较数值。</p>
+<p>在排查计算差异时，还要固定权重，并确认两端记录的都是 raw 概率，或者都是经过相同处理的 processed 概率。随后检查有效记录的数量，以及是否存在缺失值或非有限值。如果生成时的记录没有保存下来，就需要重新采集，因为事后重算的概率无法说明当时的 decode 实际算出了什么。</p>
 </div>
-<div class="cm-panel" id="cm-trainer" data-map-panel="trainer">
-<strong>Trainer 自身：把执行变化与参数更新分开</strong>
-<dl><dt>固定什么</dt><dd>关闭 dropout，固定参数和输入，并使用 loss 实际采用的评分路径。先在原配置下重复计算，再单独改变 batch 或者序列拼接方式。</dd><dt>检查什么</dt><dd>重复前向的差值，单独评分与训练 batch 评分的差别，packing 后的 mask、精度、并行归约及 log-softmax。</dd><dt>怎样继续</dt><dd>如果重复计算时就出现了不同结果，可以先沿着这一条路径定位。参数更新以后的评分变化可能符合预期，因此需要与同版本下的执行差异分别记录。冻结的 old 评分，也不能代替 generator 实际采样时的行为概率。</dd></dl>
-<a href="#12-trainer-重算的-old-log-prob为什么会让这个问题消失在指标里">阅读：old log-prob 隐藏了什么</a> · <a href="#73-比较实际执行过的路径再决定下一项实验">阅读：trainer 的 batch 与逐层定位</a>
+<div class="cm-panel" id="cm-trainer" data-map-panel="trainer" aria-labelledby="cm-heading-trainer">
+<strong id="cm-heading-trainer">参数没有更新时，trainer 的计算也可能随 batch 改变</strong>
+<p>关闭 dropout，固定参数和输入，沿着训练 loss 实际使用的路径重复计算 log-prob。随后把同一条序列单独拿出来评分，再放回训练 batch，或者只改变 packing 的方式，观察结果是否发生变化。如果重复计算的结果就不相同，或者评分随 batch、packing 改变，就检查 mask、计算精度、并行归约和 log-softmax，沿 trainer 自己的计算路径寻找原因。</p>
+<p>参数更新以后，概率本来就可能改变，因此需要把这种变化与固定权重时的计算差异分别记录。更新前冻结的 old log-prob 也只代表 trainer 当时的评分，不能用它代替 generator 实际生成 token 时的概率。</p>
 </div>
-<div class="cm-panel" id="cm-prefill" data-map-panel="prefill">
-<strong>Prefill 自身：重复性与 batch 不变性分别检查</strong>
-<dl><dt>固定什么</dt><dd>固定权重和整条 token 序列，每次都从干净状态开始。检查重复性时，保持 batch 相同；检查 batch 的影响时，只改变请求组成或者排列。</dd><dt>检查什么</dt><dd>每个 token 的评分、prefill 的分块方式、实际调用的 kernel，以及中间精度。对于 MoE，还需要记录 router 得分、expert 编号和混合权重。</dd><dt>怎样继续</dt><dd>在固定配置下重复计算的结果相同，只说明这条路径具有重复性。如果更换 batch 以后结果不同，就先在两种 batch 的 prefill 之间寻找第一处分歧，再继续检查跨阶段的差异。</dd></dl>
-<a href="#72-先检查-generator-能否复现自己的评分与状态">阅读：generator 自身的四组对照</a>
+<div class="cm-panel" id="cm-prefill" data-map-panel="prefill" aria-labelledby="cm-heading-prefill">
+<strong id="cm-heading-prefill">重复 prefill 得到相同结果以后，还要改变 batch 再比较</strong>
+<p>固定权重和整条 token 序列，每次都从干净的状态开始 prefill。先保持 batch 和分块方式不变，确认重复计算能否得到相同的 log-prob。然后分别改变请求的组成、排列和 prefill 分块方式，观察同一条序列的评分是否变化。</p>
+<p>如果差异出现在更换 batch 或分块方式之后，就在这两次 prefill 之间寻找最早出现分歧的计算，记录实际调用的 kernel 和中间精度。对于 MoE，还需要保留 router 得分、expert 编号和混合权重。同一配置下的重复性只验证了这一种执行方式，不能据此推断换一种 batch 后，或者切换到 decode 后，结果仍然相同。</p>
 </div>
-<div class="cm-panel" id="cm-phase" data-map-panel="phase">
-<strong>Prefill 与 Decode：同一引擎也可能执行不同的浮点计算</strong>
-<dl><dt>固定什么</dt><dd>先让两条路径都单独处理同一条序列，并固定权重和并行配置。decode 强制沿着记录中的 token 推进，同时保留选择 token 之前的评分。</dd><dt>检查什么</dt><dd>计算形状、实际 backend 分派、MLA 投影重排、MoE 路由、KV 精度，以及递归状态的更新。如果使用候选验证，还需要在相同前缀上，比较 verifier 的候选块评分与逐 token 评分。</dd><dt>怎样继续</dt><dd>单请求的对照只能排除其他请求的干扰，多行与单行计算的形状仍然不同。找到第一个算子或者状态分歧以后，再做局部对照，不能仅凭 backend 的名称相同，就认为路径已经一致。</dd></dl>
-<a href="#23-同一个-generator-的-prefill-与-decode也可能执行不同的计算路径">阅读：同一引擎为什么仍会不同</a> · <a href="#72-先检查-generator-能否复现自己的评分与状态">阅读：怎样做受控比较</a> · <a href="#63-验证时的数值路径与拒绝后的缓存都需要单独检查">阅读：候选块的验证路径</a>
+<div class="cm-panel" id="cm-phase" data-map-panel="phase" aria-labelledby="cm-heading-phase">
+<strong id="cm-heading-phase">Prefill 与 decode 的差异，要沿实际执行的算子定位</strong>
+<p>让 prefill 和 decode 分别单独处理同一条序列，并固定权重和并行配置。Decode 需要沿记录中的 token 强制推进，同时保留选出 token 之前的评分。这样可以排除其他请求的干扰，但整段计算与逐 token 计算的形状仍然不同，所以仍要核对实际的 backend 分派、MLA 投影顺序、MoE 路由、KV 精度，以及递归状态的更新。</p>
+<p>找到第一个出现分歧的算子或者状态以后，再对它做局部比较。如果使用了候选验证，还要在相同前缀上比较 verifier 的候选块评分与逐 token 评分。配置里写着同一个 backend 名称，并不能说明这几条路径执行了相同的浮点计算。</p>
 </div>
-<div class="cm-panel" id="cm-state" data-map-panel="state">
-<strong>Decode 状态：比较连续推进与状态交接</strong>
-<dl><dt>固定什么</dt><dd>从同一份已经核对过的增量状态出发，让一条路径直接继续，另一条经过暂停、恢复或者复用。两者后续的 token、batch 和 decode 配置保持相同。</dd><dt>检查什么</dt><dd>在途 token、有效长度、位置和页映射、缓存的参数版本，以及交接前后的状态。如果候选被拒绝，还需要检查作废的后缀、重新采出的 token，以及下一次计算。</dd><dt>怎样继续</dt><dd>如果差异只在状态交接以后才出现，就检查状态传递。如果在没有交接的对照中，逐 token 构建的状态仍然与 prefill 不同，就先沿着两种状态构建路径定位。差异集中出现在哪里，只能帮助我们选择检查位置。</dd></dl>
-<a href="#5-从-kl-spike-追到请求恢复一次前缀错位的排查">阅读：暂停后继续生成时的前缀错位</a> · <a href="#63-验证时的数值路径与拒绝后的缓存都需要单独检查">阅读：候选拒绝后的状态</a>
+<div class="cm-panel" id="cm-state" data-map-panel="state" aria-labelledby="cm-heading-state">
+<strong id="cm-heading-state">暂停后继续生成时，要核对缓存与 token 记录是否仍然对应</strong>
+<p>从同一份已经核对过的增量状态出发，让一条路径直接继续生成，另一条经过暂停后再继续，或者经过一次缓存复用。两条路径都强制采用相同的后续 token，并保持 batch 和 decode 配置一致。如果只有经过状态交接的路径出现了差异，就逐项对照交接前后的在途 token、有效长度、位置、页映射和缓存的参数版本。</p>
+<p>如果没有状态交接时，逐 token 构建的缓存也与 prefill 重建的状态不同，就先比较这两种构建过程。对于候选被拒绝的情况，还需要确认候选后缀对应的临时缓存已经被回退或者屏蔽，重新采出的 token 已经提交，并检查接下来的第一次计算。异常出现的位置可以帮助选择对照，具体原因仍要由对照结果和状态记录来确认。</p>
 </div>
-<div class="cm-panel" id="cm-sampling" data-map-panel="sampling">
-<strong>实际采样：评分相同还需要检查输出分布</strong>
-<dl><dt>固定什么</dt><dd>固定前缀和目标分布，记录温度、截断和概率返回模式。如果使用候选验证，还需要保存生成候选时的实际提议概率。</dd><dt>检查什么</dt><dd>raw 与 processed 概率、目标与行为策略各自能够产生哪些 token、候选的接受比例、拒绝后的残差采样、bonus token，以及最终返回的 verifier 概率。</dd><dt>怎样继续</dt><dd>先独立核对提议概率的来源，再比较接受比例和输出频率，同时记录统计的不确定性。即使日志差为零，实际采样分布也可能出错；但也不能仅凭某一次输出不同，就认定分布有问题。</dd></dl>
-<a href="#6-两端-log-prob-一致为什么还不能保证采样正确">阅读：评分与实际采样的区别</a> · <a href="#74-评分相等以后怎样检查采样过程">阅读：接受比例和频率检查</a>
+<div class="cm-panel" id="cm-sampling" data-map-panel="sampling" aria-labelledby="cm-heading-sampling">
+<strong id="cm-heading-sampling">评分一致以后，仍要确认采样结果符合目标分布</strong>
+<p>固定前缀和目标分布，记录温度、截断配置，以及接口返回的是 raw 还是 processed log-prob。核对目标策略与实际采样策略各自可能产生哪些 token。如果使用了候选验证，还需要独立确认提议概率确实来自生成候选的那次计算，然后检查接受比例、拒绝后的残差采样、bonus token 和最终返回的 verifier 概率。</p>
+<p>这些检查完成以后，再比较输出频率与目标概率，并说明有限样本带来的统计不确定性。两端评分相同，仍然可能因为接受规则或采样实现错误而生成错误的分布。反过来，某一次生成结果不同，也不足以说明分布出了问题。</p>
 </div>
-<div class="cm-panel" id="cm-engines" data-map-panel="engines">
-<strong>Trainer 与 Prefill：对齐两套整段前向计算</strong>
-<dl><dt>固定什么</dt><dd>使用相同的逻辑权重、序列和概率定义，让 generator 从干净缓存开始重新评分，同时保留两端各自的 batch 配置。</dd><dt>检查什么</dt><dd>分片与量化、LoRA 表示、激活和累加精度、归约顺序、路由与 expert 计算、有效词表及归一化。</dd><dt>怎样继续</dt><dd>沿着 embedding 和各层寻找第一个分歧。只有确认输入和参数已经对齐，才能把新增差异归到当前算子。即使两套整段评分已经一致，也仍然需要继续比较 prefill 与生成时的 decode。</dd></dl>
-<a href="#42-用-generator-的-prefill-重算把差异拆到两段路径上">阅读：三条评分路径的拆分</a> · <a href="#73-比较实际执行过的路径再决定下一项实验">阅读：算子与归一化定位</a>
+<div class="cm-panel" id="cm-engines" data-map-panel="engines" aria-labelledby="cm-heading-engines">
+<strong id="cm-heading-engines">比较 trainer 与 prefill，可以定位两套整段前向实现的差异</strong>
+<p>使用相同的逻辑权重、序列和概率定义，让 generator 从干净缓存开始重算，同时保持两端各自原来的 batch 配置，并把这些配置保存下来。随后从 embedding 开始逐层比较。如果找到了第一个不同的输出，需要先确认该算子的输入与参数已经对齐，再检查分片和量化、LoRA 的表示、激活与累加精度、归约顺序、路由和 expert 计算。</p>
+<p>到了输出端，还要核对有效词表和概率归一化。即使 trainer 与 prefill 已经一致，也还需要比较 prefill 与生成时保存的 decode 结果，因为这里尚未验证增量计算和生成状态。</p>
 </div>
-<div class="cm-panel" id="cm-total" data-map-panel="total">
-<strong>Trainer 与 Decode：训练真正面对的总差异</strong>
-<dl><dt>固定什么</dt><dd>比较 trainer 当前的评分与生成时保存的 decode 记录。如果要诊断执行差异，就选取两端权重版本相同的样本。</dd><dt>检查什么</dt><dd>逐 token 的 log-prob 差、importance ratio，以及结合 advantage 符号统计的 PPO 零梯度分支比例。还可以加入 prefill 的中间评分，把总差异拆成两段。</dd><dt>怎样继续</dt><dd>总差异很小，也可能是因为两段差值相互抵消了。逐 token 的 log 差可以相加，但 k3 不能直接按路径相加。如果要把样本平均解释为 KL 的估计，还需要核对行为概率和采样分布，并确认每个差值比较的都是相同前缀。</dd></dl>
-<a href="#1-两端的计算差异会提前用掉-ppo-的更新空间">阅读：差异怎样进入 PPO 更新</a> · <a href="#42-用-generator-的-prefill-重算把差异拆到两段路径上">阅读：路径差与 KL 的关系</a>
+<div class="cm-panel" id="cm-total" data-map-panel="total" aria-labelledby="cm-heading-total">
+<strong id="cm-heading-total">PPO 实际受到的影响，取决于 trainer 与生成记录之间的总差异</strong>
+<p>比较 trainer 当前计算的 log-prob 与生成时保存的 decode 记录。如果想单独调查执行差异，就选取两端使用同一版本权重的样本。先计算逐 token 的 log-prob 差和 importance ratio。对于以生成时的概率作为 ratio 分母的 PPO 目标，还要结合 advantage 的符号，统计多少 token 提前进入了零梯度分支。</p>
+<p>加入 prefill 的中间评分，可以判断差异主要来自哪一段路径，也可以发现两段差值相互抵消的情况。逐 token 的 log-prob 差可以按路径相加，但 k3 不能这样相加。如果要把样本均值解释为 KL 的估计，还必须确认实际采样分布与记录的行为概率相符，而且每一项比较都使用了相同的前缀。</p>
 </div>
-<div class="cm-panel" id="cm-sync" data-map-panel="sync">
-<strong>更新与同步：初始一致还需要经过一次真实参数变化</strong>
-<dl><dt>固定什么</dt><dd>记录更新前后的 trainer 快照，通过正常路径完成同步，再确认 generator 已经采用对应的新权重，并且按照设计处理了旧状态。</dd><dt>检查什么</dt><dd>参数是否实际改变，变更是否到达正确的 shard、adapter 和 expert，逻辑张量是否匹配，以及缓存是否仍属于旧版本。</dd><dt>怎样继续</dt><dd>完成非零更新以后的生成和重新评分，并在隔离测试中确认，漏传权重时检查能够发现错误。仅仅看到学习率为零时两端一致，或者版本号相同，都不能证明同步已经生效。</dd></dl>
-<a href="#76-修复要经过真实更新故障触发和生产配置的复查">阅读：同步与修复的回归验证</a>
+<div class="cm-panel" id="cm-sync" data-map-panel="sync" aria-labelledby="cm-heading-sync">
+<strong id="cm-heading-sync">权重同步需要在参数真正改变之后验证</strong>
+<p>保存 trainer 更新前后的快照，确认参数确实发生了变化，再通过正常路径同步到 generator。随后核对对应的 shard、adapter 和 expert 是否收到了新权重，并比较两端的逻辑张量。缓存也需要按照设计清理或更新，避免继续使用旧参数计算出的状态。</p>
+<p>完成同步以后，重新生成回答并评分，再运行一次两端对照。在隔离测试中，还可以故意漏传一个确实发生变化、而且测试样本会用到的张量，确认检查能够发现错误。仅仅看到版本号相同，或者学习率为零时两端一致，都不足以证明同步成功。</p>
 </div>
-<div class="cm-panel" id="cm-monitor" data-map-panel="monitor">
-<strong>监控与验收：保留能够再次定位问题的证据</strong>
-<dl><dt>保存什么</dt><dd>有效 token 数量、均值、最大差值、分位数、超阈值数量，以及异常 rollout、权重版本、batch 和状态事件。</dd><dt>检查什么</dt><dd>除了看最大的差异，还需要沿着序列寻找首次分歧。如果记录为空、包含缺失值或非有限值，或者提前过滤了异常，都不能把检查结果算作通过。</dd><dt>怎样结束</dt><dd>回到原来的故障，确认触发条件确实发生过，再检查非零更新和生产配置。严格零差异与采用已测量容差的结果，需要分别报告；路径比较、采样检查和状态回归，也都应该各自保留结果。</dd></dl>
-<a href="#3-平均-kl-描述整体差异异常-token-才能告诉我们哪里出了问题">阅读：监控怎样保留异常</a> · <a href="#75-暂时无法归零时怎样利用已有的数值偏差继续排查">阅读：数值基线与验收范围</a>
+<div class="cm-panel" id="cm-monitor" data-map-panel="monitor" aria-labelledby="cm-heading-monitor">
+<strong id="cm-heading-monitor">保留异常样本，才能在修复后重新验证同一个故障</strong>
+<p>监控除了记录有效 token 数、均值、最大差值、分位数和超阈值数量，还需要保存对应的 rollout、权重版本、batch 配置以及调度和缓存事件。调查时要沿着序列寻找首次分歧，不能只查看差异最大的 token。记录为空、包含缺失值或非有限值，或者异常已被提前过滤，都意味着这次检查没有提供完整证据。</p>
+<p>修复以后，先确认原来的触发条件确实再次发生，再检查非零更新和生产配置下的结果。严格零差异与落在已测量容差内是两种不同的结果，应当分别记录。路径比较、采样分布和状态恢复也需要各自的验证结果，这样才能知道修复覆盖了哪些问题。</p>
 </div>
 </div>
 <button type="button" class="cm-return" data-map-return hidden>返回图中刚才的位置 ↑</button>
-<figcaption>图 4：两个区域内部，分别检查同一引擎的行为；两端之间，则检查评分的差异和权重同步。点击检查入口以后，可以查看具体应该做哪一组对照。同一种异常现象可能有多个来源，因此还需要结合相应的证据继续区分。</figcaption>
+<figcaption>图 4：两个区域内部，分别检查同一引擎的行为。两端之间，则检查评分的差异和权重同步。同一种异常现象可能有多个来源，因此还需要结合相应的证据继续区分。</figcaption>
 </figure>
 <script type="module" src="/js/trainer-generator-diagnostic-map.js"></script>

@@ -5,11 +5,6 @@ if (root) {
   const panels = Array.from(root.querySelectorAll('[data-map-panel]'));
   const reset = root.querySelector('[data-map-reset]');
   const returnToMap = root.querySelector('[data-map-return]');
-  const status = root.querySelector('[data-map-status]');
-  const language = root.closest('[lang]')?.lang || document.documentElement.lang;
-  const labels = language.startsWith('zh')
-    ? { viewing: '当前查看：', overview: '总览' }
-    : { viewing: 'Viewing: ', overview: 'Overview' };
   let selectedButton = null;
   const endpoints = {
     inputs: ['train', 'prefill', 'decode'],
@@ -40,7 +35,6 @@ if (root) {
     }
     reset.hidden = key === 'overview';
     returnToMap.hidden = key === 'overview';
-    status.textContent = `${labels.viewing}${key === 'overview' ? labels.overview : selected.querySelector('strong').textContent}`;
     root.dataset.mapSelection = key;
     if (showDetail) {
       selected.tabIndex = -1;
