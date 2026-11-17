@@ -8,7 +8,7 @@ part: 7
 tags: ["GRPO"]
 ---
 
-<!-- 初稿第七版，写于 2026-11-17，在第六版的基础上做了一轮语言校对，按作者要求把 sampler 统一改为 generator，把 Score Function Centering 的回顾移到了第 4 章开头，按作者的选择改了标题，并在第 1 到第 7 章的标题下加了 TL;DR。发布日期、作者声明和开头的个人说明由作者补充。文中的七张图由 site/public/js/kl-gradient-charts.js 绘制。原来的第 8 章（实验）移到了单独的一篇文章。那篇文章发布以后，在 6.1 节"在那些实验里……一次都没有崩溃过"这一句，以及 6.3 节讲 tail 近似的地方，加上指向它的链接。 -->
+<!-- 初稿第七版，写于 2026-11-17，在第六版的基础上做了一轮语言校对，按作者要求把 sampler 统一改为 generator，把 Score Function Centering 的回顾移到了第 4 章开头，按作者的选择改了标题，并在第 1 到第 7 章的标题下加了 TL;DR。作者声明和开头的个人说明由作者补充。文中的七张图由 site/public/js/kl-gradient-charts.js 绘制。原来的第 8 章（实验）移到了单独的一篇文章。那篇文章发布以后，在 6.1 节"在那些实验里……一次都没有崩溃过"这一句，以及 6.3 节讲 tail 近似的地方，加上指向它的链接。 -->
 
 # 无偏的 KL 估计，为什么给不出正确的梯度？从常见的 KL Estimator 到异步 RL 的 trainer-generator 约束
 
@@ -72,7 +72,7 @@ $$
 \mathrm{KL}(\pi_{\text{ref}}\|\pi_\theta)=\mathbb E_{y\sim\pi_{\text{ref}}}[-\rho(y)].
 $$
 
-在 RLHF 和 GRPO 里，我们通常想约束的是第一个。本文沿用[之前介绍 Score Function Centering 的文章](https://normaluhr.github.io/zh/p/score-function-centering-kl/)的叫法，把参照分布在前、$\pi_\theta$ 在后的 KL 叫作 reverse KL，例如 $\mathrm{KL}(\pi_{\text{ref}}\|\pi_\theta)$，把 $\pi_\theta$ 在前的 KL 叫作 forward KL，例如 $\mathrm{KL}(\pi_\theta\|\pi_{\text{ref}})$。有一些 RLHF 的论文和代码库的叫法正好相反，文末的附录专门列出了两种叫法的对应关系。
+在 RLHF 和 GRPO 里，我们通常想约束的是第一个。本文沿用[之前介绍 Score Function Centering 加 KL 的文章](https://normaluhr.github.io/zh/p/score-function-centering-kl/)的叫法，把参照分布在前、$\pi_\theta$ 在后的 KL 叫作 reverse KL，例如 $\mathrm{KL}(\pi_{\text{ref}}\|\pi_\theta)$，把 $\pi_\theta$ 在前的 KL 叫作 forward KL，例如 $\mathrm{KL}(\pi_\theta\|\pi_{\text{ref}})$。有一些 RLHF 的论文和代码库的叫法正好相反，文末的附录专门列出了两种叫法的对应关系。
 
 在前情回顾的三个公式里，$q$ 是采样用的分布，$p$ 是另一个分布。这里我们要估计的是 $\mathrm{KL}(\pi_\theta\|\pi_{\text{ref}})$，样本来自 $\pi_\theta$，所以 $\pi_\theta$ 处在 $q$ 的位置上，$\pi_{\text{ref}}$ 处在 $p$ 的位置上。于是 $r=\pi_{\text{ref}}(y)/\pi_\theta(y)$，$\log r=-\rho(y)$。代入以后，三个估计器写成 $\rho$ 的函数分别是
 
@@ -175,9 +175,9 @@ $$
 
 而 $\mathrm{KL}(\pi_{\text{ref}}\|\pi_\theta)=\mathbb E_{y\sim\pi_{\text{ref}}}[\log\pi_{\text{ref}}(y)-\log\pi_\theta(y)]$ 的梯度也是 $-\mathbb E_{y\sim\pi_{\text{ref}}}[s_\theta(y)]$。因此 $k_3$ 当 loss 时，期望梯度是 reverse KL 的梯度。回到 1.2 节的例子，reverse KL 对 logit 的梯度是 $\pi_\theta-\pi_{\text{ref}}$，它在 A 上的分量是 $\pi_\theta(A)-\pi_{\text{ref}}(A)=0.2$，这就是 $k_3$ 给出的那个数。在图 1 里，$k_3$ 的虚线和 reverse KL 的曲线完全重合。
 
-在 $\rho$ 接近 0 的时候，$1-e^{-\rho}\approx\rho-\rho^2/2$，和 $k_2$ 的系数一阶相同，所以 Liu 等人（2025）把 $k_3$ 当 loss 看作 $\mathrm{KL}(\pi_\theta\|\pi_{\text{ref}})$ 的一阶近似。这和"它是 reverse KL 的梯度"并不矛盾。模型离参考分布不远时，两个方向的 KL 梯度本来就很接近，离得越远，它们的差别越大。图 1 也能看出这一点，两条曲线在竖线 $\pi_\theta(A)=\pi_{\text{ref}}(A)$ 附近几乎重合，离这条线越远，分开得越多。
+在 $\rho$ 接近 0 的时候，$1-e^{-\rho}\approx\rho-\rho^2/2$，和 $k_2$ 的系数一阶相同，所以 Liu 等人（2025）把 $k_3$ 当 loss 看作 $\mathrm{KL}(\pi_\theta\|\pi_{\text{ref}})$ 的一阶近似。这和"它是 reverse KL 的梯度"并不矛盾。模型离参考分布不远时，两个方向的 KL 梯度本来就很接近，离得越远，它们的差别越大。图 1 也能看出这一点，两条曲线在 $\pi_\theta(A)=\pi_{\text{ref}}(A)$ 的位置附近几乎重合，离这个位置越远，分开得越多。
 
-$k_3$ 的系数在 $\rho$ 的两侧并不对称，图 2 画出了三个估计器在单个样本上的系数。在 $\rho>0$ 的一侧，也就是模型给某个 token 的概率高于参考分布时，$k_3$ 的系数最大只能到 1。在 $\rho<0$ 的一侧，也就是模型给某个 token 的概率低于参考分布时，系数按 $e^{-\rho}$ 指数增长。比如 $\rho=2$ 时，$k_2$ 的系数是 2，$k_3$ 的系数是 0.865。$\rho=-2$ 时，$k_2$ 的系数是 $-2$，$k_3$ 的系数是 $1-e^2\approx-6.39$。
+$k_3$ 的系数在 $\rho$ 的两侧并不对称，图 2 画出了三个估计器在单个样本上的系数。在 $\rho>0$ 的一侧，也就是模型给某个 token 的概率高于参考分布时，$k_3$ 的系数最大只能到 1。在 $\rho<0$ 的一侧，也就是模型给某个 token 的概率低于参考分布时，系数的绝对值按 $e^{-\rho}$ 指数增长。比如 $\rho=2$ 时，$k_2$ 的系数是 2，$k_3$ 的系数是 0.865。$\rho=-2$ 时，$k_2$ 的系数是 $-2$，$k_3$ 的系数是 $1-e^2\approx-6.39$。
 
 <figure data-chart="kl-coef">
 <noscript><p>图 2 需要 JavaScript 才能显示。</p></noscript>
@@ -217,7 +217,7 @@ $$
 
 其中 $\gamma$ 是折扣因子，$\lambda$ 控制 advantage 往后看多远，$\lambda=0$ 时只看一步，$\lambda$ 越接近 1，看得越远。我们在[介绍 GRPO 的文章](https://normaluhr.github.io/zh/p/grpo/)的 8.2 节详细介绍过 GAE。取 $\gamma=\lambda=1$ 时，相邻两步的 $V$ 两两抵消，$A_t=\sum_{k\ge t}R_k-V(s_t)$，也就是从第 $t$ 个 token 开始到序列结束的所有 reward 之和，再减去一个 baseline。
 
-把 KL 放进 reward 时，第 $k$ 个 token 的 reward 里多了一项 $-\beta\rho_k$。按上面的式子，第 $t$ 个 token 的 advantage 里就多了 $-\beta\sum_{k\ge t}\rho_k$，它包含了第 $t$ 个 token 之后所有 token 的 KL。用 2.1 节的说法，KL 这一部分在第 $t$ 个 token 上的系数是
+把 KL 放进 reward 时，第 $k$ 个 token 的 reward 里多了一项 $-\beta\rho_k$。按上面的式子，第 $t$ 个 token 的 advantage 里就多了 $-\beta\sum_{k\ge t}\rho_k$，它包含了从第 $t$ 个 token 开始到序列结束的所有 token 的 KL。用 2.1 节的说法，KL 这一部分在第 $t$ 个 token 上的系数是
 
 $$
 \beta\sum_{k\ge t}\rho_k.
@@ -227,7 +227,7 @@ $$
 
 把 KL 放进 loss 时，每个 token 的系数只取决于它自己的 $\rho_t$，比如 $k_2$ 的系数是 $\rho_t$，$k_3$ 的系数是 $1-e^{-\rho_t}$。这相当于在每个固定的前缀上分别约束下一个 token 的分布，但不考虑当前 token 对后面前缀的影响。Tang 和 Munos（2025）把这种做法得到的梯度称为部分梯度。
 
-所以，$k_1$ 放进 reward 和逐个 token 的 $k_2$ 放进 loss，只在单个位置上等价。放到整条序列上，前者的系数是之后所有 token 的 $\rho$ 之和，它给出的是整条序列 KL 的准确梯度，但序列越长，这个和的波动越大，梯度的方差也就越大。后者每个 token 只用自己的 $\rho_t$，方差小，但它不是整条序列 KL 的梯度。
+所以，$k_1$ 放进 reward 和逐个 token 的 $k_2$ 放进 loss，只在单个位置上等价。放到整条序列上，前者的系数是从当前 token 开始到序列结束的所有 token 的 $\rho$ 之和，它给出的是整条序列 KL 的准确梯度，但序列越长，这个和的波动越大，梯度的方差也就越大。后者每个 token 只用自己的 $\rho_t$，方差小，但它不是整条序列 KL 的梯度。
 
 如果想在 loss 里得到整条序列 KL 的梯度，可以把 $k_2$ 用在整条序列的 log ratio 之和上，也就是 $\tfrac12\big(\sum_t\rho_t\big)^2$。它的梯度是 $\big(\sum_k\rho_k\big)\sum_t s_\theta(y_t)$，第 $t$ 个 token 的 score 乘上了所有位置的 $\rho_k$。其中 $k<t$ 的那些 $\rho_k$ 在采第 $t$ 个 token 之前就已经确定了，和这个 token 的 score 相乘以后期望为 0，所以它在期望上和 $k_1$ 放进 reward 相同，只是方差还要更大一些。
 
@@ -288,7 +288,7 @@ $$
 
 当 $w$ 参与求导时，从系数的角度看，这个修正同时做了两件事。第一件事是修正采样分布，把 $\pi_{\text{old}}$ 下的期望转成 $\pi_\theta$ 下的期望，这是比率本来的用途。第二件事不太明显。$w$ 对 $\theta$ 的导数是 $w\,s_\theta$，它的作用相当于补回了采样项。因此，即使在第一次更新时 $\pi_{\text{old}}$ 和 $\pi_\theta$ 完全相同，$w$ 的数值等于 1，只要它参与求导，$k_3$ 的梯度就会从 reverse KL 变成 forward KL。反过来，如果把 $w$ detach 掉，得到的仍然是 reverse KL 的梯度。
 
-DeepSeek-V3.2 的报告也解释了原来的 $k_3$ 有什么问题。如果采到的 token 在当前模型下的概率远低于在 reference model 下的概率，$k_3$ 的梯度会给它一个很大而且没有上界的权重，使梯度的噪声变大。这对应 2.2 节里 $k_3$ 的系数在 $\rho<0$ 一侧指数增长的那部分。
+DeepSeek-V3.2 的报告也解释了原来的 $k_3$ 有什么问题。如果采到的 token 在当前模型下的概率远低于在 reference model 下的概率，$k_3$ 的梯度会给它一个很大而且没有上界的权重，使梯度的噪声变大。这对应 2.2 节里 $k_3$ 的系数的绝对值在 $\rho<0$ 一侧指数增长的那部分。
 
 ### 4.2 样本来自固定的 generator 时，为什么直接对 $k_1$ 求导反而是对的？
 
@@ -398,7 +398,7 @@ $$
 
 ## 6. 三种写法分别怎样约束概率下降和概率上升的 token？
 
-> **TL;DR：** 三种写法的差别主要出现在 $r$ 远离 1 的时候。对概率正在被压低的 token，$k_4$ 的拉力随着概率下降没有上限，能把这些 token 保住。$\mathrm{KL}(\pi_{\text{generator}}\|\pi_\theta)$ 的拉力有上限，$\mathrm{KL}(\pi_\theta\|\pi_{\text{generator}})$ 的拉力会趋于 0，所以 $\beta$ 较小时，这两种写法都可能把 advantage 偏低的 token 一直压到 0。对概率正在被抬高的 token，情况正好反过来，$k_4$ 的约束最弱，$\mathrm{KL}(\pi_\theta\|\pi_{\text{generator}})$ 的约束最强。哪一种写法更合适，取决于训练中哪一类 token 的风险更大，以及 $\beta$ 和 advantage 的相对大小。
+> **TL;DR：** 三种写法的差别主要出现在 $r$ 远离 1 的时候。对概率正在被压低的 token，$k_4$ 的拉力随着概率下降没有上限，能把这些 token 保住。$\mathrm{KL}(\pi_{\text{generator}}\|\pi_\theta)$ 的拉力有上限，$\mathrm{KL}(\pi_\theta\|\pi_{\text{generator}})$ 的拉力会趋于 0，所以 $\beta$ 较小时，在这两种写法下，advantage 偏低的 token 都可能被一直压到 0。对概率正在被抬高的 token，情况正好反过来，$k_4$ 的约束最弱，$\mathrm{KL}(\pi_\theta\|\pi_{\text{generator}})$ 的约束最强。哪一种写法更合适，取决于训练中哪一类 token 的风险更大，以及 $\beta$ 和 advantage 的相对大小。
 
 第 5 章把三种写法都写成了给 advantage 减去 $\beta$ 乘以一个系数的形式。$\mathrm{KL}(\pi_{\text{generator}}\|\pi_\theta)$ 的系数是 $r-1$，$k_4$ 的系数是 $\log r$，$\mathrm{KL}(\pi_\theta\|\pi_{\text{generator}})$ 的系数大约是 $r\log r$。当 trainer 和 generator 离得比较远时，这三个系数的形状决定了它们的行为。我们分两类 token 来看，一类是概率正在被压低的 token，也就是 $r<1$ 的 token，另一类是概率正在被抬高的 token，也就是 $r>1$ 的 token。这一章先在 6.1 节比较三种写法在单个 token 上的拉力，再在 6.2 节用一个简化的模型看它们最终把分布拉到哪里。6.3 节讨论每种写法的代价，6.4 节讨论选择时可以考虑的因素。
 
@@ -410,7 +410,7 @@ KL 的权重是 $\beta$，但 KL 对训练的实际影响，还取决于 $\beta$
 
 * $\mathrm{KL}(\pi_{\text{generator}}\|\pi_\theta)$ 的拉力是 $\beta\,(\pi_{\text{generator}}(v)-\pi_\theta(v))$。当 $\pi_\theta(v)\to0$ 时，这个力趋于 $\beta\,\pi_{\text{generator}}(v)$，不会再增大。这和 2.2 节里 $k_3$ 当 loss 时的情况相同，那里的拉力也不会超过 $\pi_{\text{ref}}(v)$。
 * $k_4$ 的拉力是 $\beta\,\pi_{\text{generator}}(v)\,(\mathbb E_{\pi_{\text{generator}}}\log r-\log r_v)$。当 $\pi_\theta(v)\to0$ 时，$-\log r_v$ 越来越大，这个力随着 logit 下降的幅度线性增长，没有上界。
-* $\mathrm{KL}(\pi_\theta\|\pi_{\text{generator}})$ 的拉力是 $\beta\,\pi_\theta(v)\,(\mathrm{KL}(\pi_\theta\|\pi_{\text{generator}})-\log r_v)$，写成 $\beta\,\pi_{\text{generator}}(v)$ 乘以系数的形式，系数大约是 $-r_v\log r_v$。函数 $r\log r$ 在 $r=1/e$ 时最小，约为 $-1/e$，之后随着 $r$ 继续变小又回到 0。所以它往回拉的力最多约为 $\beta\,\pi_{\text{generator}}(v)/e$，而且 token 被压得越低，这个力越弱。
+* $\mathrm{KL}(\pi_\theta\|\pi_{\text{generator}})$ 的拉力是 $\beta\,\pi_\theta(v)\,(\mathrm{KL}(\pi_\theta\|\pi_{\text{generator}})-\log r_v)$，写成 $\beta\,\pi_{\text{generator}}(v)$ 乘以系数的形式，系数大约是 $-r_v\log r_v$。函数 $r\log r$ 在 $r=1/e$ 时取到最小值 $-1/e$，之后随着 $r$ 继续变小又回到 0。所以它往回拉的力最多约为 $\beta\,\pi_{\text{generator}}(v)/e$，而且 token 被压得越低，这个力越弱。
 
 把推力和拉力放在一起比较。对 $\mathrm{KL}(\pi_{\text{generator}}\|\pi_\theta)$ 来说，一个正在被压低的 token，往回拉的力不会超过 $\beta\,\pi_{\text{generator}}(v)$，而往下推的力是 $\pi_{\text{generator}}(v)\,|\Delta A_v|$。只要 $\Delta A_v<-\beta$，推力就一直大于拉力，这个 KL 无法阻止这个 token 的概率继续下降，它最终会被压向 0。样本来自当前模型时，推力会随着 $\pi_\theta(v)$ 一起变小，有上界的拉力足以把 token 拉住。在 SFC 下推力不会变小，有上界的拉力就可能拉不住。
 
@@ -420,7 +420,7 @@ KL 的权重是 $\beta$，但 KL 对训练的实际影响，还取决于 $\beta$
 <noscript><p>图 4 需要 JavaScript 才能显示。</p></noscript>
 </figure>
 
-$\Delta A_v<-\beta$ 的情况在实际训练中是可能出现的。在我们[之前的实验设置](https://normaluhr.github.io/zh/p/score-function-centering-experiments/)里，KL 的权重 $\beta_t$ 等于 $\beta_0=0.3$ 除以 age 的平方根。在 Countdown 的 4-prompt slice 上，也就是 trainer 每次更新用 4 个 prompt 的 rollout 时，token 的平均 age 大约是 50，一个 age 为 50 的 token 的 $\beta_t=0.3/\sqrt{50}\approx0.042$。那些实验计算 advantage 时，答对的回答记为 $+1$，答错的记为 $-1$，再减去组内的平均值，所以单条回答的 advantage 在 $\pm1$ 这个量级。单个 token 的 $\Delta A_v$ 通常比这个小，因为大多数 token 换成别的选择，并不会改变回答的结果。但在少数决定回答走向的 token 上，$\Delta A_v$ 可能接近这个量级，远远超过 0.042。
+$\Delta A_v<-\beta$ 的情况在实际训练中是可能出现的。在我们[之前的实验设置](https://normaluhr.github.io/zh/p/score-function-centering-experiments/)里，KL 的权重 $\beta_t$ 等于 $\beta_0=0.3$ 除以 age 的平方根。在 Countdown 的 4-prompt slice 上，也就是 trainer 每次更新用 4 个 prompt 的 rollout 时，token 的平均 age 大约是 50，一个 age 为 50 的 token 的 $\beta_t=0.3/\sqrt{50}\approx0.042$。那些实验计算 advantage 时，答对的回答记为 $+1$，答错的记为 $-1$，再减去组内的平均值，所以单条回答的 advantage 在 $\pm1$ 这个量级。单个 token 的 $\Delta A_v$ 通常比这个小，因为大多数 token 换成别的选择，并不会改变回答的结果。但在少数决定回答走向的 token 上，$|\Delta A_v|$ 可能接近这个量级，远远超过 0.042。
 
 不过，在那些实验里，SFC 加 $\mathrm{KL}(\pi_{\text{generator}}\|\pi_\theta)$ 一次都没有崩溃过，这和上面的分析可以同时成立。上面的比较假设推力一直持续，而在实际训练中，每一片 rollout 只用来做一次更新，generator 也在不断刷新，同一个前缀很少被反复更新，推力并不会一直持续。另外，一个 token 被压到 0，也不一定会让训练崩溃。拉力的上限说明的是，一旦推力持续存在，这个 KL 能提供的保护是有限的。
 
@@ -475,7 +475,7 @@ $$
 <noscript><p>图 5 需要 JavaScript 才能显示。</p></noscript>
 </figure>
 
-两个例子放在一起，可以看到三种写法的分工。在第一个例子里，$\beta$ 较小时，只有 $k_4$ 保留了 advantage 偏低的 token，另外两种写法都把它们压到了 0。在第二个例子里，advantage 较高的稀有 token 在 $\mathrm{KL}(\pi_\theta\|\pi_{\text{generator}})$ 下涨得最少，在 $\mathrm{KL}(\pi_{\text{generator}}\|\pi_\theta)$ 下涨得多一些，在 $k_4$ 下几乎占据了全部概率。
+两个例子放在一起，可以看到三种写法的分工。在第一个例子里，$\beta$ 较小时，只有 $k_4$ 保留了 advantage 偏低的 token，在另外两种写法下，它们都被压到了 0。在第二个例子里，advantage 较高的稀有 token 在 $\mathrm{KL}(\pi_\theta\|\pi_{\text{generator}})$ 下涨得最少，在 $\mathrm{KL}(\pi_{\text{generator}}\|\pi_\theta)$ 下涨得多一些，在 $k_4$ 下几乎占据了全部概率。
 
 哪一种行为是我们想要的，取决于 advantage 有多可靠。如果第二个例子里那个稀有 token 的高 advantage 反映的是一个确实更好的行为，让它快速增长就是好事。如果它来自一个过时的样本、一个 reward 的漏洞，或者单纯的噪声，限制它的增长会更安全。第一个例子也是这样。如果低 advantage 的 token 确实不好，把它压到 0 并没有问题。如果它只是这一次运气不好，把它压到 0 就会损失探索。
 
@@ -485,9 +485,9 @@ $$
 
 6.1 节和 6.2 节讨论的是每种写法在期望上的行为。实际使用时，还要考虑它们的方差，以及它们的行为本身带来的风险。
 
-5.1 节说明，三种写法都可以通过修改 advantage 来实现，只用到采到的 token 的 $\pi_\theta(y)$ 和 $\pi_{\text{generator}}(y)$，所以它们在实现上的差别并不大。方差上的差别主要来自系数的大小。$\mathrm{KL}(\pi_{\text{generator}}\|\pi_\theta)$ 的系数 $r-1$ 里有 $1/\pi_{\text{generator}}(y)$，一个在 generator 下概率很小、在 trainer 下概率涨上来的 token，一旦被采到，系数就会很大。$\mathrm{KL}(\pi_\theta\|\pi_{\text{generator}})$ 的系数 $r\log r$ 比 $r-1$ 增长得更快，这和 importance sampling 的方差问题是同一类。$k_4$ 的系数 $\log r$ 只按对数增长，方差最小。
+5.1 节说明，三种写法都可以通过修改 advantage 来实现，只用到采到的 token 的 $\pi_\theta(y)$ 和 $\pi_{\text{generator}}(y)$，所以它们在实现上的差别并不大。方差上的差别主要来自系数的大小。$\mathrm{KL}(\pi_{\text{generator}}\|\pi_\theta)$ 的系数 $r-1$ 里有 $1/\pi_{\text{generator}}(y)$，一个在 generator 下概率很小、在 trainer 下概率涨上来的 token，一旦被采到，系数就会很大。$\mathrm{KL}(\pi_\theta\|\pi_{\text{generator}})$ 的系数 $r\log r$ 比 $r-1$ 增长得更快，这和 importance sampling 的方差问题是同一类。$k_4$ 的系数 $\log r$ 只按对数增长，方差可能最小。
 
-另一种降低方差的做法，是在 head 上精确计算期望，只对 tail 做估计，原则上三种写法都可以这样做。以 $\mathrm{KL}(\pi_{\text{generator}}\|\pi_\theta)$ 为例，记 head 在 generator 下的总概率为 $\alpha$，head 上的 token 可以精确计算 $\pi_\theta-\pi_{\text{generator}}$，tail 上采到的 token 用 $(1-\alpha)(\pi_\theta/\pi_{\text{generator}}-1)$ 来估计。如果连 tail 上的采样也省掉，只在 head 上精确计算，并把 tail 合并成一个类别，只用到 tail 的总概率，那么采样带来的方差就没有了，但会漏掉 tail 内部的差异，所以是有偏的，KLPO 把它称为 TopK-KL。我们之前的实验默认用的就是这一类实现，generator 送回概率最高的 128 个 token，不对 tail 采样，tail 内部的概率按 trainer 自己的分布分配。这和把 tail 合并成一个类别是一回事。tail 内部按 trainer 自己的比例分配概率以后，tail 里每个 token 的 $r$ 都相同，都等于 trainer 和 generator 在 tail 上的总概率之比，tail 内部的 KL 也就只剩下一项。
+另一种降低方差的做法，是在 head 上精确计算期望，只对 tail 做估计，原则上三种写法都可以这样做。以 $\mathrm{KL}(\pi_{\text{generator}}\|\pi_\theta)$ 为例，记 head 在 generator 下的总概率为 $\alpha$，head 上的 token 可以精确计算 $\pi_\theta-\pi_{\text{generator}}$，tail 上采到的 token 用 $(1-\alpha)(\pi_\theta/\pi_{\text{generator}}-1)$ 来估计。如果连 tail 上的采样也省掉，只在 head 上精确计算，并把 tail 合并成一个类别，只用到 tail 的总概率，那么采样带来的方差就没有了，但会漏掉 tail 内部的差异，所以是有偏的，KLPO 把它称为 TopK-KL。我们之前的实验默认用的就是这一类实现，generator 送回概率最高的 128 个 token，不对 tail 采样。tail 的总概率取 generator 给出的值，再按 trainer 自己的概率比例分配给 tail 里的各个 token。这和把 tail 合并成一个类别是一回事。tail 的概率按 trainer 自己的比例分配以后，tail 里每个 token 的 $r$ 都相同，都等于 trainer 和 generator 在 tail 上的总概率之比，tail 内部的 KL 也就只剩下一项。
 
 除了方差，$k_4$ 的不对称性本身也有好坏两面。好的一面是，它能防止 token 的概率在一个 generator 版本之内被压到 0，从而避免熵下降和探索变少，同时允许确实更好的 token 快速增长。坏的一面是，它对抬高这一侧的约束比较弱，如果一个 token 的高 advantage 来自过时的样本或者噪声，它也会被放任增长。我们之前的实验里有一个间接的参考。其中一个方法是在 SFC 的梯度上再乘一个截断到 2 的比率 $\min(\pi_\theta/\pi_{\text{generator}},2)$，也就是 truncated importance sampling，这是 Marek 和 Ryabinin（2026）使用的组合。这个方法在 Countdown 上崩溃时，熵持续上升，意味着原本概率很低的 token 整体上被抬高了，回答也越来越长，最后 trainer 和 generator 之间的 KL 突然涨了两个数量级，看起来更像是抬高这一侧出了问题。不过那个 run 里没有任何 KL 项，所以它只能作为一个间接的参考。
 
@@ -560,17 +560,17 @@ $\mathrm{KL}(\pi_{\text{generator}}\|\pi_\theta)$ 的系数 $r-1$ 还多了一�
 
 ## 附录：本文对 KL 方向的叫法，和其他公开资料有什么不同？
 
-本文沿用了[之前介绍 Score Function Centering 的文章](https://normaluhr.github.io/zh/p/score-function-centering-kl/)的叫法。那篇文章把 $D_{\mathrm{KL}}(q_\phi\|p_\theta)$ 的估计器叫作 sparse reverse-KL estimator，其中 $q_\phi$ 是 generator，$p_\theta$ 是 trainer。按照同一个规则，本文把参照分布在前、$\pi_\theta$ 在后的 KL 叫作 reverse KL，例如 $\mathrm{KL}(\pi_{\text{generator}}\|\pi_\theta)$ 和 $\mathrm{KL}(\pi_{\text{ref}}\|\pi_\theta)$。$\pi_\theta$ 在前的 KL 则叫作 forward KL，例如 $\mathrm{KL}(\pi_\theta\|\pi_{\text{generator}})$ 和 $\mathrm{KL}(\pi_\theta\|\pi_{\text{ref}})$。
+本文沿用了[之前介绍 Score Function Centering 加 KL 的文章](https://normaluhr.github.io/zh/p/score-function-centering-kl/)的叫法。那篇文章把 $D_{\mathrm{KL}}(q_\phi\|p_\theta)$ 的估计器叫作 sparse reverse-KL estimator，其中 $q_\phi$ 是 generator，$p_\theta$ 是 trainer。按照同一个规则，本文把参照分布在前、$\pi_\theta$ 在后的 KL 叫作 reverse KL，例如 $\mathrm{KL}(\pi_{\text{generator}}\|\pi_\theta)$ 和 $\mathrm{KL}(\pi_{\text{ref}}\|\pi_\theta)$。$\pi_\theta$ 在前的 KL 则叫作 forward KL，例如 $\mathrm{KL}(\pi_\theta\|\pi_{\text{generator}})$ 和 $\mathrm{KL}(\pi_\theta\|\pi_{\text{ref}})$。
 
 有一些公开资料的叫法正好相反。RLHF 的论文和代码库通常把正在训练的 $\pi_\theta$ 看作变分推断里那个用来做近似的分布，所以把 $\mathrm{KL}(\pi_\theta\|\pi_{\text{ref}})$ 叫作 reverse KL，把 $\mathrm{KL}(\pi_{\text{ref}}\|\pi_\theta)$ 叫作 forward KL。on-policy distillation 的文章也是这样，它们把学生在前、老师在后的 KL 叫作 reverse KL。两种叫法说的是同样的两个量，只是名字对调了。
 
 对照其他资料读本文时，下面几处最容易混淆：
 
-* 当 loss 用、样本来自当前模型时，$k_2$ 的梯度等于 $\mathrm{KL}(\pi_\theta\|\pi_{\text{ref}})$ 的梯度。本文说它给出的是 forward KL，多数资料会说是 reverse KL。
-* 同样的条件下，$k_3$ 的梯度等于 $\mathrm{KL}(\pi_{\text{ref}}\|\pi_\theta)$ 的梯度。本文说它给出的是 reverse KL，多数资料会说是 forward KL。
+* 当 loss 用、样本来自当前模型时，$k_2$ 的梯度等于 $\mathrm{KL}(\pi_\theta\|\pi_{\text{ref}})$ 的梯度。本文说它给出的是 forward KL，叫法相反的资料会说是 reverse KL。
+* 同样的条件下，$k_3$ 的梯度等于 $\mathrm{KL}(\pi_{\text{ref}}\|\pi_\theta)$ 的梯度。本文说它给出的是 reverse KL，叫法相反的资料会说是 forward KL。
 * InstructGPT 式的 PPO 把 $k_1$ 放进 reward，梯度对应 $\mathrm{KL}(\pi_\theta\|\pi_{\text{ref}})$，在本文里是 forward KL。GRPO 把 $k_3$ 当 loss，在样本来自当前模型的近似下，梯度对应 $\mathrm{KL}(\pi_{\text{ref}}\|\pi_\theta)$，在本文里是 reverse KL。
 * Liu 等人（2025）说"$k_3$ 当 loss 是 reverse KL 的一阶近似"，他们说的 reverse KL 是 $\mathrm{KL}(\pi_\theta\|\pi_{\text{ref}})$，在本文里是 forward KL。
-* 资料里常说"reverse KL 是 mode-seeking 的"，意思是 $\pi_\theta$ 在前的 KL 允许 $\pi_\theta$ 只保留参照分布的一部分取值。在本文的叫法下，这句话说的是 forward KL。6.2 节里，$\mathrm{KL}(\pi_\theta\|\pi_{\text{generator}})$ 会把 advantage 足够低的 token 一直压到 0，就是这个性质的表现。
+* 资料里常说"reverse KL 是 mode-seeking 的"，意思是 $\pi_\theta$ 在前的 KL 允许 $\pi_\theta$ 只保留参照分布的一部分取值。在本文的叫法下，这句话说的是 forward KL。6.2 节里，在 $\mathrm{KL}(\pi_\theta\|\pi_{\text{generator}})$ 下，advantage 足够低的 token 会被一直压到 0，就是这个性质的表现。
 * 之前那篇文章里的 KL 项是 $\mathrm{KL}(\pi_{\text{generator}}\|\pi_\theta)$，它在那篇文章和本文里都叫 reverse KL，没有变化。
 
 所以读这类材料时，最可靠的办法是对照公式。先看 KL 的前后两个位置上各是哪个分布，再看样本来自哪个分布，以及代码对哪几处求了导。这三点确定以后，名字就不会再造成误解。
