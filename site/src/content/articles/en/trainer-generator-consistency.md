@@ -612,3 +612,7 @@ The diagram below is organized by these objects of comparison, and it connects t
 <figcaption>Figure 4: Inside each of the two regions, the checks concern the behavior of one engine. Between the two sides, the checks concern score differences and weight synchronization. The same symptom can have several sources, so you still need the corresponding evidence to tell them apart.</figcaption>
 </figure>
 <script type="module" src="/js/trainer-generator-diagnostic-map.js"></script>
+
+## 9. Closing Remarks
+
+Identical weights do not automatically mean that the trainer and generator use the same policy distribution. When KL or an importance ratio changes, we therefore need to distinguish the contribution of parameter updates from the contribution of the execution process. A zero-difference test provides a controlled way to compare the computations. Probabilities and state saved during generation give us evidence for investigating anomalies in production. For numerical differences that we cannot yet eliminate, we also need to measure the conditions under which they occur and their effects on model updates. With these comparisons in place, we can more confidently distinguish the effects of the algorithm from differences introduced by system execution when discussing distribution shifts in asynchronous training, importance sampling, or KL regularization.
