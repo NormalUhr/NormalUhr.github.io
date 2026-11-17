@@ -8,8 +8,6 @@ part: 7
 tags: ["GRPO"]
 ---
 
-<!-- 初稿第七版，写于 2026-11-17，在第六版的基础上做了一轮语言校对，按作者要求把 sampler 统一改为 generator，把 Score Function Centering 的回顾移到了第 4 章开头，按作者的选择改了标题，并在第 1 到第 7 章的标题下加了 TL;DR。作者声明和开头的个人说明由作者补充。文中的七张图由 site/public/js/kl-gradient-charts.js 绘制。原来的第 8 章（实验）移到了单独的一篇文章。那篇文章发布以后，在 6.1 节"在那些实验里……一次都没有崩溃过"这一句，以及 6.3 节讲 tail 近似的地方，加上指向它的链接。 -->
-
 # 无偏的 KL 估计，为什么给不出正确的梯度？从常见的 KL Estimator 到异步 RL 的 trainer-generator 约束
 
 <link rel="stylesheet" href="/css/kl-gradient.css">

@@ -7,8 +7,6 @@ part: 7
 tags: ["GRPO"]
 ---
 
-<!-- English version of the seventh draft, translated on 2026-11-17 from the Chinese version of the same date. The author adds the author statement and the personal note at the beginning. The seven figures are drawn by site/public/js/kl-gradient-charts.js, whose labels are in English on both language pages. The former Section 8 (experiments) moved to a separate article. After that article is published, add a link to it in Section 6.1, at the sentence that says SFC plus the KL never collapsed in those experiments, and in Section 6.3, where the approximation of the tail is discussed. -->
-
 # Why Does an Unbiased KL Estimate Not Give the Right Gradient? From Common KL Estimators to the Trainer-Generator Constraint in Asynchronous RL
 
 <link rel="stylesheet" href="/css/kl-gradient.css">
