@@ -21,6 +21,8 @@ This article first discusses how differences between the trainer and the generat
 
 ## 1. Computation differences between the two sides use up part of the PPO update range in advance
 
+> **TL;DR:** When the ratio uses the probability recorded during generation as its denominator, execution differences between the two sides affect the PPO gradient and can cause clipping to remove some tokens’ PPO gradient contributions before the first parameter update. Even if the initial ratio is 1 when the denominator is an old log-prob recomputed by the trainer, this does not establish agreement between the trainer and generator.
+
 We write the prompt as $x$ and the response as $y_1,\ldots,y_N$. When generating $y_t$, the prefix that the model has already seen is $h_t=(x,y_1,\ldots,y_{t-1})$, which does not include $y_t$ itself. For this prefix, we write the distribution given by the trainer as $\pi_\theta$, and the distribution that the generator actually used when it generated this token as $\pi_{\mathrm{generator}}$. This section first considers ordinary token-by-token sampling. The temperature is 1, there is no top-k, top-p, or other logits modification, and we assume that the sampling implementation is correct. Under these conditions, the softmax probability that the generator reports is the actual sampling probability.
 
 If the denominator of the importance ratio uses the probability that the generator actually used when it generated this token, we can first compute the difference between the log-probs of the two sides, and then take the exponential to get the ratio:
@@ -83,6 +85,8 @@ The approach of keeping the reference that limits updates separate from the data
 Checking whether the ratio deviates from 1 tells us whether the probabilities on the two sides are the same, but it does not tell us where the difference comes from. To exclude the effects of parameter updates and version lag, we can first fix the weights on both sides, and then compare the log-probs of the same token on the same prefix. **If the two sides still give different values under these conditions, we need to go on and check the computation paths that they actually execute.** We start from the differences between these paths.
 
 ## 2. With the same weights, why do the trainer and the generator still compute different probabilities?
+
+> **TL;DR:** Identical weights, output dtypes, and backend names do not guarantee identical operation order, intermediate precision, or state. Debugging therefore requires comparing the trainer with the generator and comparing prefill with decode inside the generator, while confirming that every comparison uses the same prefix.
 
 In mathematics, we usually treat a model as a function determined by its parameters. When this function becomes a running program, however, we also have to choose a concrete order of operations, the data types, and a way to use the state that has already been saved. For example, the trainer usually processes a whole sequence at once, while the generator first processes the prompt with prefill and then generates tokens one at a time with decode. During decode, the generator also reads the keys and values that it saved earlier, that is, the KV cache. So although the two sides use the same mathematical model, they do not necessarily execute the same set of floating-point operations.
 
@@ -167,6 +171,8 @@ We can now see that even after confirming that the two sides use the same weight
 
 ## 3. The mean KL describes the overall difference, but only abnormal tokens show where the problem is
 
+> **TL;DR:** A small mean KL can still hide a few severe anomalies, and the token with the largest difference may not be where the error began. Monitoring needs to retain the inputs and execution state needed to reproduce the anomaly so that we can trace the sequence back to the first divergence.
+
 Given the prefix $h_t$, if the token really comes from $\pi_{\mathrm{generator}}$, and the two sides compare probabilities on the same prefix, then
 
 $$
@@ -206,6 +212,8 @@ After finding the abnormal rollout, we also need to look back along the sequence
 There is one more precondition to remember. If the prefix that the generator actually used is already inconsistent with the record, then subtracting the log-probs of the two sides gives the difference between computations under two different conditions, and the KL equation above no longer applies. The request resumption example later in this article shows this situation in detail.
 
 ## 4. Once we have found abnormal tokens, why do we still need a zero-difference test?
+
+> **TL;DR:** By fixing inputs and weights and matching computation paths, a zero-difference test provides a controlled comparison for locating execution differences. Recomputing scores with the generator’s prefill path lets us compare trainer with prefill and prefill with decode separately, then investigate the paths that diverge.
 
 Suppose monitoring has exported an abnormal response. The trainer and the generator have the same weight version, but several tokens have large log-prob differences. From this response alone, we do not know which configuration to check first. The two sides may always use different summation orders, and this input just amplified the difference. It is also possible that a synchronization, a cache reuse, or a request resumption went wrong, and made this response depart from its normal computation path. If we simply raise the alert threshold, both cases may go unnoticed. Lowering the learning rate also does not help us tell which case happened.
 
@@ -292,6 +300,8 @@ After this set of comparisons, we can narrow the investigation to a specific pat
 
 ## 5. From a KL Spike to request resumption: debugging a prefix misalignment
 
+> **TL;DR:** If tokens whose results are still in flight are handled incorrectly when generation resumes, the recorded prefix can differ from the prefix the engine actually uses, so the log-prob difference no longer has the same-prefix KL interpretation. Validating a fix requires reproducing the relevant pause and resumption conditions and checking the state before and after the transfer, since the absence of a KL Spike alone is not enough.
+
 Suppose a KL Spike appears in monitoring. We export the abnormal rollout and compare it with the scheduling records of the generator. We find that one of the responses was temporarily removed from the generation batch by the scheduler before it finished. Later, the response rejoined the batch and continued to generate the rest of its tokens. What is resumed here is the same unfinished generation request. The engine needs to continue from the existing tokens, and it does not start a new response from the prompt.
 
 When we compare the log-prob of each token, we find that the large differences are concentrated in the part of the response that was generated after this request rejoined the batch. The generator gives these tokens high probabilities, while the trainer, which recomputes on the complete recorded prefix, considers them almost impossible. This gives us a concrete place to check: the token records and the execution state before and after the pause. However, the fact that the request resumption and the anomaly appear at nearby positions does not directly prove the cause. Below we use a simplified set of tokens to show one kind of error that could cause this behavior, and then look at how to validate it with controlled comparisons.
@@ -320,6 +330,8 @@ When validating the fix, besides confirming that the original wrong state is rej
 In this example, we started the investigation from the abnormal tokens kept by monitoring. We then narrowed the scope by comparing prefill with decode, and finally used the state records before and after the resumption to explain how the error happened. After finding the cause, we still need to validate the fix with a specially constructed resumption scenario. If the original zero-difference test did not cover this state transition, we should add this scenario to it, so that the problem is not missed again in the future.
 
 ## 6. If the two sides agree on log-probs, why is sampling still not guaranteed to be correct?
+
+> **TL;DR:** Even if the two sides report identical log-probs, those probabilities may not describe the distribution from which tokens were actually sampled. For speculative decoding, candidate-block scores, acceptance and resampling rules, and cache state after rejection each need separate validation.
 
 The tests so far check whether the same token gets the same score on both sides. But if we want to use the probability returned by the generator as the denominator of the importance ratio, we also need to confirm that the output token was really sampled from this distribution. For example, a temperature transform can make the actual sampling distribution differ from the probability that the interface returns. In a more complex candidate verification process, every scoring step can be completely correct, and an error in the acceptance rule can still make the final samples follow the wrong distribution.
 
@@ -395,6 +407,8 @@ In addition, candidate verification adds state handling after a rejection. Suppo
 This connects to the earlier request resumption case. We need to confirm separately whether the scoring paths agree, whether the acceptance rule preserves the target distribution, and whether the later state corresponds to the committed sequence. If we only turn off speculation and see the anomaly disappear, we still cannot tell whether the problem lies in the computation shape during verification, in the acceptance probability, or in the state after a rejection. So in the debugging workflow later in this article, each of these checks needs to stay separate.
 
 ## 7. How should debugging move from an abnormal sample to a regression test?
+
+> **TL;DR:** Debugging should start from an abnormal sample that can be reproduced and use controlled comparisons to locate the first point of divergence. Validation after a fix must cover nonzero parameter updates and weight synchronization, the original failure conditions, and the production configuration, while also confirming that the checks detect deliberately introduced errors.
 
 When we bring the checks above into our own system, we can first confirm what is being compared, then build controlled comparisons, then narrow the scope based on the results, and finally validate whether the fix works. When integrating a model for the first time, we can start from a small set of short samples. When a KL Spike appears in production training, we should first keep the failed rollout and the execution events that triggered the problem. There is another situation worth investigating. With fixed weights, turning speculation on or off may cause a reproducible change in statistics such as token frequencies or response lengths, while the score difference in the logs does not change accordingly. In this case, we need to check the sampling process. These statistical changes alone, however, cannot tell whether the problem comes from the acceptance algorithm, from the numerical path during verification, or from normal sampling variation.
 

@@ -1,3 +1,8 @@
+.prose > h2 + blockquote {
+  font-style: normal;
+  color: var(--ink, #252a2b);
+}
+
 .consistency-diagram {
   margin: 1.8em 0;
   padding: 18px;
