@@ -12,6 +12,8 @@ tags: ["GRPO"]
 
 # 无偏的 KL 估计，为什么给不出正确的梯度？从常见的 KL Estimator 到异步 RL 的 trainer-generator 约束
 
+<link rel="stylesheet" href="/css/kl-gradient.css">
+
 我们之前写过一篇[读《Approximating KL Divergence》的笔记](https://normaluhr.github.io/zh/p/kl/)，讨论了 $k_1$、$k_2$、$k_3$ 这三个估计器在估计 KL 散度的数值时，各自有多大的偏差和方差。这篇文章是那篇笔记的续篇。在训练里，KL 的数值大多只用来记录，或者用来调节 KL 的权重 $\beta$。KL 真正影响模型更新的方式，是我们把它写进 loss 或者 reward 以后，它在 backward 中产生的梯度。一个估计器能把 KL 的数值估计得很准，并不代表它的梯度指向我们想要的方向。这篇文章就从这个问题讲起。
 
 文章想回答两个问题。第一个问题是，常见的几种 KL 写法在 backward 之后分别产生了什么梯度，这个梯度对应的又是哪一个方向的 KL。第二个问题来自异步 RL。在异步 RL 里，生成数据的 generator 比正在训练的 trainer 落后若干步，我们在[介绍 Score Function Centering 加 KL 的文章](https://normaluhr.github.io/zh/p/score-function-centering-kl/)里的做法，是加一个 KL，把 trainer 拉向 generator。这个 KL 有好几种写法，我们想弄清楚每一种写法在做什么，又有什么代价。第一个问题的答案，会成为我们回答第二个问题的工具。最后，KL 和它的系数都是在有限精度下算出来的，我们也会讨论计算时需要注意的地方。
