@@ -30,8 +30,8 @@ let loading: Promise<Country[] | null> | undefined
  * Visits per country over the whole history of the site and over the last 24 hours, read
  * from GoatCounter's API once per build. The key comes from the GOATCOUNTER_TOKEN environment
  * variable and never reaches the built pages. Without a key, or without any located visit,
- * this is null and the globe is left out. With a key, a failed request fails the build, so a
- * broken key cannot quietly remove the globe from the live site.
+ * this is null and the globe is left out. With a key, a request that fails on every try fails
+ * the build, so a broken key cannot quietly remove the globe from the live site.
  */
 export function countryVisits(): Promise<Country[] | null> {
   loading ??= load()
@@ -67,13 +67,33 @@ async function locations(token: string, start: string) {
     url.searchParams.set('start', start)
     url.searchParams.set('limit', '100')
     url.searchParams.set('offset', String(offset))
-    const res = await fetch(url, {
-      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-    })
-    if (!res.ok) throw new Error(`GoatCounter locations: HTTP ${res.status} ${await res.text()}`)
-    const page = (await res.json()) as LocationsPage
+    const page = await fetchPage(url, token)
     for (const s of page.stats) found.set(s.id, { name: s.name, count: s.count })
     if (!page.more) break
   }
   return found
+}
+
+/** Seconds to wait before each further try of a failed GoatCounter request. */
+const RETRY_WAITS = [5, 15, 30]
+
+/**
+ * GoatCounter now and then answers a valid request with 404 or drops the connection, and the
+ * same request succeeds a little later. A key that is really broken still fails every try.
+ */
+async function fetchPage(url: URL, token: string): Promise<LocationsPage> {
+  let failure = ''
+  for (const wait of [0, ...RETRY_WAITS]) {
+    if (wait) await new Promise((resume) => setTimeout(resume, wait * 1000))
+    try {
+      const res = await fetch(url, {
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      })
+      if (res.ok) return (await res.json()) as LocationsPage
+      failure = `HTTP ${res.status} ${await res.text()}`
+    } catch (err) {
+      failure = String(err)
+    }
+  }
+  throw new Error(`GoatCounter locations: ${failure}, after ${RETRY_WAITS.length + 1} tries`)
 }
