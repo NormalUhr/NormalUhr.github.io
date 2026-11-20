@@ -191,17 +191,23 @@ p.lede { font-size: 17.5px; line-height: 1.58; color: var(--ink-soft); margin: 0
 /* ---------- article ---------- */
 .post {
   display: grid; grid-template-columns: var(--rail) minmax(0, var(--measure));
-  gap: 46px; align-items: start; margin-top: 6px; justify-content: center;
+  grid-template-areas: "rail head" "rail body";
+  column-gap: 46px; align-items: start; margin-top: 6px; justify-content: center;
 }
 .post > * { min-width: 0; }
+.post > .ahead { grid-area: head; }
+.post > .rail { grid-area: rail; }
+.post > .abody { grid-area: body; }
 .doc2 { max-width: var(--measure); margin-top: 20px; }
 @media (max-width: 1120px) {
-  .post { grid-template-columns: 1fr; }
-  .rail { position: static !important; max-height: none !important; margin-bottom: 26px; }
+  .post { grid-template-columns: 1fr; grid-template-areas: "rail" "head" "body"; }
+  .rail { position: static !important; max-height: none !important; margin-bottom: 72px; }
 }
 .rail { position: sticky; top: 82px; max-height: calc(100vh - 112px); overflow: auto; min-width: 0; font-family: var(--sans); font-size: 12.5px; }
-.rail section { margin-bottom: 22px; padding-bottom: 18px; border-bottom: 1px solid var(--rule-soft); }
-.rail section:last-child { border-bottom: 0; padding-bottom: 0; }
+.rail details { margin-bottom: 22px; padding-bottom: 18px; border-bottom: 1px solid var(--rule-soft); }
+.rail details:last-child { border-bottom: 0; padding-bottom: 0; }
+.rail summary { display: block; list-style: none; cursor: default; }
+.rail summary::-webkit-details-marker { display: none; }
 .rail h2 { margin: 0 0 9px; font-size: 10px; letter-spacing: .16em; text-transform: uppercase; font-weight: 600; color: var(--ink-faint); font-family: var(--sans); }
 .rail ol { list-style: none; margin: 0; padding: 0; }
 .rail li a { display: block; padding: 3px 0 3px 11px; color: var(--ink-soft); border-left: 2px solid var(--rule-soft); line-height: 1.4; }
@@ -216,6 +222,23 @@ p.lede { font-size: 17.5px; line-height: 1.58; color: var(--ink-soft); margin: 0
   mask-image: linear-gradient(to bottom, #000 0 26px, transparent 38px);
   -webkit-mask-image: linear-gradient(to bottom, #000 0 26px, transparent 38px); }
 .eqlist .katex { font-size: .64em; }
+/* On a phone the title comes first. The rail follows it as a small box with one folded
+   row per section, and each row is tall enough to tap. */
+@media (max-width: 900px) {
+  .post { grid-template-areas: "head" "rail" "body"; }
+  .rail { margin: 0 0 26px; padding: 0 14px; border: 1px solid var(--rule-soft); border-radius: 8px; }
+  .rail details, .rail details:last-child { margin: 0; padding: 0; border-bottom: 0; }
+  .rail details + details { border-top: 1px solid var(--rule-soft); }
+  .rail summary { display: flex; align-items: center; min-height: 44px; cursor: pointer; }
+  .rail summary h2 { margin: 0; }
+  .rail summary::after {
+    content: ''; margin: 0 4px 0 auto; width: 6px; height: 6px;
+    border-right: 1.5px solid var(--ink-faint); border-bottom: 1.5px solid var(--ink-faint);
+    transform: translateY(-2px) rotate(45deg);
+  }
+  .rail details[open] summary::after { transform: translateY(2px) rotate(225deg); }
+  .rail details[open] > :not(summary) { margin-bottom: 16px; }
+}
 
 .ahead { margin-bottom: 26px; }
 .ahead .over { display: flex; gap: 11px; flex-wrap: wrap; align-items: center; margin-bottom: 13px; }

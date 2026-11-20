@@ -60,66 +60,87 @@ const bib = [
   section="articles"
   altPaths={{ en: `/en/p/${slug}`, zh: `/zh/p/${slug}` }}
 >
-  <div class="post">
-    <aside class="rail">
-      {toc.length > 0 && (
-        <section>
-          <h2>{L.contents}</h2>
-          <ol>
-            {toc.map((h) => (
-              <li class={`d${h.depth}`}><a href={`#${h.slug}`} data-toc={h.slug}>{h.text}</a></li>
-            ))}
-          </ol>
-        </section>
-      )}
-      {article.eqns > 0 && (
-        <section>
-          <h2>{L.equations} ({article.eqns})</h2>
-          <div class="eqlist" id="eqlist"></div>
-        </section>
-      )}
-    </aside>
-
-    <article>
-      <div class="ahead">
-        <div class="over">
-          <a class="lbl" style={`color:${c.accent}`}
-             href={data.category === 'archive' ? `/${lang}/archive` : `/${lang}/topics/${data.category}`}>
-            {c.name[lang]}
+  <article class="post">
+    <div class="ahead">
+      <div class="over">
+        <a class="lbl" style={`color:${c.accent}`}
+           href={data.category === 'archive' ? `/${lang}/archive` : `/${lang}/topics/${data.category}`}>
+          {c.name[lang]}
+        </a>
+        {s && (
+          <a class="pill" href={`/${lang}/s/${s.id}`}>
+            {s.name[lang]}{data.part ? ` · ${fill(L.partOf, { n: data.part, m: partsCount })}` : ''}
           </a>
-          {s && (
-            <a class="pill" href={`/${lang}/s/${s.id}`}>
-              {s.name[lang]}{data.part ? ` · ${fill(L.partOf, { n: data.part, m: partsCount })}` : ''}
-            </a>
-          )}
-        </div>
-
-        <h1 lang={lang}>{name}</h1>
-        {original && <p class="st" lang={bodyLang}>{original}</p>}
-
-        <div class="ameta">
-          <div><b><time datetime={dateISO(data.date)}>{dateISO(data.date)}</time></b>{L.published}</div>
-          <button class="minread" type="button" data-egg="tower" data-label={fill(L.readingClock, { minutes: article.minutes })}>
-            <b><svg class="tower" viewBox="0 0 16 16" aria-hidden="true">
-              <circle class="tower-ring" cx="8" cy="8" r="6.6" />
-              <path class="tower-minute" d="M8 8V2.2" />
-              <path class="tower-hour" d="M8 8V4.4" />
-              <circle class="tower-lift" cx="8" cy="8" r="1.5" />
-            </svg>{article.minutes}</b>{L.minRead}
-          </button>
-          <div><b>{article.words.toLocaleString('en-US')}</b>{L.words}</div>
-          {article.eqns > 0 && (
-            <div><a href="#eq-1" data-scroll="eq-1"><b>{article.eqns}</b>{L.equations}</a></div>
-          )}
-          <div><b>{langs.join(' / ')}</b>{L.languages}</div>
-          {site.likes && <div class="metaact"><LikeButton lang={lang} /></div>}
-        </div>
-
-        {bodyLang !== lang && (
-          <p class="notice"><b>{fill(L.onlyIn, { lang: L.langName[bodyLang] })}</b></p>
         )}
       </div>
 
+      <h1 lang={lang}>{name}</h1>
+      {original && <p class="st" lang={bodyLang}>{original}</p>}
+
+      <div class="ameta">
+        <div><b><time datetime={dateISO(data.date)}>{dateISO(data.date)}</time></b>{L.published}</div>
+        <button class="minread" type="button" data-egg="tower" data-label={fill(L.readingClock, { minutes: article.minutes })}>
+          <b><svg class="tower" viewBox="0 0 16 16" aria-hidden="true">
+            <circle class="tower-ring" cx="8" cy="8" r="6.6" />
+            <path class="tower-minute" d="M8 8V2.2" />
+            <path class="tower-hour" d="M8 8V4.4" />
+            <circle class="tower-lift" cx="8" cy="8" r="1.5" />
+          </svg>{article.minutes}</b>{L.minRead}
+        </button>
+        <div><b>{article.words.toLocaleString('en-US')}</b>{L.words}</div>
+        {article.eqns > 0 && (
+          <div><a href="#eq-1" data-scroll="eq-1"><b>{article.eqns}</b>{L.equations}</a></div>
+        )}
+        <div><b>{langs.join(' / ')}</b>{L.languages}</div>
+        {site.likes && <div class="metaact"><LikeButton lang={lang} /></div>}
+      </div>
+
+      {bodyLang !== lang && (
+        <p class="notice"><b>{fill(L.onlyIn, { lang: L.langName[bodyLang] })}</b></p>
+      )}
+    </div>
+
+    {(toc.length > 0 || article.eqns > 0) && (
+      <aside class="rail" id="rail">
+        {toc.length > 0 && (
+          <details open>
+            <summary><h2>{L.contents}</h2></summary>
+            <ol>
+              {toc.map((h) => (
+                <li class={`d${h.depth}`}><a href={`#${h.slug}`} data-toc={h.slug}>{h.text}</a></li>
+              ))}
+            </ol>
+          </details>
+        )}
+        {article.eqns > 0 && (
+          <details open>
+            <summary><h2>{L.equations} ({article.eqns})</h2></summary>
+            <div class="eqlist" id="eqlist"></div>
+          </details>
+        )}
+      </aside>
+    )}
+    <script is:inline>
+      // On a phone the rail sits under the title, folded to one row per section. Wider
+      // screens keep it open, and there the headings are labels rather than controls.
+      (() => {
+        const phone = matchMedia('(max-width: 900px)')
+        const rail = document.getElementById('rail')
+        if (!rail) return
+        const folds = [...rail.querySelectorAll('details')]
+        const fit = () => folds.forEach((d) => {
+          d.open = !phone.matches
+          d.querySelector('summary').tabIndex = phone.matches ? 0 : -1
+        })
+        folds.forEach((d) => d.querySelector('summary').addEventListener('click', (e) => {
+          if (!phone.matches) e.preventDefault()
+        }))
+        fit()
+        phone.addEventListener('change', fit)
+      })()
+    </script>
+
+    <div class="abody">
       <div class="prose" id="prose" lang={bodyLang} data-egg="read" data-day={dateISO(data.date)} data-minutes={article.minutes}><Content /></div>
 
       {(data.tags.length > 0 || site.goatcounter || site.likes) && (
@@ -151,9 +172,8 @@ const bib = [
           </a>
         )}
       </nav>
-    </article>
-
-  </div>
+    </div>
+  </article>
 
   <div class="hcard" id="hcard"></div>
   <Enhance />
